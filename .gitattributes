@@ -1,0 +1,19 @@
+# File nguon cua Vaz duoc tach ra tu UltraPcOptimizer, noi deu dung LF.
+# Pin LF de moi clone ra deu giong nhau, khong phu thuoc core.autocrlf cua may.
+* text=auto eol=lf
+
+# File Windows native phai luon CRLF.
+*.cmd   text eol=crlf
+*.bat   text eol=crlf
+*.ps1   text eol=crlf
+
+# Binary - khong bao gio text, khong doi line ending.
+*.dll   binary
+*.exe   binary
+*.pdb   binary
+*.zip   binary
+*.png   binary
+*.jpg   binary
+*.ico   binary
+*.xbf   binary
+*.pri   binary

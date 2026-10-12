@@ -1,0 +1,11 @@
+bin/
+obj/
+TestResults/
+*.user
+.vs/
+.idea/
+
+# Ban build/single-file lo ra ngoai bin/obj (PublishSingleFile) - khong track.
+*.dll
+*.exe
+*.pdb

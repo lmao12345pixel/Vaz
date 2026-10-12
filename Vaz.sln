@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{33C137EC-C7D6-4FA7-B0E1-FD915AC3A796}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vazer.Core", "src\Vazer.Core\Vazer.Core.csproj", "{94AB249C-C9EE-49DB-ABD4-431A3950941E}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{E84BD5AA-4233-485A-A155-90064A564A1A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vazer.Core.Tests", "tests\Vazer.Core.Tests\Vazer.Core.Tests.csproj", "{756A70DC-4A46-4422-804D-B613A1DED918}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{94AB249C-C9EE-49DB-ABD4-431A3950941E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{94AB249C-C9EE-49DB-ABD4-431A3950941E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{94AB249C-C9EE-49DB-ABD4-431A3950941E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{94AB249C-C9EE-49DB-ABD4-431A3950941E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{756A70DC-4A46-4422-804D-B613A1DED918}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{756A70DC-4A46-4422-804D-B613A1DED918}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{756A70DC-4A46-4422-804D-B613A1DED918}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{756A70DC-4A46-4422-804D-B613A1DED918}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{94AB249C-C9EE-49DB-ABD4-431A3950941E} = {33C137EC-C7D6-4FA7-B0E1-FD915AC3A796}
+		{756A70DC-4A46-4422-804D-B613A1DED918} = {E84BD5AA-4233-485A-A155-90064A564A1A}
+	EndGlobalSection
+EndGlobal
