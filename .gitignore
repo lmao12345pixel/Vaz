@@ -9,3 +9,20 @@ TestResults/
 *.dll
 *.exe
 *.pdb
+
+# dotnet publish / pack output
+publish/
+*.nupkg
+*.snupkg
+
+# Bao cao coverage
+coverage*/
+*.coverage
+*.coveragexml
+*.cobertura.xml
+*.opencover.xml
+
+# AppSettings override theo moi truong (co the chua secret) -
+# giu lai appsettings.json goc lam mau.
+appsettings.*.json
+!appsettings.json
