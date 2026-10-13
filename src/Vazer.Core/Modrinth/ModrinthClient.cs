@@ -32,8 +32,9 @@ public sealed class ModrinthClient : IModrinthClient
     public async Task<SearchResult> SearchAsync(SearchQuery query, CancellationToken ct = default)
     {
         var facets = BuildFacets(query);
+        var limit = Math.Clamp(query.Limit, 1, 100);
         var url = $"{BaseUrl}/search?query={Uri.EscapeDataString(query.Query ?? "")}" +
-                  $"&limit={query.Limit}&offset={query.Offset}" +
+                  $"&limit={limit}&offset={query.Offset}" +
                   (query.SortIndex != null ? $"&index={query.SortIndex}" : "") +
                   $"&facets={Uri.EscapeDataString(facets)}";
 
