@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Vazer.Core.Abstractions;
+using Vazer.Core.Http;
 using Vazer.Core.Mods;
 
 namespace Vazer.Core.Modpacks;
@@ -19,15 +20,18 @@ public sealed class MrpackImporter : IMrpackImporter
 
     private readonly IInstanceManager _instanceManager;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IFileDownloader _fileDownloader;
     private readonly ILogger<MrpackImporter> _logger;
 
     public MrpackImporter(
         IInstanceManager instanceManager,
         IHttpClientFactory httpClientFactory,
-        ILogger<MrpackImporter> logger)
+        ILogger<MrpackImporter> logger,
+        IFileDownloader? fileDownloader = null)
     {
         _instanceManager = instanceManager;
         _httpClientFactory = httpClientFactory;
+        _fileDownloader = fileDownloader ?? new FileDownloader(httpClientFactory);
         _logger = logger;
     }
 
@@ -108,7 +112,6 @@ public sealed class MrpackImporter : IMrpackImporter
                               string.Equals(f.Env.Client, "unsupported", StringComparison.OrdinalIgnoreCase)))
                 .ToList();
 
-            var client = _httpClientFactory.CreateClient(DownloadClientName);
             var downloadedFiles = new List<MrpackFile>();
 
             // ponytail: sequential file downloads using primary mirror; upgrade to concurrent downloads and mirror failover if large packs need acceleration
@@ -130,13 +133,12 @@ public sealed class MrpackImporter : IMrpackImporter
                     Directory.CreateDirectory(targetDir);
                 }
 
-                using (var response = await client.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead, ct))
-                {
-                    response.EnsureSuccessStatusCode();
-                    await using var responseStream = await response.Content.ReadAsStreamAsync(ct);
-                    await using var fileStream = new FileStream(partialPath, FileMode.Create, FileAccess.Write, FileShare.None);
-                    await responseStream.CopyToAsync(fileStream, ct);
-                }
+                await _fileDownloader.DownloadFileAsync(
+                    downloadUrl,
+                    partialPath,
+                    new FileDownloadOptions { HttpClientName = DownloadClientName },
+                    progress: null,
+                    ct);
 
                 if (!string.IsNullOrWhiteSpace(file.Hashes?.Sha512))
                 {

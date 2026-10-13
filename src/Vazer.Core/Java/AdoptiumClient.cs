@@ -4,6 +4,7 @@ using System.Threading;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Vazer.Core.Abstractions;
+using Vazer.Core.Http;
 
 namespace Vazer.Core.Java;
 
@@ -16,15 +17,18 @@ public sealed class AdoptiumClient : IAdoptiumClient
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<AdoptiumClient> _logger;
     private readonly MinecraftOptions _options;
+    private readonly IFileDownloader _fileDownloader;
 
     public AdoptiumClient(
         IHttpClientFactory httpClientFactory,
         ILogger<AdoptiumClient> logger,
-        IOptions<MinecraftOptions> options)
+        IOptions<MinecraftOptions> options,
+        IFileDownloader? fileDownloader = null)
     {
         _httpClientFactory = httpClientFactory;
         _logger = logger;
         _options = options.Value;
+        _fileDownloader = fileDownloader ?? new FileDownloader(httpClientFactory);
     }
 
     /// <inheritdoc />
@@ -82,44 +86,16 @@ public sealed class AdoptiumClient : IAdoptiumClient
     /// <inheritdoc />
     public async Task DownloadFileAsync(string url, string destination, IProgress<InstallProgress>? progress, CancellationToken ct = default)
     {
-        using var client = _httpClientFactory.CreateClient();
-        client.Timeout = TimeSpan.FromMinutes(10);
-
-        using var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
-        response.EnsureSuccessStatusCode();
-
-        var totalBytes = response.Content.Headers.ContentLength ?? -1;
-        var downloaded = 0L;
-        var lastReport = DateTime.UtcNow;
-
-        using var stream = await response.Content.ReadAsStreamAsync(ct);
-        using var fileStream = File.Create(destination);
-
-        var buffer = new byte[81920];
-        int bytesRead;
-        while ((bytesRead = await stream.ReadAsync(buffer, ct)) > 0)
-        {
-            await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), ct);
-            downloaded += bytesRead;
-
-            var now = DateTime.UtcNow;
-            if (progress != null && (downloaded % (1024 * 1024) == 0 || (now - lastReport).TotalMilliseconds >= 500))
+        await _fileDownloader.DownloadFileAsync(
+            url,
+            destination,
+            new FileDownloadOptions
             {
-                progress.Report(new InstallProgress
-                {
-                    TotalBytes = totalBytes,
-                    DownloadedBytes = downloaded,
-                    Status = "downloading"
-                });
-                lastReport = now;
-            }
-        }
-
-        progress?.Report(new InstallProgress
-        {
-            TotalBytes = totalBytes,
-            DownloadedBytes = downloaded,
-            Status = "verifying"
-        });
+                Timeout = TimeSpan.FromMinutes(10),
+                StatusMessage = "downloading",
+                CompletionStatus = "verifying"
+            },
+            progress,
+            ct);
     }
 }

@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Vazer.Core.Abstractions;
+using Vazer.Core.Http;
 using Vazer.Core.Modrinth;
 using Vazer.Core.Mods;
 
@@ -16,6 +17,7 @@ public class OptifineInstallerService : IOptifineInstallerService
     private readonly IOptions<MinecraftOptions> _options;
     private readonly ILogger<OptifineInstallerService> _logger;
     private readonly IModrinthClient? _modrinthClient;
+    private readonly IFileDownloader _fileDownloader;
 
     private readonly ConcurrentDictionary<string, (DateTimeOffset CachedAt, OptifineCatalog Catalog)> _cache =
         new(StringComparer.OrdinalIgnoreCase);
@@ -31,12 +33,14 @@ public class OptifineInstallerService : IOptifineInstallerService
         IHttpClientFactory httpClientFactory,
         IOptions<MinecraftOptions> options,
         ILogger<OptifineInstallerService> logger,
-        IModrinthClient? modrinthClient = null)
+        IModrinthClient? modrinthClient = null,
+        IFileDownloader? fileDownloader = null)
     {
         _httpClientFactory = httpClientFactory;
         _options = options;
         _logger = logger;
         _modrinthClient = modrinthClient;
+        _fileDownloader = fileDownloader ?? new FileDownloader(httpClientFactory);
     }
 
     private TimeSpan CacheTtl => TimeSpan.FromMinutes(Math.Max(1, _options.Value.OptifineCatalogCacheTtlMinutes));
@@ -348,36 +352,24 @@ public class OptifineInstallerService : IOptifineInstallerService
 
         try
         {
-            using var downloadRequest = new HttpRequestMessage(HttpMethod.Get, downloadUrl);
-            downloadRequest.Headers.Referrer = new Uri("https://optifine.net/downloads");
-            if (!string.IsNullOrWhiteSpace(_options.Value.OptifineUserAgent))
-            {
-                downloadRequest.Headers.TryAddWithoutValidation("User-Agent", _options.Value.OptifineUserAgent);
-            }
-
-            using var downloadResponse = await client.SendAsync(downloadRequest, HttpCompletionOption.ResponseHeadersRead, ct);
-            downloadResponse.EnsureSuccessStatusCode();
-
-            var totalBytes = downloadResponse.Content.Headers.ContentLength ?? 0;
-            long downloaded = 0;
-
-            await using (var responseStream = await downloadResponse.Content.ReadAsStreamAsync(ct))
-            await using (var fileStream = new FileStream(partialPath, FileMode.Create, FileAccess.Write, FileShare.None))
-            {
-                var buffer = new byte[81920];
-                int bytesRead;
-                while ((bytesRead = await responseStream.ReadAsync(buffer.AsMemory(0, buffer.Length), ct)) > 0)
+            await _fileDownloader.DownloadFileAsync(
+                downloadUrl,
+                partialPath,
+                new FileDownloadOptions
                 {
-                    await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), ct);
-                    downloaded += bytesRead;
-                    progress?.Report(new InstallProgress
+                    HttpClientName = "optifine",
+                    StatusMessage = $"Downloading {filename}",
+                    ConfigureRequest = downloadRequest =>
                     {
-                        TotalBytes = totalBytes > 0 ? totalBytes : downloaded,
-                        DownloadedBytes = downloaded,
-                        Status = $"Downloading {filename}"
-                    });
-                }
-            }
+                        downloadRequest.Headers.Referrer = new Uri("https://optifine.net/downloads");
+                        if (!string.IsNullOrWhiteSpace(_options.Value.OptifineUserAgent))
+                        {
+                            downloadRequest.Headers.TryAddWithoutValidation("User-Agent", _options.Value.OptifineUserAgent);
+                        }
+                    }
+                },
+                progress,
+                ct);
 
             var fileInfo = new FileInfo(partialPath);
             if (!fileInfo.Exists || fileInfo.Length <= 102400)

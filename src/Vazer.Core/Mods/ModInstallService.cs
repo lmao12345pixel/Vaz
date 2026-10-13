@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Vazer.Core.Abstractions;
+using Vazer.Core.Http;
 using Vazer.Core.Modrinth;
 
 namespace Vazer.Core.Mods;
@@ -11,6 +12,7 @@ public class ModInstallService : IModInstallService
 {
     private readonly IInstanceManager _instanceManager;
     private readonly IModrinthClient _modrinthClient;
+    private readonly IFileDownloader _fileDownloader;
     private readonly IOptions<MinecraftOptions> _options;
     private readonly ILogger<ModInstallService> _logger;
 
@@ -25,10 +27,12 @@ public class ModInstallService : IModInstallService
         IInstanceManager instanceManager,
         IModrinthClient modrinthClient,
         IOptions<MinecraftOptions> options,
-        ILogger<ModInstallService> logger)
+        ILogger<ModInstallService> logger,
+        IFileDownloader? fileDownloader = null)
     {
         _instanceManager = instanceManager;
         _modrinthClient = modrinthClient;
+        _fileDownloader = fileDownloader ?? new FileDownloader();
         _options = options;
         _logger = logger;
     }
@@ -157,22 +161,14 @@ public class ModInstallService : IModInstallService
         var finalPath = Path.Combine(modsDir, targetFilename);
 
         await using (var downloadStream = await _modrinthClient.DownloadAsync(file.Url, ct))
-        await using (var fileStream = new FileStream(partialPath, FileMode.Create, FileAccess.Write, FileShare.None))
         {
-            var buffer = new byte[81920];
-            int bytesRead;
-            long downloaded = 0;
-            while ((bytesRead = await downloadStream.ReadAsync(buffer, 0, buffer.Length, ct)) > 0)
-            {
-                await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), ct);
-                downloaded += bytesRead;
-                progress?.Report(new InstallProgress
-                {
-                    TotalBytes = file.Size > 0 ? file.Size : downloaded,
-                    DownloadedBytes = downloaded,
-                    Status = $"Downloading {file.Filename}"
-                });
-            }
+            await _fileDownloader.CopyStreamAsync(
+                downloadStream,
+                partialPath,
+                file.Size > 0 ? file.Size : null,
+                $"Downloading {file.Filename}",
+                progress,
+                ct);
         }
 
         if (!string.IsNullOrWhiteSpace(file.Hashes?.Sha512))

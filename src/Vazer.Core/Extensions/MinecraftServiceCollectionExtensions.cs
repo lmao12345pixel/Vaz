@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Vazer.Core.Abstractions;
 using Vazer.Core.Auth;
+using Vazer.Core.Http;
 using Vazer.Core.Instances;
 using Vazer.Core.Java;
 using Vazer.Core.Launch;
@@ -74,6 +75,9 @@ public static class MinecraftServiceCollectionExtensions
         {
             AllowAutoRedirect = false
         });
+
+        // Item 4: downloader dùng chung (gom 4 chỗ download trùng lặp).
+        services.AddSingleton<IFileDownloader, FileDownloader>();
 
         // Core services
         services.AddSingleton<IAccountStore, AccountStore>();
