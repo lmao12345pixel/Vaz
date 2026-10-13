@@ -306,6 +306,178 @@ public sealed class MrpackImporterTests : IDisposable
         _instanceManagerMock.Verify(m => m.DeleteAsync("inst-dl-fail", true, CancellationToken.None), Times.Once);
     }
 
+    [Fact]
+    public async Task Import_EnvServerRequiredClientUnsupported_FileSkipped()
+    {
+        var instanceDir = Path.Combine(_tempRoot, "instances", "EnvSkipInst");
+        Directory.CreateDirectory(instanceDir);
+
+        var instance = new MinecraftInstance
+        {
+            Id = "inst-env-skip",
+            Name = "EnvSkipInst",
+            MinecraftVersion = "1.21.1",
+            LoaderType = "fabric",
+            Path = instanceDir,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        _instanceManagerMock
+            .Setup(m => m.CreateFabricAsync("EnvSkipInst", "1.21.1", "0.15.11", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(instance);
+
+        var skippedBytes = "skipped-content"u8.ToArray();
+        var keptBytes = "kept-content"u8.ToArray();
+        var keptSha = Convert.ToHexString(SHA512.HashData(keptBytes));
+
+        _http.Map(HttpMethod.Get, "/download/skipped.jar", _ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(skippedBytes)
+        });
+        _http.Map(HttpMethod.Get, "/download/kept.jar", _ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(keptBytes)
+        });
+
+        var packPath = CreateMrpack(
+            files: new List<MrpackFile>
+            {
+                new()
+                {
+                    Path = "mods/skipped.jar",
+                    Downloads = new List<string> { "https://cdn.modrinth.com/download/skipped.jar" },
+                    Env = new MrpackEnv { Client = "unsupported", Server = "required" }
+                },
+                new()
+                {
+                    Path = "mods/kept.jar",
+                    Downloads = new List<string> { "https://cdn.modrinth.com/download/kept.jar" },
+                    Hashes = new FileHashes { Sha512 = keptSha },
+                    FileSize = keptBytes.Length
+                }
+            });
+
+        await _importer.ImportAsync(packPath, "EnvSkipInst");
+
+        File.Exists(Path.Combine(instanceDir, "mods", "skipped.jar")).Should().BeFalse();
+        File.Exists(Path.Combine(instanceDir, "mods", "kept.jar")).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Import_Sha512Mismatch_ThrowsAndRollsBack()
+    {
+        var instanceDir = Path.Combine(_tempRoot, "instances", "ShaMismatchInst");
+        Directory.CreateDirectory(instanceDir);
+
+        var instance = new MinecraftInstance
+        {
+            Id = "inst-sha-mismatch",
+            Name = "ShaMismatchInst",
+            MinecraftVersion = "1.21.1",
+            LoaderType = "fabric",
+            Path = instanceDir,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        _instanceManagerMock
+            .Setup(m => m.CreateFabricAsync("ShaMismatchInst", "1.21.1", "0.15.11", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(instance);
+
+        var wrongBytes = "wrong-content"u8.ToArray();
+        var expectedSha = Convert.ToHexString(SHA512.HashData("expected-content"u8.ToArray()));
+
+        _http.Map(HttpMethod.Get, "/download/bad.jar", _ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(wrongBytes)
+        });
+
+        var packPath = CreateMrpack(
+            files: new List<MrpackFile>
+            {
+                new()
+                {
+                    Path = "mods/bad.jar",
+                    Downloads = new List<string> { "https://cdn.modrinth.com/download/bad.jar" },
+                    Hashes = new FileHashes { Sha512 = expectedSha },
+                    FileSize = wrongBytes.Length
+                }
+            });
+
+        var act = () => _importer.ImportAsync(packPath, "ShaMismatchInst");
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+
+        _instanceManagerMock.Verify(m => m.DeleteAsync("inst-sha-mismatch", true, CancellationToken.None), Times.Once);
+    }
+
+    [Fact]
+    public async Task Import_NeoforgeDependencies_MapsToNeoForgeInstance()
+    {
+        var instanceDir = Path.Combine(_tempRoot, "instances", "NeoInst");
+        Directory.CreateDirectory(instanceDir);
+
+        var instance = new MinecraftInstance
+        {
+            Id = "inst-neo",
+            Name = "NeoInst",
+            MinecraftVersion = "1.21.1",
+            LoaderType = "neoforge",
+            LoaderVersion = "21.1.0",
+            Path = instanceDir,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        _instanceManagerMock
+            .Setup(m => m.CreateNeoForgeAsync("NeoInst", "1.21.1", "21.1.0", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(instance);
+
+        var packPath = CreateMrpack(
+            dependencies: new Dictionary<string, string>
+            {
+                ["minecraft"] = "1.21.1",
+                ["neoforge"] = "21.1.0"
+            });
+
+        var act = () => _importer.ImportAsync(packPath, "NeoInst");
+
+        await act.Should().NotThrowAsync();
+
+        _instanceManagerMock.Verify(m => m.CreateNeoForgeAsync("NeoInst", "1.21.1", "21.1.0", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Import_NoLoaderKey_CreatesVanillaInstance()
+    {
+        var instanceDir = Path.Combine(_tempRoot, "instances", "VanillaInst");
+        Directory.CreateDirectory(instanceDir);
+
+        var instance = new MinecraftInstance
+        {
+            Id = "inst-vanilla",
+            Name = "VanillaInst",
+            MinecraftVersion = "1.21.1",
+            LoaderType = "vanilla",
+            Path = instanceDir,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        _instanceManagerMock
+            .Setup(m => m.CreateVanillaAsync("VanillaInst", "1.21.1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(instance);
+
+        var packPath = CreateMrpack(
+            dependencies: new Dictionary<string, string>
+            {
+                ["minecraft"] = "1.21.1"
+            });
+
+        var act = () => _importer.ImportAsync(packPath, "VanillaInst");
+
+        await act.Should().NotThrowAsync();
+
+        _instanceManagerMock.Verify(m => m.CreateVanillaAsync("VanillaInst", "1.21.1", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     private string CreateMrpack(
         string name = "Test Pack",
         int formatVersion = 1,

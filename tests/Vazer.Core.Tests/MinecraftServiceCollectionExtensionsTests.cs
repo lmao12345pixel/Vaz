@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using System.Net.Http;
 using Vazer.Core;
 using Vazer.Core.Abstractions;
 using Vazer.Core.Auth;
@@ -9,6 +10,7 @@ using Vazer.Core.Http;
 using Vazer.Core.Instances;
 using Vazer.Core.Java;
 using Vazer.Core.Launch;
+using Vazer.Core.Loaders.Optifine;
 using Vazer.Core.Modpacks;
 using Vazer.Core.Modrinth;
 using Vazer.Core.Mods;
@@ -108,5 +110,34 @@ public sealed class MinecraftServiceCollectionExtensionsTests : IDisposable
         });
 
         Assert.Throws<OptionsValidationException>(() => sp.GetRequiredService<IOptions<MinecraftOptions>>().Value);
+    }
+
+    [Fact]
+    public void AddMinecraftLauncher_ResolvesPhase2ServicesAndNamedClients()
+    {
+        using var sp = Build(o =>
+        {
+            o.RootPath = _tempRoot;
+            o.OfflineDemoMode = true;
+            // MsalAuthProvider ctor throw khi thieu client-id, nen dat gia tri gia
+            // de resolve duoc toan bo graph.
+            o.MsalClientId = "test-client-id";
+        });
+
+        sp.GetService<IModrinthClient>().Should().NotBeNull();
+        sp.GetService<IModInstallService>().Should().NotBeNull();
+        sp.GetService<IMrpackImporter>().Should().NotBeNull();
+        sp.GetService<IOptifineInstallerService>().Should().NotBeNull();
+
+        var factory = sp.GetRequiredService<IHttpClientFactory>();
+
+        using var api = factory.CreateClient("modrinth-api");
+        api.Timeout.Should().Be(TimeSpan.FromSeconds(30));
+
+        using var download = factory.CreateClient("modrinth-download");
+        download.Timeout.Should().Be(TimeSpan.FromSeconds(300));
+
+        using var optifine = factory.CreateClient("optifine");
+        optifine.Timeout.Should().Be(TimeSpan.FromSeconds(60));
     }
 }
