@@ -396,7 +396,7 @@ public class OptifineInstallerService : IOptifineInstallerService
         {
             if (File.Exists(partialPath))
             {
-                try { File.Delete(partialPath); } catch { }
+                try { File.Delete(partialPath); } catch (Exception ex) { _logger.LogDebug(ex, "Khong xoa duoc file partial '{Path}'", partialPath); }
             }
             throw;
         }

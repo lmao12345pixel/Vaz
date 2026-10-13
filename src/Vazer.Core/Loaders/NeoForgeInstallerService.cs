@@ -186,7 +186,10 @@ public sealed class NeoForgeInstallerService : INeoForgeInstallerService
                 var candidate = Path.Combine(dir.Trim(), "java.exe");
                 if (File.Exists(candidate)) return candidate;
             }
-            catch { }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Bo qua loi khi quet java.exe trong PATH dir");
+            }
         }
 
         throw new InvalidOperationException(

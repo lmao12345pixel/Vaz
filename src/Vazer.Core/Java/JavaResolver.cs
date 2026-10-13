@@ -83,10 +83,12 @@ public sealed class JavaResolver : IJavaResolver
                     }
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Bo qua loi khi quet Java trong PATH dir '{Dir}'", pathDir);
+            }
         }
 
-        // 3. Check common install locations
         var commonPaths = new[]
         {
             Environment.ExpandEnvironmentVariables(@"%ProgramFiles%\Eclipse Adoptium"),
@@ -185,7 +187,7 @@ public sealed class JavaResolver : IJavaResolver
         catch
         {
             // Corrupt archive must not leave a .tmp dir behind.
-            try { Directory.Delete(extractDir, true); } catch { }
+            try { Directory.Delete(extractDir, true); } catch (Exception ex) { _logger.LogDebug(ex, "Khong don duoc thu muc tam '{Dir}'", extractDir); }
             throw;
         }
 

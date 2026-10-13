@@ -184,7 +184,7 @@ public sealed class MrpackImporter : IMrpackImporter
         {
             if (createdInstance != null)
             {
-                await _instanceManager.DeleteAsync(createdInstance.Id, deleteFiles: true, CancellationToken.None);
+                await _instanceManager.DeleteAsync(createdInstance.Id, deleteFiles: true, ct);
             }
             throw;
         }

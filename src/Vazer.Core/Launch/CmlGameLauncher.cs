@@ -36,7 +36,9 @@ internal sealed class CmlProcessHandle : IProcessHandle
         }
         catch (OperationCanceledException)
         {
-            // Ignore cancellation, process might still be running
+            // Caller huy wait nhung process co the van dang chay: tra -1 theo hop dong
+            // (HasExited=false). Khong log duoc: handle nay khong giu ILogger de tranh
+            // phu thuoc thua trong lop wrapper mong.
         }
         return _process.HasExited ? _process.ExitCode : -1;
     }
