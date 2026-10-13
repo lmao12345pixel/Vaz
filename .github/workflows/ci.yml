@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+          dotnet-quality: ga
+
+      - name: Restore
+        run: dotnet restore Vaz.sln
+
+      - name: Build (Debug)
+        run: dotnet build Vaz.sln -c Debug --no-restore --nologo
+
+      - name: Test
+        run: dotnet test Vaz.sln -c Debug --no-build --nologo --logger "trx;LogFileName=results.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: '**/TestResults/*.trx'
+          if-no-files-found: warn
+
+      # Chong mat test am tham (hoc theo UltraPcOptimizer).
+      #
+      # Buoc nay doc truc tiep so lieu trong .trx (khong parse log console)
+      # va chan khi tong so test xuong duoi nguong.
+      #
+      # MIN_TESTS la SAN, khong phai so chinh xac: them test moi thi tong
+      # tang len va van xanh; chi khi test bi XOA/SKIP moi lam giam va fail
+      # o day. Khi muon chot so chinh xac, doi thanh -eq.
+      - name: Verify test count
+        shell: pwsh
+        env:
+          MIN_TESTS: '119'
+        run: |
+          $trx = Get-ChildItem -Path tests -Recurse -Filter '*.trx' -ErrorAction SilentlyContinue
+          if (-not $trx) {
+            Write-Host "::error::Khong tim thay file .trx - co that step Test khong?"
+            exit 1
+          }
+
+          $total = 0
+          $failed = 0
+          foreach ($f in $trx) {
+            [xml]$x = Get-Content $f.FullName -Raw
+            $c = $x.TestRun.ResultSummary.Counters
+            $total  += [int]$c.total
+            $failed += [int]$c.failed
+            Write-Host ("{0}: total={1} passed={2} failed={3}" -f $f.Name, $c.total, $c.passed, $c.failed)
+          }
+
+          $min = [int]$env:MIN_TESTS
+
+          if ($failed -gt 0) {
+            Write-Host "::error::$failed test bi fail"
+            exit 1
+          }
+          if ($total -lt $min) {
+            Write-Host "::error::Chi con $total test, can it nhat $min. Co test bi xoa/skip khong?"
+            exit 1
+          }
+          if ($total -gt $min) {
+            Write-Host "::warning::Tong $total test (vuot nguong $min) - nho cap nhat MIN_TESTS neu muon chot so chinh xac"
+          }
+
+          Write-Host "Test count OK: $total >= $min"
