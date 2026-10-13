@@ -745,8 +745,8 @@ public sealed class ModInstallServiceTests : IDisposable
         };
         await WriteManifestAsync(manifest);
 
-        SetupUpdatePair("m1", "v2", contentNew1, shaNew1);
-        SetupUpdatePair("m3", "v2", contentNew3, shaNew3);
+        SetupUpdatePair("m1", "v2-m1", contentNew1, shaNew1);
+        SetupUpdatePair("m3", "v2-m3", contentNew3, shaNew3);
 
         // mod2: có version mới nhưng download fail
         var proj2 = CreateProject("m2", "m2", "M2");
@@ -766,9 +766,9 @@ public sealed class ModInstallServiceTests : IDisposable
         updated.Should().Be(2);
         var after = await ReadManifestAsync();
         after.Mods.Should().HaveCount(3);
-        after.Mods.First(m => m.ProjectId == "m1").VersionId.Should().Be("v2");
+        after.Mods.First(m => m.ProjectId == "m1").VersionId.Should().Be("v2-m1");
         after.Mods.First(m => m.ProjectId == "m2").VersionId.Should().Be("v1");
-        after.Mods.First(m => m.ProjectId == "m3").VersionId.Should().Be("v2");
+        after.Mods.First(m => m.ProjectId == "m3").VersionId.Should().Be("v2-m3");
     }
 
     [Fact]
@@ -809,6 +809,42 @@ public sealed class ModInstallServiceTests : IDisposable
         File.Exists(Path.Combine(_instanceDir, "mods", "modG.jar")).Should().BeFalse();
     }
 
+    [Fact]
+    public async Task InstallFromModrinthAsync_MismatchedVersionId_Throws()
+    {
+        var sodiumProj = CreateProject("sodium-id", "sodium", "Sodium");
+        var irisVer = CreateVersion("v-iris", "iris-id", "1.0", "release", "iris-1.0.jar", new byte[] { 9 });
+
+        _modrinthMock.Setup(m => m.GetProjectAsync("sodium", It.IsAny<CancellationToken>())).ReturnsAsync(sodiumProj);
+        _modrinthMock.Setup(m => m.GetVersionAsync("v-iris", It.IsAny<CancellationToken>())).ReturnsAsync(irisVer);
+
+        var act = () => _service.InstallFromModrinthAsync("test-inst", "sodium", versionId: "v-iris");
+
+        var ex = await act.Should().ThrowAsync<InvalidOperationException>();
+        ex.Which.Message.Should().Contain("belongs to project iris-id");
+        _modrinthMock.Verify(m => m.DownloadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        File.Exists(Path.Combine(_instanceDir, "mods", "iris-1.0.jar")).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task InstallFromModrinthAsync_MatchingVersionId_Succeeds()
+    {
+        var content = new byte[] { 7, 7 };
+        var sha = ComputeSha512Hex(content);
+        var sodiumProj = CreateProject("sodium-id", "sodium", "Sodium");
+        var ver = CreateVersion("v1", "sodium-id", "1.0", "release", "sodium-1.0.jar", content, sha);
+
+        _modrinthMock.Setup(m => m.GetProjectAsync("sodium", It.IsAny<CancellationToken>())).ReturnsAsync(sodiumProj);
+        _modrinthMock.Setup(m => m.GetVersionAsync("v1", It.IsAny<CancellationToken>())).ReturnsAsync(ver);
+        _modrinthMock.Setup(m => m.DownloadAsync(ver.Files[0].Url, It.IsAny<CancellationToken>())).Returns(() => Task.FromResult<Stream>(new MemoryStream(content)));
+
+        var result = await _service.InstallFromModrinthAsync("test-inst", "sodium", versionId: "v1");
+
+        result.Success.Should().BeTrue();
+        var manifest = await ReadManifestAsync();
+        manifest.Mods.Should().HaveCount(1);
+        manifest.Mods[0].VersionId.Should().Be("v1");
+    }
     private void SetupUpdatePair(string projectId, string newVersionId, byte[] newContent, string newSha)
     {
         var proj = CreateProject(projectId, projectId, projectId);

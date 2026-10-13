@@ -80,6 +80,12 @@ public class ModInstallService : IModInstallService
         {
             version = await _modrinthClient.GetVersionAsync(versionId, ct)
                 ?? throw new InvalidOperationException($"Version not found: {versionId}");
+            if (!string.Equals(version.ProjectId, project.Id, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"Version {versionId} belongs to project {version.ProjectId}, " +
+                    $"not {project.Id} ({projectSlug}). Refusing to install.");
+            }
         }
         else
         {
