@@ -81,8 +81,9 @@ public sealed record LaunchResult
 
 /// <summary>
 /// Wrapper cho Process để abstract khỏi System.Diagnostics.Process.
+/// Dispose để giải phóng handle hệ điều hành (không kill process).
 /// </summary>
-public interface IProcessHandle
+public interface IProcessHandle : IDisposable
 {
     /// <summary>
     /// Process ID.

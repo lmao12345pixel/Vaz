@@ -15,6 +15,7 @@ namespace Vazer.Core.Launch;
 internal sealed class CmlProcessHandle : IProcessHandle
 {
     private readonly Process _process;
+    private bool _disposed;
 
     public CmlProcessHandle(Process process)
     {
@@ -46,6 +47,20 @@ internal sealed class CmlProcessHandle : IProcessHandle
         {
             _process.Kill(true);
         }
+    }
+
+    /// <summary>
+    /// Giải phóng Process handle. Không kill process đang chạy -
+    /// gọi <see cref="Kill"/> trước nếu muốn dừng game.
+    /// </summary>
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+        _disposed = true;
+        _process.Dispose();
     }
 }
 

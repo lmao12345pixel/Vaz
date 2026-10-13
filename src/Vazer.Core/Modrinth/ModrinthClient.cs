@@ -68,9 +68,15 @@ public sealed class ModrinthClient : IModrinthClient
     {
         var client = _httpClientFactory.CreateClient(DownloadClientName);
         client.DefaultRequestHeaders.UserAgent.ParseAdd(_options.ModrinthUserAgent);
-        var response = await client.GetAsync(fileUrl, HttpCompletionOption.ResponseHeadersRead, ct);
+        // Buffer vào MemoryStream để response được dispose ngay tại đây.
+        // Stream mạng trả thẳng ra ngoài sẽ giữ HttpResponseMessage sống theo,
+        // caller không có cách nào dispose response đó.
+        using var response = await client.GetAsync(fileUrl, HttpCompletionOption.ResponseHeadersRead, ct);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadAsStreamAsync(ct);
+        var buffered = new MemoryStream();
+        await response.Content.CopyToAsync(buffered, ct);
+        buffered.Position = 0;
+        return buffered;
     }
 
     private async Task<T> GetCachedAsync<T>(string url, CancellationToken ct)
@@ -92,7 +98,7 @@ public sealed class ModrinthClient : IModrinthClient
             var client = _httpClientFactory.CreateClient(ApiClientName);
             client.DefaultRequestHeaders.UserAgent.ParseAdd(_options.ModrinthUserAgent);
 
-            var response = await client.GetAsync(url, ct);
+            using var response = await client.GetAsync(url, ct);
 
             if (response.StatusCode == HttpStatusCode.TooManyRequests)
             {
