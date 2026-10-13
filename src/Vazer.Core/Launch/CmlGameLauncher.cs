@@ -90,22 +90,27 @@ public sealed class CmlGameLauncher : IGameLauncher
     {
         _logger.LogInformation("Launching instance {InstanceId} with account {Account}", parameters.InstanceId, parameters.Account.DisplayName);
 
-        // Ensure Java is available
-        var java = parameters.Java;
-        var requiredMajor = _javaResolver.RequiredJava("1.21.1");
-
-        if (java.MajorVersion < requiredMajor)
-        {
-            _logger.LogInformation("Java {Current} < required {Required}, auto-downloading", java.MajorVersion, requiredMajor);
-            java = await _javaResolver.EnsureAsync(requiredMajor, null, ct);
-            _logger.LogInformation("Auto-downloaded Java {Major} from Adoptium", java.MajorVersion);
-        }
-
-        // Get version
+        // Get version trước để biết Minecraft version thật của instance -
+        // RequiredJava phải theo version này, không hard-code "1.21.1".
         var version = await _launcher.GetVersionAsync(parameters.InstanceId, ct);
         if (version == null)
         {
             throw new InvalidOperationException($"Version not found for instance {parameters.InstanceId}");
+        }
+
+        var mcVersion = string.IsNullOrEmpty(parameters.MinecraftVersion)
+            ? version.Id
+            : parameters.MinecraftVersion;
+
+        // Ensure Java is available
+        var java = parameters.Java;
+        var requiredMajor = _javaResolver.RequiredJava(mcVersion);
+
+        if (java.MajorVersion < requiredMajor)
+        {
+            _logger.LogInformation("Java {Current} < required {Required} for MC {Mc}, auto-downloading", java.MajorVersion, requiredMajor, mcVersion);
+            java = await _javaResolver.EnsureAsync(requiredMajor, null, ct);
+            _logger.LogInformation("Auto-downloaded Java {Major} from Adoptium", java.MajorVersion);
         }
 
         // Build launch parameters - use MLaunchOption with correct properties for CmlLib.Core 4.0.6

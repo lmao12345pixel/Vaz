@@ -58,6 +58,12 @@ public sealed record LaunchParameters
     public bool Fullscreen { get; init; } = false;
 
     /// <summary>
+    /// Minecraft version của instance (ví dụ: "1.20.1"). Dùng để chọn Java runtime
+    /// phù hợp. Nếu null, launcher tự suy ra từ metadata version đã resolve.
+    /// </summary>
+    public string? MinecraftVersion { get; init; }
+
+    /// <summary>
     /// Custom main class (cho mod loader đặc biệt).
     /// </summary>
     public string? MainClass { get; init; }
