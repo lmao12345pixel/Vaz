@@ -178,6 +178,23 @@ public sealed class OptifineInstallerTests : IDisposable
     }
 
     [Fact]
+    public async Task InstallFromCatalog_UnknownVersion_ThrowsOptifineVersionNotFoundException()
+    {
+        _http.Map(HttpMethod.Get, "/downloads", _ =>
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(CatalogHtmlFixture, Encoding.UTF8, "text/html")
+            });
+
+        var svc = CreateService();
+        var instance = CreateInstance();
+
+        var act = () => svc.InstallFromCatalogAsync(instance, "HD U Z99");
+
+        await act.Should().ThrowAsync<OptifineVersionNotFoundException>();
+    }
+
+    [Fact]
     public async Task DownloadCatalog_ValidChain_SavesJarToMods()
     {
         _http.Map(HttpMethod.Get, "/downloads", _ =>

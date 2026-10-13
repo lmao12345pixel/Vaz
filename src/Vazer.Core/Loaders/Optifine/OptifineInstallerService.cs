@@ -83,7 +83,7 @@ public class OptifineInstallerService : IOptifineInstallerService
         var release = catalog.Releases.FirstOrDefault(r =>
             string.Equals(r.Version, optifineVersion, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(r.Filename, optifineVersion, StringComparison.OrdinalIgnoreCase))
-            ?? throw new InvalidOperationException($"OptiFine version '{optifineVersion}' not found for Minecraft {instance.MinecraftVersion}.");
+            ?? throw new OptifineVersionNotFoundException($"OptiFine version '{optifineVersion}' not found for Minecraft {instance.MinecraftVersion}.");
 
         return await DownloadAndInstallAsync(
             instance,
