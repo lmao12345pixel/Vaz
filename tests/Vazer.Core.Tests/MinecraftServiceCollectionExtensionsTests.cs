@@ -1,0 +1,112 @@
+using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Vazer.Core;
+using Vazer.Core.Abstractions;
+using Vazer.Core.Auth;
+using Vazer.Core.Extensions;
+using Vazer.Core.Http;
+using Vazer.Core.Instances;
+using Vazer.Core.Java;
+using Vazer.Core.Launch;
+using Vazer.Core.Modpacks;
+using Vazer.Core.Modrinth;
+using Vazer.Core.Mods;
+
+namespace Vazer.Core.Tests;
+
+/// <summary>
+/// Item 5: DI wiring - AddMinecraftLauncher dang ky du service, options validate dung.
+/// </summary>
+public sealed class MinecraftServiceCollectionExtensionsTests : IDisposable
+{
+    private readonly string _tempRoot;
+
+    public MinecraftServiceCollectionExtensionsTests()
+    {
+        _tempRoot = Path.Combine(Path.GetTempPath(), "vaz-di-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(_tempRoot);
+    }
+
+    public void Dispose()
+    {
+        try { Directory.Delete(_tempRoot, true); } catch { }
+    }
+
+    private static ServiceProvider Build(Action<MinecraftOptions>? configure = null)
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddMinecraftLauncher(configure ?? (o =>
+        {
+            o.OfflineDemoMode = true;
+        }));
+        return services.BuildServiceProvider();
+    }
+
+    [Fact]
+    public void AddMinecraftLauncher_ResolvesCoreServices()
+    {
+        using var sp = Build(o =>
+        {
+            o.RootPath = _tempRoot;
+            o.OfflineDemoMode = true;
+            // MsalAuthProvider ctor throw khi thieu client-id, nen dat gia tri gia
+            // de resolve duoc toan bo graph (path offline that van dung OfflineAuthProvider).
+            o.MsalClientId = "test-client-id";
+        });
+
+        sp.GetService<IFileDownloader>().Should().NotBeNull();
+        sp.GetService<IAccountStore>().Should().NotBeNull();
+        sp.GetService<CompositeAuthProvider>().Should().NotBeNull();
+        sp.GetService<IAdoptiumClient>().Should().NotBeNull();
+        sp.GetService<IJavaResolver>().Should().NotBeNull();
+        sp.GetService<IInstanceManager>().Should().NotBeNull();
+        sp.GetService<IGameLauncher>().Should().NotBeNull();
+        sp.GetService<IModrinthClient>().Should().NotBeNull();
+        sp.GetService<IModInstallService>().Should().NotBeNull();
+        sp.GetService<IMrpackImporter>().Should().NotBeNull();
+    }
+
+    [Fact]
+    public void AddMinecraftLauncher_ResolvesMultipleAuthProviders()
+    {
+        using var sp = Build(o =>
+        {
+            o.RootPath = _tempRoot;
+            o.OfflineDemoMode = true;
+            o.MsalClientId = "test-client-id";
+        });
+
+        var providers = sp.GetServices<IAuthProvider>().ToList();
+        providers.Should().Contain(p => p.Kind == AccountKind.Offline);
+        providers.Should().Contain(p => p.Kind == AccountKind.Microsoft);
+    }
+
+    [Fact]
+    public void AddMinecraftLauncher_OfflineDemo_AllowsEmptyClientId()
+    {
+        using var sp = Build(o =>
+        {
+            o.RootPath = _tempRoot;
+            o.OfflineDemoMode = true;
+            o.MsalClientId = "";
+        });
+
+        var options = sp.GetRequiredService<IOptions<MinecraftOptions>>().Value;
+        options.OfflineDemoMode.Should().BeTrue();
+    }
+
+    [Fact]
+    public void AddMinecraftLauncher_OnlineWithoutClientId_FailsValidation()
+    {
+        using var sp = Build(o =>
+        {
+            o.RootPath = _tempRoot;
+            o.OfflineDemoMode = false;
+            o.MsalClientId = "";
+        });
+
+        Assert.Throws<OptionsValidationException>(() => sp.GetRequiredService<IOptions<MinecraftOptions>>().Value);
+    }
+}
