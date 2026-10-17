@@ -1,0 +1,62 @@
+<ContentDialog
+    x:Class="Vaz.WinUI.Views.ProjectDetailDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    PrimaryButtonText="Cài đặt"
+    CloseButtonText="Đóng"
+    PrimaryButtonClick="Install_Click"
+    MaxWidth="720">
+
+    <StackPanel Spacing="8" MaxWidth="700">
+        <!-- Header -->
+        <Grid ColumnDefinitions="48,*,Auto" ColumnSpacing="12">
+            <Image
+                Grid.Column="0"
+                Width="48" Height="48"
+                Stretch="UniformToFill"
+                x:Name="IconImage" />
+            <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                <TextBlock
+                    x:Name="TitleText"
+                    FontWeight="Bold"
+                    FontSize="18"
+                    TextWrapping="Wrap" />
+                <TextBlock
+                    x:Name="AuthorText"
+                    Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}" />
+            </StackPanel>
+            <StackPanel Grid.Column="2" VerticalAlignment="Center" Orientation="Horizontal" Spacing="4">
+                <FontIcon Glyph="&#xE74C;" FontSize="14" />
+                <TextBlock x:Name="DownloadsText" VerticalAlignment="Center" />
+            </StackPanel>
+        </Grid>
+
+        <!-- Loading -->
+        <ProgressRing
+            x:Name="LoadingRing"
+            IsActive="True"
+            Width="32" Height="32"
+            HorizontalAlignment="Center" />
+
+        <!-- Error -->
+        <InfoBar
+            x:Name="ErrorBar"
+            IsOpen="False"
+            Severity="Error"
+            Title="Không tải được">
+            <InfoBar.ActionButton>
+                <Button Content="Thử lại" Click="Retry_Click" />
+            </InfoBar.ActionButton>
+        </InfoBar>
+
+        <!-- Body: markdown render -->
+        <ScrollViewer
+            MaxHeight="420"
+            VerticalScrollBarVisibility="Auto">
+            <RichTextBlock
+                x:Name="BodyText"
+                IsTextSelectionEnabled="True"
+                TextWrapping="Wrap" />
+        </ScrollViewer>
+    </StackPanel>
+</ContentDialog>

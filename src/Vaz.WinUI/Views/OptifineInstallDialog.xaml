@@ -1,0 +1,70 @@
+<ContentDialog
+    x:Class="Vaz.WinUI.Views.OptifineInstallDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Cài OptiFine"
+    CloseButtonText="Đóng"
+    DefaultButton="Close"
+    MaxWidth="640">
+    <StackPanel Spacing="8">
+        <!-- Progress chung -->
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <ProgressRing x:Name="BusyRing" IsActive="False" Width="20" Height="20" />
+            <TextBlock x:Name="BusyText" Text="" VerticalAlignment="Center" Visibility="Collapsed" />
+        </StackPanel>
+
+        <TabView x:Name="Tabs" Height="360" IsEnabled="True">
+            <!-- Tab 1: tự động scrape catalog -->
+            <TabViewItem Header="Tự động (scrape)">
+                <StackPanel Spacing="8" Padding="0,8,0,0">
+                    <InfoBar
+                        x:Name="AutoErrorBar"
+                        IsOpen="False"
+                        Severity="Error"
+                        Title="Không tải được catalog"
+                        Message="">
+                        <InfoBar.ActionButton>
+                            <Button Content="Thử lại" Click="RetryCatalog_Click" />
+                        </InfoBar.ActionButton>
+                    </InfoBar>
+
+                    <ComboBox
+                        x:Name="ReleaseCombo"
+                        Header="Phiên bản OptiFine"
+                        DisplayMemberPath="Label"
+                        MinWidth="380"
+                        PlaceholderText="Đang tải catalog..."
+                        SelectionChanged="ReleaseCombo_SelectionChanged" />
+
+                    <TextBlock
+                        Text="Chọn phiên bản rồi bấm [Cài]. Preview = bản thử, Stable = bản ổn định."
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        TextWrapping="Wrap" />
+
+                    <Button x:Name="InstallCatalogBtn" Content="Cài" Click="InstallCatalog_Click" IsEnabled="False" />
+                </StackPanel>
+            </TabViewItem>
+
+            <!-- Tab 2: thủ công paste URL -->
+            <TabViewItem Header="Thủ công (paste URL)">
+                <StackPanel Spacing="8" Padding="0,8,0,0">
+                    <TextBox
+                        x:Name="UrlBox"
+                        PlaceholderText="https://optifine.net/adloadx?f=OptiFine_1.21.1_HD_U_J1.jar"
+                        TextChanged="UrlBox_TextChanged" />
+                    <TextBlock
+                        Text="Cách lấy URL: vào optifine.net → Download → chuột phải link tải → Copy link address, rồi dán vào ô trên."
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        TextWrapping="Wrap" />
+                    <TextBlock
+                        x:Name="UrlValidation"
+                        Text="URL phải bắt đầu bằng https://optifine.net/"
+                        Foreground="Red"
+                        Visibility="Collapsed"
+                        TextWrapping="Wrap" />
+                    <Button x:Name="InstallUrlBtn" Content="Cài" Click="InstallUrl_Click" IsEnabled="False" />
+                </StackPanel>
+            </TabViewItem>
+        </TabView>
+    </StackPanel>
+</ContentDialog>
