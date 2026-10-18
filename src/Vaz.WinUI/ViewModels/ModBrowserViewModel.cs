@@ -1,3 +1,5 @@
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -303,18 +305,24 @@ public sealed partial class ModBrowserViewModel : ObservableObject
     [RelayCommand]
     public async Task InstallPerformancePackAsync()
     {
+        HasError = false;
+        HasWarning = false;
+
         var inst = await _activeInstance.GetCurrentAsync();
         if (inst == null)
         {
-            HasError = true;
-            ErrorMessage = "Chưa chọn instance.";
+            SetWarning("Chọn instance trước.");
             return;
         }
 
         if (string.Equals(inst.LoaderType, "vanilla", StringComparison.OrdinalIgnoreCase))
         {
-            HasError = true;
-            ErrorMessage = "Performance Pack yêu cầu Fabric hoặc NeoForge. Instance hiện tại là Vanilla.";
+            SetWarning("Performance Pack yêu cầu Fabric hoặc NeoForge.");
+            return;
+        }
+
+        if (!await ConfirmPerformancePackAsync(inst.Name))
+        {
             return;
         }
 
@@ -345,12 +353,13 @@ public sealed partial class ModBrowserViewModel : ObservableObject
 
             if (!string.IsNullOrEmpty(result.Warning))
             {
-                HasWarning = true;
-                WarningMessage = result.Warning!;
+                SetWarning(result.Warning!);
             }
         }
         catch (Exception ex)
         {
+            // Không để status "Đang cài..." dính lại sau khi fail.
+            StatusMessage = string.Empty;
             HasError = true;
             ErrorMessage = ex.Message;
         }
@@ -360,5 +369,36 @@ public sealed partial class ModBrowserViewModel : ObservableObject
             ProgressPercent = 0;
             NotifyBusyChanged();
         }
+    }
+
+    private void SetWarning(string message)
+    {
+        HasWarning = true;
+        WarningMessage = message;
+    }
+
+    /// <summary>Dialog xác nhận trước khi cài (Sodium + Iris).</summary>
+    private static async Task<bool> ConfirmPerformancePackAsync(string instanceName)
+    {
+        var root = (App.MainWindow?.Content as FrameworkElement)?.XamlRoot;
+        if (root == null)
+        {
+            // Chưa lấy được XamlRoot — bỏ qua confirm thay vì chặn cài.
+            return true;
+        }
+
+        var dialog = new ContentDialog
+        {
+            XamlRoot = root,
+            Title = "Cài Performance Pack?",
+            Content = $"Cài Sodium + Iris cho instance \"{instanceName}\"?\n" +
+                      "Alternative performance pack thay OptiFine.\n" +
+                      "Yêu cầu: Fabric hoặc NeoForge.",
+            PrimaryButtonText = "Cài",
+            CloseButtonText = "Hủy",
+            DefaultButton = ContentDialogButton.Primary
+        };
+
+        return await dialog.ShowAsync() == ContentDialogResult.Primary;
     }
 }
