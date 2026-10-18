@@ -3,30 +3,14 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="using:Vaz.WinUI.ViewModels"
-    NavigationCacheMode="Required">
+    NavigationCacheMode="Disabled">
 
     <Grid x:Name="PageRoot" RowDefinitions="Auto,Auto,Auto,*" Padding="16,12,16,12" RowSpacing="8">
-
-        <!-- Empty state: chưa có instance -->
-        <StackPanel
-            Grid.Row="0"
-            HorizontalAlignment="Center"
-            VerticalAlignment="Center"
-            Spacing="8"
-            Visibility="{x:Bind ViewModel.HasInstance, Mode=OneWay, Converter={StaticResource BoolToVisInv}}">
-            <FontIcon Glyph="&#xE7F8;" FontSize="32" />
-            <TextBlock Text="Chưa chọn instance nào." HorizontalAlignment="Center" />
-            <TextBlock
-                Text="Chọn instance ở thanh bên trái."
-                HorizontalAlignment="Center"
-                Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}" />
-        </StackPanel>
 
         <StackPanel
             Grid.Row="0"
             Grid.RowSpan="4"
-            Spacing="8"
-            Visibility="{x:Bind ViewModel.HasInstance, Mode=OneWay, Converter={StaticResource BoolToVis}}">
+            Spacing="8">
 
             <!-- Header -->
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
@@ -81,6 +65,7 @@
                                 <Button Content="Update all" Command="{x:Bind ViewModel.UpdateAllCommand}" />
                                 <Button Content="Install .mrpack" Click="InstallMrpack_Click" />
                                 <Button Content="Install OptiFine" Click="InstallOptifine_Click" />
+                                <Button Content="Download Mods" Click="DownloadMods_Click" />
                                 <Button Content="Open mods folder" Command="{x:Bind ViewModel.OpenModsFolderCommand}" />
                                 <InfoBar
                                     Severity="Informational"

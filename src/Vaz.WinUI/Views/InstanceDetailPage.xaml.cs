@@ -25,6 +25,12 @@ public sealed partial class InstanceDetailPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
+        if (e.Parameter is string instanceId)
+        {
+            var active = ((App)Application.Current).Services
+                .GetRequiredService<Vaz.WinUI.Services.ActiveInstanceService>();
+            active.SetCurrent(instanceId);
+        }
         _ = ViewModel.LoadCommand.ExecuteAsync(null);
     }
 
@@ -80,6 +86,13 @@ public sealed partial class InstanceDetailPage : Page
     private async void InstallOptifine_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new OptifineInstallDialog(ViewModel);
+        dialog.XamlRoot = XamlRoot;
+        await dialog.ShowAsync();
+    }
+
+    private async void DownloadMods_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new ModBrowserDialog();
         dialog.XamlRoot = XamlRoot;
         await dialog.ShowAsync();
     }

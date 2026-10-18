@@ -42,14 +42,14 @@ public partial class App : Application
         services.AddSingleton<ActiveInstanceService>();
 
         // ViewModels
-        services.AddSingleton<InstancePickerViewModel>();
+        services.AddTransient<InstancesViewModel>();
         services.AddTransient<ModBrowserViewModel>();
         services.AddTransient<InstanceDetailViewModel>();
         services.AddTransient<AccountViewModel>();
         services.AddTransient<CreateInstanceViewModel>();
 
         // Pages / window
-        services.AddTransient<ModBrowserPage>();
+        services.AddTransient<InstancesPage>();
         services.AddTransient<InstanceDetailPage>();
         services.AddTransient<AccountPage>();
         services.AddSingleton<MainWindow>();

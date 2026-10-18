@@ -13,41 +13,8 @@
         OpenPaneLength="220"
         SelectionChanged="NavView_SelectionChanged">
 
-        <NavigationView.PaneHeader>
-            <Grid ColumnSpacing="4">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <ComboBox
-                    x:Name="InstanceCombo"
-                    MinWidth="140"
-                    MaxWidth="200"
-                    HorizontalAlignment="Stretch"
-                    Header="Instance"
-                    DisplayMemberPath="Name"
-                    ItemsSource="{x:Bind Picker.Instances}"
-                    SelectionChanged="InstanceCombo_SelectionChanged" />
-                <Button
-                    x:Name="NewInstanceButton"
-                    Grid.Column="1"
-                    MinWidth="0"
-                    Width="32"
-                    VerticalAlignment="Bottom"
-                    ToolTipService.ToolTip="New Instance"
-                    Click="NewInstanceButton_Click">
-                    <SymbolIcon Symbol="Add" />
-                </Button>
-            </Grid>
-        </NavigationView.PaneHeader>
-
         <NavigationView.MenuItems>
-            <NavigationViewItem Content="Mod Browser" Tag="modbrowser" IsSelected="True">
-                <NavigationViewItem.Icon>
-                    <FontIcon Glyph="&#xE71E;" />
-                </NavigationViewItem.Icon>
-            </NavigationViewItem>
-            <NavigationViewItem Content="Instances" Tag="instances">
+            <NavigationViewItem Content="Instances" Tag="instances" IsSelected="True">
                 <NavigationViewItem.Icon>
                     <FontIcon Glyph="&#xE7F8;" />
                 </NavigationViewItem.Icon>
@@ -60,5 +27,7 @@
         </NavigationView.MenuItems>
 
         <Frame x:Name="ContentFrame" />
+
     </NavigationView>
+
 </Window>
