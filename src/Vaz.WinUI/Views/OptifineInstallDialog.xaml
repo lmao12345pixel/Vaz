@@ -13,9 +13,9 @@
             <TextBlock x:Name="BusyText" Text="" VerticalAlignment="Center" Visibility="Collapsed" />
         </StackPanel>
 
-        <TabView x:Name="Tabs" Height="360" IsEnabled="True">
+        <TabView x:Name="Tabs" Height="360" IsEnabled="True" IsAddTabButtonVisible="False">
             <!-- Tab 1: tự động scrape catalog -->
-            <TabViewItem Header="Tự động (scrape)">
+            <TabViewItem Header="Tự động (scrape)" IsClosable="False">
                 <StackPanel Spacing="8" Padding="0,8,0,0">
                     <InfoBar
                         x:Name="AutoErrorBar"
@@ -46,7 +46,7 @@
             </TabViewItem>
 
             <!-- Tab 2: thủ công paste URL -->
-            <TabViewItem Header="Thủ công (paste URL)">
+            <TabViewItem Header="Thủ công (paste URL)" IsClosable="False">
                 <StackPanel Spacing="8" Padding="0,8,0,0">
                     <TextBox
                         x:Name="UrlBox"
