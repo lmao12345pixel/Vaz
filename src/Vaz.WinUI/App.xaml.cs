@@ -46,6 +46,7 @@ public partial class App : Application
         services.AddTransient<ModBrowserViewModel>();
         services.AddTransient<InstanceDetailViewModel>();
         services.AddTransient<AccountViewModel>();
+        services.AddTransient<CreateInstanceViewModel>();
 
         // Pages / window
         services.AddTransient<ModBrowserPage>();

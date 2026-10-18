@@ -66,4 +66,27 @@ public sealed partial class MainWindow : Window
             Picker.SelectedInstance = inst;
         }
     }
+
+    private async void NewInstanceButton_Click(object sender, RoutedEventArgs e)
+    {
+        var vm = ((App)Application.Current).Services
+            .GetRequiredService<CreateInstanceViewModel>();
+        var dialog = new CreateInstanceDialog(vm) { XamlRoot = Content.XamlRoot };
+
+        var result = await dialog.ShowAsync();
+        if (result == ContentDialogResult.Primary && dialog.CreatedInstanceId != null)
+        {
+            var createdId = dialog.CreatedInstanceId;
+
+            // Refresh ComboBox rồi auto-select instance vừa tạo.
+            // So theo Id vì object trong list sau reload là instance mới.
+            await Picker.LoadAsync();
+            var target = Picker.Instances.FirstOrDefault(i => i.Id == createdId);
+            if (target != null)
+            {
+                Picker.SelectedInstance = target;
+                InstanceCombo.SelectedItem = target;
+            }
+        }
+    }
 }

@@ -14,15 +14,31 @@
         SelectionChanged="NavView_SelectionChanged">
 
         <NavigationView.PaneHeader>
-            <ComboBox
-                x:Name="InstanceCombo"
-                MinWidth="180"
-                MaxWidth="200"
-                HorizontalAlignment="Stretch"
-                Header="Instance"
-                DisplayMemberPath="Name"
-                ItemsSource="{x:Bind Picker.Instances}"
-                SelectionChanged="InstanceCombo_SelectionChanged" />
+            <Grid ColumnSpacing="4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ComboBox
+                    x:Name="InstanceCombo"
+                    MinWidth="140"
+                    MaxWidth="200"
+                    HorizontalAlignment="Stretch"
+                    Header="Instance"
+                    DisplayMemberPath="Name"
+                    ItemsSource="{x:Bind Picker.Instances}"
+                    SelectionChanged="InstanceCombo_SelectionChanged" />
+                <Button
+                    x:Name="NewInstanceButton"
+                    Grid.Column="1"
+                    MinWidth="0"
+                    Width="32"
+                    VerticalAlignment="Bottom"
+                    ToolTipService.ToolTip="New Instance"
+                    Click="NewInstanceButton_Click">
+                    <SymbolIcon Symbol="Add" />
+                </Button>
+            </Grid>
         </NavigationView.PaneHeader>
 
         <NavigationView.MenuItems>
