@@ -88,9 +88,17 @@ public sealed partial class ProjectDetailDialog : ContentDialog
                         break;
 
                     case MarkdownTokenType.Link:
-                        var link = new Hyperlink { NavigateUri = new Uri(token.Url!) };
-                        link.Inlines.Add(new Run { Text = token.Text });
-                        p.Inlines.Add(link);
+                        // URL malformed (dù parser đã whitelist http/https) → fallback text thường, tránh crash.
+                        if (Uri.TryCreate(token.Url, UriKind.Absolute, out var uri))
+                        {
+                            var link = new Hyperlink { NavigateUri = uri };
+                            link.Inlines.Add(new Run { Text = token.Text });
+                            p.Inlines.Add(link);
+                        }
+                        else
+                        {
+                            p.Inlines.Add(new Run { Text = token.Text });
+                        }
                         break;
 
                     case MarkdownTokenType.LineBreak:
