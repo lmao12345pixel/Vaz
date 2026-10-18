@@ -58,6 +58,26 @@ public sealed class MsalAuthProviderTests : IDisposable
             _msal);
     }
 
+    /// <summary>
+    /// Provider cho che do OfflineDemoMode=true: MsalClientId rong, wrapper null
+    /// (appsettings offline-only — graph phai resolve duoc, login MSAL throw message ro rang).
+    /// </summary>
+    private MsalAuthProvider CreateOfflineProvider()
+    {
+        var options = Options.Create(new MinecraftOptions
+        {
+            RootPath = _tempRoot,
+            MsalClientId = string.Empty,
+            OfflineDemoMode = true,
+            HttpTimeoutSeconds = 30
+        });
+        return new MsalAuthProvider(
+            new FakeHttpClientFactory(_http),
+            NullLogger<MsalAuthProvider>.Instance,
+            options,
+            null);
+    }
+
     private void MapHappyPath()
     {
         _http.MapJson(HttpMethod.Post, "/user/authenticate", HttpStatusCode.OK,
@@ -248,6 +268,43 @@ public sealed class MsalAuthProviderTests : IDisposable
         };
 
         await Assert.ThrowsAsync<MsalUiRequiredException>(() => provider.RefreshAsync(account));
+    }
+
+    [Fact]
+    public void Ctor_OfflineDemoMode_EmptyClientId_DoesNotThrow()
+    {
+        // OfflineDemoMode=true + MsalClientId rong: phai resolve duoc (khong throw).
+        var provider = CreateOfflineProvider();
+
+        provider.Kind.Should().Be(AccountKind.Microsoft);
+    }
+
+    [Fact]
+    public async Task LoginAsync_OfflineDemoMode_NullWrapper_Throws_Clear_Message()
+    {
+        var provider = CreateOfflineProvider();
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => provider.LoginAsync());
+        ex.Message.Should().Contain("MSAL login requires MsalClientId");
+    }
+
+    [Fact]
+    public async Task RefreshAsync_OfflineDemoMode_NullWrapper_Throws_Clear_Message()
+    {
+        var provider = CreateOfflineProvider();
+        var account = new MinecraftAccount
+        {
+            Id = McUuid,
+            DisplayName = McName,
+            Kind = AccountKind.Microsoft,
+            Uuid = McUuid,
+            AccessToken = "old",
+            RefreshToken = "",
+            ExpiresAt = null
+        };
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => provider.RefreshAsync(account));
+        ex.Message.Should().Contain("MSAL login requires MsalClientId");
     }
 
     private sealed class FakeMsalClientWrapper : IMsalClientWrapper

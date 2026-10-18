@@ -24,7 +24,7 @@ public sealed class MsalAuthProvider : IAuthProvider
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<MsalAuthProvider> _logger;
     private readonly MinecraftOptions _options;
-    private readonly IMsalClientWrapper _msal;
+    private readonly IMsalClientWrapper? _msal;
 
     /// <inheritdoc />
     public AccountKind Kind => AccountKind.Microsoft;
@@ -41,13 +41,13 @@ public sealed class MsalAuthProvider : IAuthProvider
         IHttpClientFactory httpClientFactory,
         ILogger<MsalAuthProvider> logger,
         IOptions<MinecraftOptions> options,
-        IMsalClientWrapper msal)
+        IMsalClientWrapper? msal)
     {
         _httpClientFactory = httpClientFactory;
         _logger = logger;
         _options = options.Value;
 
-        if (string.IsNullOrWhiteSpace(_options.MsalClientId))
+        if (string.IsNullOrWhiteSpace(_options.MsalClientId) && !_options.OfflineDemoMode)
         {
             throw new InvalidOperationException("MsalClientId is not configured in MinecraftOptions");
         }
@@ -55,11 +55,18 @@ public sealed class MsalAuthProvider : IAuthProvider
         _msal = msal;
     }
 
-    private static IMsalClientWrapper CreateDefaultWrapper(MinecraftOptions options)
+    private static IMsalClientWrapper? CreateDefaultWrapper(MinecraftOptions options)
     {
         if (string.IsNullOrWhiteSpace(options.MsalClientId))
         {
-            throw new InvalidOperationException("MsalClientId is not configured in MinecraftOptions");
+            // Chưa cấu hình MSAL. OfflineDemoMode chỉ cần OfflineAuthProvider —
+            // trả null; chỉ throw khi chế độ online thật sự cần đăng nhập Microsoft.
+            if (!options.OfflineDemoMode)
+            {
+                throw new InvalidOperationException("MsalClientId is not configured in MinecraftOptions");
+            }
+
+            return null;
         }
 
         var cachePath = Path.Combine(options.RootPath, "auth", "msal_cache.bin");
@@ -79,6 +86,12 @@ public sealed class MsalAuthProvider : IAuthProvider
 
         cacheHelper.RegisterCache(pca.UserTokenCache);
         return new MsalClientWrapper(pca);
+    }
+
+    private IMsalClientWrapper RequireMsal()
+    {
+        return _msal ?? throw new InvalidOperationException(
+            "MSAL login requires MsalClientId. Configure it in appsettings.json or use Offline account.");
     }
 
     /// <inheritdoc />
@@ -133,7 +146,7 @@ public sealed class MsalAuthProvider : IAuthProvider
         _logger.LogInformation("Refreshing Microsoft token for {Id}", account.Id);
 
         // Let MsalUiRequiredException bubble up so the caller can fall back to LoginAsync.
-        var result = await _msal.AcquireTokenSilentAsync(Scopes, account.Id, ct);
+        var result = await RequireMsal().AcquireTokenSilentAsync(Scopes, account.Id, ct);
 
         // Re-run Xbox Live → XSTS → Minecraft chain
         var (xblToken, uhs) = await XboxLiveAuthenticateAsync(result.AccessToken, ct);
@@ -155,12 +168,13 @@ public sealed class MsalAuthProvider : IAuthProvider
         }
 
         _logger.LogInformation("Logging out Microsoft account {Id}", account.Id);
-        await _msal.RemoveAccountAsync(account.Id, ct);
+        await RequireMsal().RemoveAccountAsync(account.Id, ct);
     }
 
     private async Task<MsalTokenResult> AcquireMsTokenAsync(CancellationToken ct)
     {
-        var accounts = await _msal.GetAccountsAsync(ct);
+        var msal = RequireMsal();
+        var accounts = await msal.GetAccountsAsync(ct);
         var account = accounts.FirstOrDefault();
 
         try
@@ -168,7 +182,7 @@ public sealed class MsalAuthProvider : IAuthProvider
             // Try silent first
             if (account != null)
             {
-                return await _msal.AcquireTokenSilentAsync(Scopes, account.HomeAccountId, ct);
+                return await msal.AcquireTokenSilentAsync(Scopes, account.HomeAccountId, ct);
             }
         }
         catch (MsalUiRequiredException)
@@ -177,7 +191,7 @@ public sealed class MsalAuthProvider : IAuthProvider
         }
 
         // Interactive login
-        return await _msal.AcquireTokenInteractiveAsync(Scopes, ct);
+        return await msal.AcquireTokenInteractiveAsync(Scopes, ct);
     }
 
     [RequiresUnreferencedCode("Calls Vazer.Core.Auth.MsalAuthProvider.PostJsonAsync(HttpClient, String, Object, CancellationToken)")]

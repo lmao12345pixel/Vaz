@@ -53,9 +53,6 @@ public sealed class MinecraftServiceCollectionExtensionsTests : IDisposable
         {
             o.RootPath = _tempRoot;
             o.OfflineDemoMode = true;
-            // MsalAuthProvider ctor throw khi thieu client-id, nen dat gia tri gia
-            // de resolve duoc toan bo graph (path offline that van dung OfflineAuthProvider).
-            o.MsalClientId = "test-client-id";
         });
 
         sp.GetService<IFileDownloader>().Should().NotBeNull();
@@ -77,7 +74,6 @@ public sealed class MinecraftServiceCollectionExtensionsTests : IDisposable
         {
             o.RootPath = _tempRoot;
             o.OfflineDemoMode = true;
-            o.MsalClientId = "test-client-id";
         });
 
         var providers = sp.GetServices<IAuthProvider>().ToList();
@@ -119,9 +115,6 @@ public sealed class MinecraftServiceCollectionExtensionsTests : IDisposable
         {
             o.RootPath = _tempRoot;
             o.OfflineDemoMode = true;
-            // MsalAuthProvider ctor throw khi thieu client-id, nen dat gia tri gia
-            // de resolve duoc toan bo graph.
-            o.MsalClientId = "test-client-id";
         });
 
         sp.GetService<IModrinthClient>().Should().NotBeNull();
