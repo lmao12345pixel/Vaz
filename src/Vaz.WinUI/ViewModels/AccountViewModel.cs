@@ -17,6 +17,8 @@ public sealed class AccountRow
     public string DisplayName => Account.DisplayName;
     public string KindText => Account.Kind == AccountKind.Microsoft ? "Microsoft" : "Offline";
     public string ActiveBadge => IsActive ? "✓ Active" : string.Empty;
+    public string AvatarUrl => $"https://minotar.net/helm/{DisplayName}/64.png";
+    public Uri AvatarUri => new(AvatarUrl);
 }
 
 /// <summary>

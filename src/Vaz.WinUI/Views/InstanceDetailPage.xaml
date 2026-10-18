@@ -5,20 +5,20 @@
     xmlns:vm="using:Vaz.WinUI.ViewModels"
     NavigationCacheMode="Disabled">
 
-    <Grid x:Name="PageRoot" RowDefinitions="Auto,Auto,Auto,*" Padding="16,12,16,12" RowSpacing="8">
+    <Grid x:Name="PageRoot" RowDefinitions="Auto,Auto,Auto,*" Padding="24" RowSpacing="16">
 
         <StackPanel
             Grid.Row="0"
             Grid.RowSpan="4"
-            Spacing="8">
+            Spacing="16">
 
             <!-- Header -->
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                <StackPanel Spacing="2">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                <StackPanel Spacing="4">
                     <TextBlock
                         Text="{x:Bind ViewModel.Current.Name, Mode=OneWay}"
-                        FontSize="22"
-                        FontWeight="Bold" />
+                        FontSize="28"
+                        FontWeight="SemiBold" />
                     <StackPanel Orientation="Horizontal" Spacing="12">
                         <TextBlock Text="{x:Bind ViewModel.Current.MinecraftVersion, Mode=OneWay}" />
                         <TextBlock
@@ -55,18 +55,64 @@
                 Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
 
             <!-- Tabs -->
-            <TabView IsAddTabButtonVisible="False">
+            <TabView IsAddTabButtonVisible="False" Margin="0,8,0,0">
                 <TabViewItem Header="Mods" IsClosable="False">
                     <TabViewItem.Content>
-                        <Grid RowDefinitions="Auto,*" RowSpacing="8">
+                        <Grid RowDefinitions="Auto,*" RowSpacing="12" Padding="0,12,0,0">
                             <!-- Toolbar -->
                             <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8">
-                                <Button Content="Check updates" Command="{x:Bind ViewModel.CheckUpdatesCommand}" />
-                                <Button Content="Update all" Command="{x:Bind ViewModel.UpdateAllCommand}" />
-                                <Button Content="Install .mrpack" Click="InstallMrpack_Click" />
-                                <Button Content="Install OptiFine" Click="InstallOptifine_Click" />
-                                <Button Content="Download Mods" Click="DownloadMods_Click" />
-                                <Button Content="Open mods folder" Command="{x:Bind ViewModel.OpenModsFolderCommand}" />
+                                <!-- Nhóm 1: Mod Management -->
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Command="{x:Bind ViewModel.CheckUpdatesCommand}">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <SymbolIcon Symbol="Sync" />
+                                            <TextBlock Text="Check updates" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Command="{x:Bind ViewModel.UpdateAllCommand}">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <SymbolIcon Symbol="Download" />
+                                            <TextBlock Text="Update all" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Click="DownloadMods_Click">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <SymbolIcon Symbol="Add" />
+                                            <TextBlock Text="Download Mods" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+
+                                <!-- Divider -->
+                                <Border Width="1" Height="24" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="4,0" VerticalAlignment="Center" />
+
+                                <!-- Nhóm 2: Installers -->
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Click="InstallMrpack_Click">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <SymbolIcon Symbol="Import" />
+                                            <TextBlock Text="Install .mrpack" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Click="InstallOptifine_Click">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <SymbolIcon Symbol="Setting" />
+                                            <TextBlock Text="Install OptiFine" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+
+                                <!-- Divider -->
+                                <Border Width="1" Height="24" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="4,0" VerticalAlignment="Center" />
+
+                                <!-- Nhóm 3: Utilities -->
+                                <Button Command="{x:Bind ViewModel.OpenModsFolderCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <SymbolIcon Symbol="Folder" />
+                                        <TextBlock Text="Open mods folder" />
+                                    </StackPanel>
+                                </Button>
+
                                 <InfoBar
                                     Severity="Informational"
                                     IsOpen="{x:Bind ViewModel.UpdateCount, Mode=OneWay, Converter={StaticResource CountToBool}}"

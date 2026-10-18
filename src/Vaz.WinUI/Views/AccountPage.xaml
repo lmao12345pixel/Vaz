@@ -5,22 +5,22 @@
     xmlns:vm="using:Vaz.WinUI.ViewModels"
     NavigationCacheMode="Required">
 
-    <Grid Padding="16,12,16,12" RowSpacing="8" RowDefinitions="Auto,Auto,*,Auto">
+    <Grid Padding="24" RowSpacing="16" RowDefinitions="Auto,Auto,*,Auto">
         <!-- Header -->
-        <StackPanel>
-            <TextBlock Text="Tài khoản" FontSize="22" FontWeight="SemiBold" />
+        <StackPanel Spacing="4">
+            <TextBlock Text="Tài khoản" FontSize="28" FontWeight="SemiBold" />
             <TextBlock
                 Text="Cần ít nhất 1 tài khoản active để Launch instance."
                 Style="{StaticResource CaptionTextBlockStyle}" />
         </StackPanel>
 
         <!-- Toolbar -->
-        <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="8">
-            <Button Grid.Column="0" Content="Add Offline" Click="AddOffline_Click" />
-            <Button Grid.Column="1" Content="Add Microsoft" Click="AddMicrosoft_Click" />
-            <Button Grid.Column="2" Content="Refresh (active)" Click="RefreshActive_Click" />
-            <Button Grid.Column="3" Content="Tải lại danh sách" Click="Reload_Click" />
-        </Grid>
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="12">
+            <Button Content="Add Offline" Click="AddOffline_Click" />
+            <Button Content="Add Microsoft" Click="AddMicrosoft_Click" />
+            <Button Content="Refresh (active)" Click="RefreshActive_Click" />
+            <Button Content="Tải lại danh sách" Click="Reload_Click" />
+        </StackPanel>
 
         <!-- Danh sách tài khoản -->
         <ListView
@@ -28,40 +28,70 @@
             x:Name="AccountsList"
             ItemsSource="{x:Bind ViewModel.Accounts, Mode=OneWay}"
             SelectionMode="Single">
+            <ListView.ItemContainerStyle>
+                <Style TargetType="ListViewItem">
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                    <Setter Property="Padding" Value="0,4" />
+                </Style>
+            </ListView.ItemContainerStyle>
             <ListView.ItemTemplate>
                 <DataTemplate x:DataType="vm:AccountRow">
-                    <Grid Padding="4,6" ColumnDefinitions="40,*,Auto,Auto" ColumnSpacing="8">
-                        <!-- Avatar placeholder -->
-                        <FontIcon Glyph="&#xE77B;" FontSize="24" VerticalAlignment="Center" />
+                    <Border
+                        Padding="14,12"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8">
+                        <Grid ColumnDefinitions="48,*,Auto,Auto" ColumnSpacing="16">
+                            <!-- Minecraft Avatar -->
+                            <Border
+                                Width="48"
+                                Height="48"
+                                CornerRadius="6"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                Background="{ThemeResource LayerFillColorDefaultBrush}">
+                                <Image
+                                    Width="48"
+                                    Height="48"
+                                    Stretch="UniformToFill">
+                                    <Image.Source>
+                                        <BitmapImage UriSource="{x:Bind AvatarUri}" />
+                                    </Image.Source>
+                                </Image>
+                            </Border>
 
-                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                            <TextBlock Text="{x:Bind DisplayName}" FontWeight="SemiBold" />
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Border
-                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                    CornerRadius="4"
-                                    Padding="6,1">
-                                    <TextBlock Text="{x:Bind KindText}" Style="{StaticResource CaptionTextBlockStyle}" />
-                                </Border>
-                                <TextBlock
-                                    Text="✓ Active"
-                                    Foreground="Green"
-                                    Style="{StaticResource CaptionTextBlockStyle}"
-                                    Visibility="{x:Bind IsActive, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
+                            <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                                <TextBlock Text="{x:Bind DisplayName}" FontWeight="SemiBold" FontSize="15" />
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Border
+                                        Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                        CornerRadius="4"
+                                        Padding="6,2">
+                                        <TextBlock Text="{x:Bind KindText}" Style="{StaticResource CaptionTextBlockStyle}" />
+                                    </Border>
+                                    <TextBlock
+                                        Text="✓ Active"
+                                        Foreground="{ThemeResource SystemFillColorSuccessBrush}"
+                                        FontWeight="Medium"
+                                        Style="{StaticResource CaptionTextBlockStyle}"
+                                        Visibility="{x:Bind IsActive, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
+                                </StackPanel>
                             </StackPanel>
-                        </StackPanel>
 
-                        <Button
-                            Grid.Column="2"
-                            Content="Set active"
-                            VerticalAlignment="Center"
-                            Click="SetActive_Click" />
-                        <Button
-                            Grid.Column="3"
-                            Content="Xóa"
-                            VerticalAlignment="Center"
-                            Click="Remove_Click" />
-                    </Grid>
+                            <Button
+                                Grid.Column="2"
+                                Content="Set active"
+                                VerticalAlignment="Center"
+                                Margin="0,0,8,0"
+                                Click="SetActive_Click" />
+                            <Button
+                                Grid.Column="3"
+                                Content="Xóa"
+                                VerticalAlignment="Center"
+                                Click="Remove_Click" />
+                        </Grid>
+                    </Border>
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>
