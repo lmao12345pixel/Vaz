@@ -95,7 +95,7 @@ public sealed record ModrinthProject
     public string? IconUrl { get; init; }
 
     [JsonPropertyName("gallery")]
-    public string[]? Gallery { get; init; }
+    public ModrinthGalleryImage[]? Gallery { get; init; }
 
     [JsonPropertyName("downloads")]
     public long Downloads { get; init; }
@@ -150,6 +150,25 @@ public sealed record ModrinthLicense
 
     [JsonPropertyName("url")]
     public string? Url { get; init; }
+}
+
+/// <summary>Ảnh gallery của project (Modrinth /project trả array of objects).</summary>
+public sealed record ModrinthGalleryImage
+{
+    [JsonPropertyName("url")]
+    public string Url { get; init; } = "";
+
+    [JsonPropertyName("featured")]
+    public bool Featured { get; init; }
+
+    [JsonPropertyName("title")]
+    public string? Title { get; init; }
+
+    [JsonPropertyName("description")]
+    public string? Description { get; init; }
+
+    [JsonPropertyName("created")]
+    public DateTimeOffset? Created { get; init; }
 }
 
 public sealed record ProjectVersion

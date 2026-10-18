@@ -147,4 +147,25 @@ public sealed class ModelsTests
         p.MinecraftVersion.Should().BeNull();
         p.MaxRamMb.Should().Be(4096);
     }
+
+    [Fact]
+    public void ModrinthProject_Gallery_Deserializes_Object_Array()
+    {
+        // Modrinth /project tra gallery la array of objects (khong phai string[]).
+        const string json = """{"id":"AANobbMI","gallery":[{"url":"https://cdn.modrinth.com/data/AANobbMI/images/1.png","featured":true,"title":"Sodium in action","description":"FPS boost","created":"2024-01-02T03:04:05Z"}]}""";
+
+        var project = System.Text.Json.JsonSerializer.Deserialize<ModrinthProject>(json);
+
+        project.Should().NotBeNull();
+        var gallery = project!.Gallery;
+        gallery.Should().NotBeNull();
+        gallery.Should().HaveCount(1);
+
+        var image = gallery![0];
+        image.Url.Should().Be("https://cdn.modrinth.com/data/AANobbMI/images/1.png");
+        image.Featured.Should().BeTrue();
+        image.Title.Should().Be("Sodium in action");
+        image.Description.Should().Be("FPS boost");
+        image.Created.Should().Be(new DateTimeOffset(2024, 1, 2, 3, 4, 5, TimeSpan.Zero));
+    }
 }
