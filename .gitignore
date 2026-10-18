@@ -26,3 +26,5 @@ coverage*/
 # giu lai appsettings.json goc lam mau.
 appsettings.*.json
 !appsettings.json
+# Build/restore debug logs
+*.log
