@@ -1,25 +1,39 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
+using Vaz.WinUI.Services;
 using Vaz.WinUI.ViewModels;
 
 namespace Vaz.WinUI.Views;
 
 /// <summary>
 /// Mod Browser as a ContentDialog — opened from Instance Detail.
-/// Reuses ModBrowserViewModel; instance context comes from ActiveInstanceService (already set).
+/// Reuses ModBrowserViewModel; instance context comes from ActiveInstanceService.
 /// </summary>
 public sealed partial class ModBrowserDialog : ContentDialog
 {
     public ModBrowserViewModel ViewModel { get; }
 
-    public ModBrowserDialog()
+    public ModBrowserDialog(string? instanceId = null)
     {
         ViewModel = ((App)Application.Current).Services
             .GetRequiredService<ModBrowserViewModel>();
         InitializeComponent();
-        Loaded += async (_, _) => await ViewModel.RefreshInstanceContextAsync();
+
+        Loaded += async (_, _) =>
+        {
+            if (!string.IsNullOrEmpty(instanceId))
+            {
+                var active = ((App)Application.Current).Services
+                    .GetRequiredService<ActiveInstanceService>();
+                active.SetCurrent(instanceId);
+            }
+            await ViewModel.RefreshInstanceContextAsync();
+            if (ViewModel.Results.Count == 0)
+            {
+                await ViewModel.SearchAsync();
+            }
+        };
     }
 
     private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
@@ -37,21 +51,11 @@ public sealed partial class ModBrowserDialog : ContentDialog
         _ = ViewModel.SearchCommand.ExecuteAsync(null);
     }
 
-    private async void Card_Tapped(object sender, Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
+    private void Install_Click(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement fe && fe.DataContext is SearchHitRow row)
         {
-            var detail = new ProjectDetailDialog(row.Slug, row.Title, ViewModel);
-            detail.XamlRoot = XamlRoot;
-            await detail.ShowAsync();
-        }
-    }
-
-    private void Install_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button btn && btn.DataContext is SearchHitRow row)
-        {
-            _ = ViewModel.InstallCommand.ExecuteAsync(row);
+            _ = ViewModel.InstallAsync(row);
         }
     }
 

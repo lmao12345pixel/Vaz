@@ -20,6 +20,18 @@ public sealed partial class InstanceDetailPage : Page
         ViewModel = ((App)Application.Current).Services
             .GetRequiredService<InstanceDetailViewModel>();
         InitializeComponent();
+        ViewModel.LogAppended += OnLogAppended;
+    }
+
+    private void OnLogAppended()
+    {
+        if (ViewModel.AutoScroll && LogScrollViewer != null)
+        {
+            _ = App.Dispatcher.TryEnqueue(() =>
+            {
+                LogScrollViewer.ChangeView(null, LogScrollViewer.ScrollableHeight, null, false);
+            });
+        }
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -92,9 +104,21 @@ public sealed partial class InstanceDetailPage : Page
 
     private async void DownloadMods_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new ModBrowserDialog();
+        var dialog = new ModBrowserDialog(ViewModel.Current?.Id);
         dialog.XamlRoot = XamlRoot;
         await dialog.ShowAsync();
+    }
+
+    private void ClearLog_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.ClearLog();
+    }
+
+    private void CopyLog_Click(object sender, RoutedEventArgs e)
+    {
+        var package = new Windows.ApplicationModel.DataTransfer.DataPackage();
+        package.SetText(ViewModel.LogText ?? string.Empty);
+        Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
     }
 
     private async void DeleteInstance_Click(object sender, RoutedEventArgs e)

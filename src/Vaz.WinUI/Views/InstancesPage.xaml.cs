@@ -3,7 +3,6 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using Vaz.WinUI.ViewModels;
-using Vazer.Core.Abstractions;
 
 namespace Vaz.WinUI.Views;
 
@@ -16,6 +15,19 @@ public sealed partial class InstancesPage : Page
         ViewModel = ((App)Application.Current).Services
             .GetRequiredService<InstancesViewModel>();
         InitializeComponent();
+
+        ViewModel.RequireAccountAction = async () =>
+        {
+            var dialog = new ContentDialog
+            {
+                XamlRoot = XamlRoot,
+                Title = "Chưa có tài khoản",
+                Content = "Vui lòng chọn hoặc thêm tài khoản ở trang Accounts trước khi khởi chạy.",
+                CloseButtonText = "Đóng",
+                DefaultButton = ContentDialogButton.Close
+            };
+            await dialog.ShowAsync();
+        };
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -36,20 +48,22 @@ public sealed partial class InstancesPage : Page
 
     private void Instance_Click(object sender, ItemClickEventArgs e)
     {
-        if (e.ClickedItem is MinecraftInstance inst)
-            NavigateToDetail(inst.Id);
+        if (e.ClickedItem is InstanceCardItem card)
+            NavigateToDetail(card.Id);
     }
 
     private void Edit_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement fe && fe.Tag is string id)
-            NavigateToDetail(id);
+        if (sender is FrameworkElement fe && fe.DataContext is InstanceCardItem card)
+            NavigateToDetail(card.Id);
     }
 
     private void Play_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement fe && fe.Tag is string id)
-            NavigateToDetail(id);
+        if (sender is FrameworkElement fe && fe.DataContext is InstanceCardItem card)
+        {
+            _ = ViewModel.PlayCommand.ExecuteAsync(card);
+        }
     }
 
     private void NavigateToDetail(string instanceId)

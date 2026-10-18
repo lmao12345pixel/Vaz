@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Vaz.WinUI.Services;
@@ -26,7 +27,7 @@ public sealed class InstalledModRow
 /// ViewModel cho Instance Detail page: launch, danh sách mod, update,
 /// mrpack, OptiFine, mở mods folder, settings (ReadOnly) + delete.
 /// </summary>
-public sealed partial class InstanceDetailViewModel : ObservableObject
+public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposable
 {
     private readonly IInstanceManager _instanceManager;
     private readonly IModInstallService _modInstall;
@@ -47,6 +48,17 @@ public sealed partial class InstanceDetailViewModel : ObservableObject
     [ObservableProperty] private int progressPercent;
     [ObservableProperty] private int updateCount;
     [ObservableProperty] private string launchStatus = string.Empty;
+
+    [ObservableProperty] private string logText = string.Empty;
+    [ObservableProperty] private bool hasLogs;
+    [ObservableProperty] private bool autoScroll = true;
+
+    public event Action? LogAppended;
+
+    private FileSystemWatcher? _logWatcher;
+    private long _lastLogPosition;
+    private readonly object _logLock = new();
+    private string? _watchedInstancePath;
 
     public bool IsNotBusy => !IsBusy;
     public bool HasInstance => Current != null;
@@ -102,6 +114,13 @@ public sealed partial class InstanceDetailViewModel : ObservableObject
                 {
                     Mods.Add(new InstalledModRow { Mod = mod, Enabled = mod.Enabled });
                 }
+                StartLogWatcher(Current.Path);
+            }
+            else
+            {
+                StopLogWatcher();
+                LogText = string.Empty;
+                HasLogs = false;
             }
 
             StatusMessage = Mods.Count == 0 && Current != null ? "Chưa có mod nào." : string.Empty;
@@ -155,6 +174,9 @@ public sealed partial class InstanceDetailViewModel : ObservableObject
 
             LaunchStatus = $"Đã launch (PID {result.ProcessId})";
             await _instanceManager.UpdateLastPlayedAsync(Current.Id);
+
+            var logPath = Path.Combine(Current.Path, "logs", "latest.log");
+            ReadNewLogContent(logPath);
         }
         catch (Exception ex)
         {
@@ -424,6 +446,132 @@ public sealed partial class InstanceDetailViewModel : ObservableObject
             IsBusy = false;
             NotifyBusyChanged();
         }
+    }
+
+    [RelayCommand]
+    public void ClearLog()
+    {
+        lock (_logLock)
+        {
+            LogText = string.Empty;
+            HasLogs = false;
+            if (Current != null)
+            {
+                var logFile = Path.Combine(Current.Path, "logs", "latest.log");
+                if (File.Exists(logFile))
+                {
+                    try { _lastLogPosition = new FileInfo(logFile).Length; } catch { }
+                }
+            }
+        }
+    }
+
+    public void StartLogWatcher(string? instancePath)
+    {
+        if (string.IsNullOrEmpty(instancePath))
+        {
+            StopLogWatcher();
+            LogText = string.Empty;
+            HasLogs = false;
+            return;
+        }
+
+        if (_watchedInstancePath == instancePath && _logWatcher != null)
+        {
+            var logPath = Path.Combine(instancePath, "logs", "latest.log");
+            ReadNewLogContent(logPath);
+            return;
+        }
+
+        StopLogWatcher();
+        _watchedInstancePath = instancePath;
+        _lastLogPosition = 0;
+        LogText = string.Empty;
+        HasLogs = false;
+
+        var logsDir = Path.Combine(instancePath, "logs");
+        var logFile = Path.Combine(logsDir, "latest.log");
+
+        if (!Directory.Exists(logsDir))
+        {
+            try { Directory.CreateDirectory(logsDir); } catch { }
+        }
+
+        if (File.Exists(logFile))
+        {
+            ReadNewLogContent(logFile);
+        }
+
+        try
+        {
+            _logWatcher = new FileSystemWatcher(logsDir, "latest.log")
+            {
+                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.FileName | NotifyFilters.CreationTime,
+                EnableRaisingEvents = true
+            };
+            _logWatcher.Changed += (s, e) => ReadNewLogContent(e.FullPath);
+            _logWatcher.Created += (s, e) => ReadNewLogContent(e.FullPath);
+        }
+        catch
+        {
+            // Watcher creation fallback
+        }
+    }
+
+    public void StopLogWatcher()
+    {
+        lock (_logLock)
+        {
+            if (_logWatcher != null)
+            {
+                _logWatcher.EnableRaisingEvents = false;
+                _logWatcher.Dispose();
+                _logWatcher = null;
+            }
+            _watchedInstancePath = null;
+        }
+    }
+
+    private void ReadNewLogContent(string logPath)
+    {
+        lock (_logLock)
+        {
+            try
+            {
+                if (!File.Exists(logPath)) return;
+
+                using var fs = new FileStream(logPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                if (fs.Length < _lastLogPosition)
+                {
+                    _lastLogPosition = 0;
+                    App.Dispatcher.TryEnqueue(() => LogText = string.Empty);
+                }
+
+                fs.Seek(_lastLogPosition, SeekOrigin.Begin);
+                using var reader = new StreamReader(fs, System.Text.Encoding.UTF8);
+                var newContent = reader.ReadToEnd();
+                _lastLogPosition = fs.Position;
+
+                if (!string.IsNullOrEmpty(newContent))
+                {
+                    App.Dispatcher.TryEnqueue(() =>
+                    {
+                        LogText += newContent;
+                        HasLogs = true;
+                        LogAppended?.Invoke();
+                    });
+                }
+            }
+            catch
+            {
+                // File locked temporarily by java process
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        StopLogWatcher();
     }
 
     private void NotifyBusyChanged()

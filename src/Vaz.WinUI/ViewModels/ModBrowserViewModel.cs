@@ -73,6 +73,11 @@ public sealed partial class ModBrowserViewModel : ObservableObject
     public bool CanLoadMore => !IsBusy && !IsLoadingMore;
     public bool ShowEmptyState => !IsBusy && !HasError && !HasResults;
 
+    partial void OnSearchTextChanged(string value) => OnSearchTextChangedDebounced();
+    partial void OnSelectedLoaderChanged(string value) => _ = SearchAsync();
+    partial void OnSelectedGameVersionChanged(string value) => _ = SearchAsync();
+    partial void OnSelectedSortChanged(string value) => _ = SearchAsync();
+
     public ModBrowserViewModel(
         IModrinthClient modrinth,
         IModInstallService modInstall,
@@ -245,7 +250,9 @@ public sealed partial class ModBrowserViewModel : ObservableObject
     }
 
     [RelayCommand]
-    public async Task InstallAsync(SearchHitRow? row)
+    public async Task InstallAsync(SearchHitRow? row) => await InstallModAsync(row);
+
+    public async Task InstallModAsync(SearchHitRow? row, IProgress<InstallProgress>? externalProgress = null)
     {
         if (row == null) return;
 
@@ -253,16 +260,17 @@ public sealed partial class ModBrowserViewModel : ObservableObject
         if (inst == null)
         {
             HasError = true;
-            ErrorMessage = "Chưa chọn instance — chọn instance ở thanh bên trái trước.";
+            ErrorMessage = "Chưa chọn instance để cài mod.";
             return;
         }
 
         try
         {
             IsBusy = true;
-            NotifyBusyChanged();
+            ProgressPercent = 0;
+            StatusMessage = $"Đang tải {row.Title}...";
             HasError = false;
-            StatusMessage = $"Installing {row.Title}...";
+            NotifyBusyChanged();
 
             var progress = new Progress<InstallProgress>(p =>
             {
@@ -271,14 +279,22 @@ public sealed partial class ModBrowserViewModel : ObservableObject
                     ProgressPercent = p.PercentComplete;
                     if (!string.IsNullOrEmpty(p.Status))
                     {
-                        StatusMessage = p.Status;
+                        StatusMessage = p.TotalBytes > 0
+                            ? $"{p.Status}... {p.PercentComplete}%"
+                            : $"{p.Status}...";
                     }
+                    else
+                    {
+                        StatusMessage = $"Downloading {row.Title}... {p.PercentComplete}%";
+                    }
+                    externalProgress?.Report(p);
                 });
             });
 
             var result = await _modInstall.InstallFromModrinthAsync(
                 inst.Id, row.Slug, versionId: null, resolveDependencies: true, progress: progress);
 
+            ProgressPercent = 100;
             StatusMessage = result.Success
                 ? $"Đã cài {result.ModName ?? row.Title}"
                 : $"Cài thất bại: {result.ModName ?? row.Title}";
@@ -293,11 +309,11 @@ public sealed partial class ModBrowserViewModel : ObservableObject
         {
             HasError = true;
             ErrorMessage = ex.Message;
+            StatusMessage = "Cài thất bại.";
         }
         finally
         {
             IsBusy = false;
-            ProgressPercent = 0;
             NotifyBusyChanged();
         }
     }
