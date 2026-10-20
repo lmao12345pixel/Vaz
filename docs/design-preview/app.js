@@ -28,6 +28,8 @@ const MOCK = {
       loaderVersion: "0.19.5",
       path: "C:\\Users\\TOSHIBA\\AppData\\Roaming\\Vazer\\Minecraft\\instances\\test fabric",
       lastPlayed: "2 giờ trước",
+      lastPlayedTs: Date.now() - 2 * 3600_000,
+      createdTs: Date.now() - 30 * 86_400_000,
     },
     {
       id: "vanilla-1.20.1",
@@ -37,6 +39,8 @@ const MOCK = {
       loaderVersion: null,
       path: "C:\\Users\\TOSHIBA\\AppData\\Roaming\\Vazer\\Minecraft\\instances\\vanilla-1.20.1",
       lastPlayed: "3 ngày trước",
+      lastPlayedTs: Date.now() - 3 * 86_400_000,
+      createdTs: Date.now() - 10 * 86_400_000,
     },
     {
       id: "neoforge-1.21.1",
@@ -46,6 +50,8 @@ const MOCK = {
       loaderVersion: "21.1.72",
       path: "C:\\Users\\TOSHIBA\\AppData\\Roaming\\Vazer\\Minecraft\\instances\\neoforge-1.21.1",
       lastPlayed: "1 tuần trước",
+      lastPlayedTs: Date.now() - 7 * 86_400_000,
+      createdTs: Date.now() - 3 * 86_400_000,
     },
   ],
 
@@ -66,6 +72,21 @@ const MOCK = {
     { id: "acc-steve", name: "Steve", kind: "Offline", active: true },
     { id: "acc-alex", name: "Alex", kind: "Microsoft", active: false },
   ],
+
+  worlds: {
+    "test fabric": [
+      { name: "World", sizeMb: 148.2, lastPlayed: "2 giờ trước", backups: 2 },
+      { name: "Survival 1.21", sizeMb: 96.4, lastPlayed: "3 ngày trước", backups: 0 },
+      { name: "Creative Test", sizeMb: 12.7, lastPlayed: "1 tuần trước", backups: 1 },
+    ],
+    "vanilla-1.20.1": [
+      { name: "World", sizeMb: 42.8, lastPlayed: "3 ngày trước", backups: 0 },
+    ],
+    "neoforge-1.21.1": [
+      { name: "ATM10", sizeMb: 512.6, lastPlayed: "1 tuần trước", backups: 4 },
+      { name: "Skyblock", sizeMb: 88.1, lastPlayed: "2 tuần trước", backups: 1 },
+    ],
+  },
 
   // Rút gọn từ kết quả Modrinth thật; icon lấy từ CDN.
   catalog: [
@@ -100,6 +121,21 @@ const TOTAL_RESULTS = 19_628;
 const MB_PAGE_SIZE = 20;
 const STORAGE_KEY = "vazer-demo-v1";
 
+const DEFAULT_SETTINGS = {
+  ramMb: 4096,
+  jvmArgs: "",
+  javaPath: "",
+  width: 854,
+  height: 480,
+};
+
+const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
+const dateStamp = () => {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}`;
+};
+
 const VERSION_OPTIONS = ["Auto", "All", "1.21.1", "1.21", "1.20.1", "1.20", "1.19.4", "1.19.2", "1.18.2", "1.16.5"];
 const SORT_OPTIONS = ["Relevance", "Downloads", "Updated", "Newest"];
 
@@ -132,7 +168,10 @@ const state = {
   accounts: structuredClone(MOCK.accounts),
   logs: {},          // instanceId -> string[]
   logTimers: {},     // instanceId -> interval id
+  worlds: structuredClone(MOCK.worlds), // instanceId -> world[]
   tab: "mods",
+  instanceQuery: "",
+  instanceSort: "lastPlayed",
   modBrowser: {
     query: "",
     loader: "Auto",
@@ -150,12 +189,13 @@ const state = {
 function saveState() {
   try {
     const instances = state.instances.map((inst) => {
-      const { launching, status, pid, ...rest } = inst;
+      const { launching, running, status, pid, ...rest } = inst;
       return rest;
     });
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       instances,
       mods: state.mods,
+      worlds: state.worlds,
       accounts: state.accounts,
       activeInstanceId: state.activeInstanceId,
       theme: document.documentElement.dataset.theme,
@@ -172,6 +212,7 @@ function loadState() {
     const data = JSON.parse(raw);
     if (Array.isArray(data.instances)) state.instances = data.instances;
     if (data.mods && typeof data.mods === "object") state.mods = data.mods;
+    if (data.worlds && typeof data.worlds === "object") state.worlds = data.worlds;
     if (Array.isArray(data.accounts)) state.accounts = data.accounts;
     if (data.activeInstanceId && state.instances.some((i) => i.id === data.activeInstanceId)) {
       state.activeInstanceId = data.activeInstanceId;
@@ -182,6 +223,19 @@ function loadState() {
   } catch {
     // state hỏng — dùng MOCK
   }
+}
+
+/** Bù các field mới cho state cũ trong localStorage. */
+function normalizeState() {
+  state.instances.forEach((inst) => {
+    inst.settings = { ...DEFAULT_SETTINGS, ...(inst.settings || {}) };
+    if (typeof inst.lastPlayedTs !== "number") inst.lastPlayedTs = 0;
+    if (typeof inst.createdTs !== "number") inst.createdTs = 0;
+    if (!state.worlds[inst.id]) state.worlds[inst.id] = structuredClone(MOCK.worlds[inst.id] || []);
+  });
+  Object.keys(state.worlds).forEach((id) => {
+    if (!getInstance(id)) delete state.worlds[id];
+  });
 }
 
 const getInstance = (id) => state.instances.find((i) => i.id === id);
@@ -203,10 +257,10 @@ function isProjectInstalled(instanceId, project) {
   return (state.mods[instanceId] || []).some((m) => m.projectId === project.id);
 }
 
-function modFileName(project, inst) {
-  if (inst.loader === "fabric") return `${project.slug}-fabric-${project.version}+mc${inst.mc}.jar`;
-  if (inst.loader === "neoforge") return `${project.slug}-neoforge-${project.version}.jar`;
-  return `${project.slug}-${project.version}.jar`;
+function modFileName(project, inst, version = project.version) {
+  if (inst.loader === "fabric") return `${project.slug}-fabric-${version}+mc${inst.mc}.jar`;
+  if (inst.loader === "neoforge") return `${project.slug}-neoforge-${version}.jar`;
+  return `${project.slug}-${version}.jar`;
 }
 
 /** Cài 1 project vào instance; trả về true nếu thêm mới. */
@@ -273,8 +327,11 @@ function openDetail(id) {
 
   setTab("mods");
   renderMods();
+  renderWorlds();
+  renderSettings();
   renderLogs();
-  if ((inst.status || "").startsWith("Đang chạy")) streamLogs(id);
+  updateDetailLaunchButton();
+  if (inst.running) streamLogs(id);
 
   showScreen("detail");
 }
@@ -282,34 +339,60 @@ function openDetail(id) {
 /* ------------------------------------------------------------
    INSTANCES
    ------------------------------------------------------------ */
+function visibleInstances() {
+  const q = state.instanceQuery.trim().toLowerCase();
+  const list = state.instances.filter((inst) => {
+    if (!q) return true;
+    return [inst.name, inst.mc, inst.loader].some((v) => String(v).toLowerCase().includes(q));
+  });
+
+  if (state.instanceSort === "name") {
+    return list.sort((a, b) => a.name.localeCompare(b.name, "vi"));
+  }
+  if (state.instanceSort === "created") {
+    return list.sort((a, b) => (b.createdTs || 0) - (a.createdTs || 0));
+  }
+  return list.sort((a, b) => (b.lastPlayedTs || 0) - (a.lastPlayedTs || 0));
+}
+
 function renderInstances() {
   const grid = $("#instanceGrid");
   const empty = $("#instancesEmpty");
+  const list = visibleInstances();
 
-  grid.innerHTML = state.instances.map((inst) => {
+  grid.innerHTML = list.map((inst) => {
     const spinner = inst.launching
       ? `<span class="spinner"></span>`
-      : `<span class="glyph">&#xE768;</span>`;
+      : `<span class="glyph">${inst.running ? "&#xE71A;" : "&#xE768;"}</span>`;
     const status = inst.status
       ? `<div class="status">${esc(inst.status)}</div>`
       : "";
+    const runningChip = inst.running ? `<span class="chip running">Đang chạy</span>` : "";
+    const lastPlayed = inst.lastPlayed ? `Chơi lần cuối: ${esc(inst.lastPlayed)}` : "Chưa chơi lần nào";
 
     return `
-      <div class="instance-card" data-id="${esc(inst.id)}" tabindex="0">
+      <div class="instance-card${inst.running ? " is-running" : ""}" data-id="${esc(inst.id)}" tabindex="0">
         <div class="name">${esc(inst.name)}</div>
         <div class="meta">
-          <span>${esc(inst.mc)}</span>
-          <span>${esc(inst.loader)}</span>
+          <span>${esc(inst.mc)} · ${esc(inst.loader)}</span>
+          <span class="text-3">${lastPlayed}</span>
         </div>
+        ${runningChip}
         ${status}
         <div class="card-actions">
-          <button class="btn icon-only" data-action="play" ${inst.launching ? "disabled" : ""}>${spinner}</button>
-          <button class="btn icon-only" data-action="edit"><span class="glyph">&#xE713;</span></button>
+          <button class="btn icon-only" data-action="play" title="${inst.running ? "Stop" : "Launch"}" ${inst.launching ? "disabled" : ""}>${spinner}</button>
+          <button class="btn icon-only" data-action="edit" title="Edit"><span class="glyph">&#xE713;</span></button>
         </div>
       </div>`;
   }).join("");
 
-  empty.hidden = state.instances.length > 0;
+  empty.hidden = list.length > 0;
+  $("#instancesEmptyTitle").textContent = state.instances.length === 0
+    ? "Chưa có instance nào."
+    : "Không tìm thấy instance nào.";
+  $("#instancesEmptyHint").textContent = state.instances.length === 0
+    ? "Bấm + để tạo instance mới."
+    : "Thử từ khoá khác hoặc xoá bộ lọc.";
 }
 
 function setCardStatus(id, text) {
@@ -322,9 +405,22 @@ function setCardStatus(id, text) {
   }
 }
 
+function updateDetailLaunchButton() {
+  const inst = currentInstance();
+  const running = !!inst?.running;
+  $("#detailLaunchLabel").textContent = running ? "Stop" : "Launch";
+  $("#detailLaunchBtn .glyph").innerHTML = running ? "&#xE71A;" : "&#xE768;";
+  $("#detailLaunchBtn").disabled = !!inst?.launching;
+}
+
 async function launchInstance(id, { fromDetail = false } = {}) {
   const inst = getInstance(id);
   if (!inst || inst.launching) return;
+
+  if (inst.running) {
+    showToastStatus(`${inst.name} đang chạy. Bấm Stop trước khi launch lại.`);
+    return;
+  }
 
   if (!state.accounts.some((a) => a.active)) {
     await showAlert("Chưa có tài khoản", "Vui lòng chọn hoặc thêm tài khoản ở trang Accounts trước khi khởi chạy.");
@@ -333,8 +429,8 @@ async function launchInstance(id, { fromDetail = false } = {}) {
 
   inst.launching = true;
   setCardStatus(id, "Đang khởi chạy...");
+  updateDetailLaunchButton();
   if (fromDetail) {
-    $("#detailLaunchBtn").disabled = true;
     $("#detailProgress").hidden = false;
     setDetailProgress(10);
     $("#detailStatus").textContent = "Đang chuẩn bị Java runtime...";
@@ -347,15 +443,23 @@ async function launchInstance(id, { fromDetail = false } = {}) {
   await sleep(500);
 
   const pid = rand(10000, 65000);
+  const settings = { ...DEFAULT_SETTINGS, ...(inst.settings || {}) };
   inst.launching = false;
+  inst.running = true;
   inst.pid = pid;
+  inst.lastPlayed = "Vừa xong";
+  inst.lastPlayedTs = Date.now();
   setCardStatus(id, `Đang chạy (PID ${pid})`);
-  // latest.log được truncate mỗi lần chạy game.
+  updateDetailLaunchButton();
+
+  // latest.log được truncate mỗi lần chạy game + in cấu hình đang dùng.
   state.logs[id] = [];
+  pushLog(id, `[Launcher/INFO]: Java runtime: ${settings.javaPath || "auto-detected (Java 21)"}`);
+  pushLog(id, `[Launcher/INFO]: JVM args: -Xmx${settings.ramMb}M -Xms${Math.min(1024, settings.ramMb)}M ${settings.jvmArgs}`.trim());
+  pushLog(id, `[Launcher/INFO]: Window: ${settings.width}x${settings.height}`);
   saveState();
 
   if (fromDetail) {
-    $("#detailLaunchBtn").disabled = false;
     $("#detailProgress").hidden = true;
     setDetailProgress(0);
     $("#detailStatus").textContent = "";
@@ -363,6 +467,26 @@ async function launchInstance(id, { fromDetail = false } = {}) {
     setTab("logs");
     streamLogs(id);
   }
+}
+
+function stopInstance(id) {
+  const inst = getInstance(id);
+  if (!inst || !inst.running) return;
+
+  if (state.logTimers[id]) {
+    clearInterval(state.logTimers[id]);
+    delete state.logTimers[id];
+  }
+  inst.running = false;
+  inst.pid = null;
+  pushLog(id, "[Launcher/INFO]: Game stopped by user.");
+  setCardStatus(id, "Đã dừng.");
+  if (state.screen === "detail" && state.activeInstanceId === id) {
+    updateDetailLaunchButton();
+    setDetailStatus("Đã dừng instance.");
+    renderLogs();
+  }
+  saveState();
 }
 
 function setDetailProgress(pct) {
@@ -376,9 +500,12 @@ function setTab(tab) {
   state.tab = tab;
   $$(".tab").forEach((t) => t.classList.toggle("is-selected", t.dataset.tab === tab));
   $("#tab-mods").hidden = tab !== "mods";
+  $("#tab-worlds").hidden = tab !== "worlds";
   $("#tab-logs").hidden = tab !== "logs";
   $("#tab-settings").hidden = tab !== "settings";
   if (tab === "logs") renderLogs();
+  if (tab === "worlds") renderWorlds();
+  if (tab === "settings") renderSettings();
 }
 
 /* ------------------------------------------------------------
@@ -400,6 +527,9 @@ function renderMods() {
         <div class="mod-version">${esc(label)} · v${esc(mod.version)}</div>
       </div>
       ${mod.update ? `<span class="badge">Cập nhật ${esc(mod.update)}</span>` : ""}
+      <button class="btn icon-only mod-menu-btn" data-mod-menu="${i}" title="Tùy chọn mod">
+        <span class="glyph">&#xE712;</span>
+      </button>
       <label class="switch">
         <input type="checkbox" data-mod-toggle="${i}" ${mod.enabled ? "checked" : ""} />
         <span class="track"></span>
@@ -480,6 +610,133 @@ async function updateAll() {
   setDetailStatus(`Đã cập nhật xong ${done} mod.`);
 }
 
+/** Giảm segment số cuối: 0.6.13 -> 0.6.12 */
+function prevVersion(v) {
+  const parts = String(v).split(".");
+  const last = parseInt(parts[parts.length - 1], 10);
+  if (Number.isFinite(last) && last > 0) parts[parts.length - 1] = String(last - 1);
+  else parts.push("0");
+  return parts.join(".");
+}
+
+async function updateSingleMod(index) {
+  const mod = currentMods()[index];
+  if (!mod || !mod.update) return;
+
+  const inst = currentInstance();
+  const project = mod.projectId ? catalogProject(mod.projectId) : null;
+  const label = project ? project.name : mod.file;
+  const from = mod.version;
+  const to = mod.update;
+
+  $("#detailProgress").hidden = false;
+  for (let p = 0; p <= 100; p += 10) {
+    setDetailProgress(p);
+    setDetailStatus(`Đang cập nhật ${label} ${from} → ${to}... ${p}%`);
+    await sleep(70);
+  }
+  $("#detailProgress").hidden = true;
+  setDetailProgress(0);
+
+  mod.version = to;
+  mod.file = project ? modFileName(project, inst, to) : mod.file.replace(from, to);
+  mod.update = null;
+  renderMods();
+  saveState();
+  setDetailStatus(`Đã cập nhật ${label} lên ${to}.`);
+}
+
+function openVersionPicker(index) {
+  const mod = currentMods()[index];
+  if (!mod) return;
+  const inst = currentInstance();
+  const project = mod.projectId ? catalogProject(mod.projectId) : null;
+  const name = project ? project.name : mod.file;
+
+  const versions = [...new Set([project?.version, mod.version, prevVersion(mod.version)].filter(Boolean))];
+
+  const dialog = showDialog({
+    title: `Chọn phiên bản — ${name}`,
+    primary: "Cài bản đã chọn",
+    closeText: "Hủy",
+    body: `
+      <div class="version-list">
+        ${versions.map((v) => `
+          <label class="version-row">
+            <input type="radio" name="verPick" value="${esc(v)}" ${v === mod.version ? "checked" : ""} />
+            <span class="ver-name">${esc(v)}</span>
+            <span class="caption text-2">${
+              v === mod.version
+                ? "Đang dùng"
+                : compareVersions(v, mod.version) > 0 ? "Mới hơn" : "Cũ hơn"
+            }</span>
+          </label>`).join("")}
+      </div>
+      <p class="caption text-2">Demo chỉ đổi metadata; app thật tải đúng file version từ Modrinth.</p>`,
+    onPrimary: () => {
+      const picked = $("input[name=verPick]:checked", dialog.host)?.value;
+      if (!picked) return false;
+      mod.version = picked;
+      mod.file = project ? modFileName(project, inst, picked) : mod.file;
+      mod.update = project && compareVersions(project.version, picked) > 0 ? project.version : null;
+      renderMods();
+      saveState();
+      setDetailStatus(`Đã đổi ${name} sang phiên bản ${picked}.`);
+      return true;
+    },
+  });
+  return dialog;
+}
+
+async function uninstallMod(index) {
+  const mod = currentMods()[index];
+  if (!mod) return;
+  const project = mod.projectId ? catalogProject(mod.projectId) : null;
+  const name = project ? project.name : mod.file;
+
+  if (await confirmDialog(`Gỡ mod "${name}"?`, "File mod sẽ bị xóa khỏi thư mục mods của instance.", "Gỡ")) {
+    currentMods().splice(index, 1);
+    renderMods();
+    saveState();
+    setDetailStatus(`Đã gỡ ${name}.`);
+  }
+}
+
+function openModMenu(x, y, index) {
+  const mod = currentMods()[index];
+  if (!mod) return;
+  const menu = $("#contextMenu");
+  delete menu.dataset.instanceId;
+  menu.innerHTML = `
+    ${mod.update ? `<button data-modmenu="update"><span class="glyph">&#xE896;</span>Cập nhật ${esc(mod.update)}</button>` : ""}
+    <button data-modmenu="version"><span class="glyph">&#xE81C;</span>Chọn phiên bản</button>
+    <hr />
+    <button data-modmenu="uninstall" class="danger"><span class="glyph">&#xE74D;</span>Gỡ mod</button>`;
+
+  menu.hidden = false;
+  const rect = menu.getBoundingClientRect();
+  menu.style.left = Math.min(x, window.innerWidth - rect.width - 8) + "px";
+  menu.style.top = Math.min(y, window.innerHeight - rect.height - 8) + "px";
+  menu.dataset.modIndex = index;
+
+  const close = () => {
+    menu.hidden = true;
+    document.removeEventListener("click", close);
+    document.removeEventListener("keydown", onKey);
+  };
+  const onKey = (e) => { if (e.key === "Escape") close(); };
+  setTimeout(() => {
+    document.addEventListener("click", close);
+    document.addEventListener("keydown", onKey);
+  }, 0);
+}
+
+async function handleModMenu(action, index) {
+  if (action === "update") await updateSingleMod(index);
+  if (action === "version") openVersionPicker(index);
+  if (action === "uninstall") await uninstallMod(index);
+}
+
 /* ------------------------------------------------------------
    DETAIL — logs
    ------------------------------------------------------------ */
@@ -554,6 +811,222 @@ function renderLogs() {
 }
 
 /* ------------------------------------------------------------
+   DETAIL — worlds
+   ------------------------------------------------------------ */
+function worldsFor(inst) {
+  return (state.worlds[inst.id] ||= []);
+}
+
+function renderWorlds() {
+  const inst = currentInstance();
+  if (!inst) return;
+
+  const worlds = worldsFor(inst);
+  const totalMb = worlds.reduce((sum, w) => sum + (w.sizeMb || 0), 0);
+  const totalBackups = worlds.reduce((sum, w) => sum + (w.backups || 0), 0);
+  $("#worldsSummary").textContent =
+    `${worlds.length} world · ${totalMb.toFixed(1)} MB · ${totalBackups} backup`;
+
+  $("#worldList").innerHTML = worlds.map((w, i) => `
+    <div class="list-row world-row">
+      <span class="glyph">&#xE81E;</span>
+      <div class="world-main">
+        <div class="world-name">${esc(w.name)}</div>
+        <div class="caption text-2">
+          ${w.sizeMb.toFixed(1)} MB · Chơi lần cuối: ${esc(w.lastPlayed)} · ${w.backups || 0} backup
+        </div>
+      </div>
+      <button class="btn" data-world-backup="${i}">
+        <span class="glyph">&#xE896;</span><span>Backup</span>
+      </button>
+    </div>`).join("");
+
+  $("#worldsEmpty").hidden = worlds.length > 0;
+}
+
+async function backupWorld(index) {
+  const inst = currentInstance();
+  if (!inst) return;
+  const world = worldsFor(inst)[index];
+  if (!world) return;
+
+  const progress = $("#worldsProgress");
+  const status = $("#worldsStatus");
+  progress.hidden = false;
+
+  for (let p = 0; p <= 100; p += 10) {
+    progress.firstElementChild.style.width = p + "%";
+    status.textContent = `Đang nén "${world.name}"... ${p}%`;
+    await sleep(45);
+  }
+
+  world.backups = (world.backups || 0) + 1;
+  saveState();
+  renderWorlds();
+
+  progress.hidden = true;
+  progress.firstElementChild.style.width = "0%";
+  status.textContent =
+    `Đã backup "${world.name}" → backups/${world.name.replace(/\s+/g, "_")}-${dateStamp()}.zip (${world.sizeMb.toFixed(1)} MB).`;
+  showToastStatus(`Đã backup "${world.name}".`);
+}
+
+async function backupAllWorlds() {
+  const inst = currentInstance();
+  if (!inst) return;
+  const worlds = [...worldsFor(inst)];
+  if (worlds.length === 0) {
+    showToastStatus("Không có world nào để backup.");
+    return;
+  }
+
+  for (let i = 0; i < worlds.length; i++) {
+    await backupWorld(i);
+  }
+  $("#worldsStatus").textContent = `Đã backup xong ${worlds.length} world.`;
+}
+
+/* ------------------------------------------------------------
+   DETAIL — settings
+   ------------------------------------------------------------ */
+function renderSettings() {
+  const inst = currentInstance();
+  if (!inst) return;
+
+  inst.settings = { ...DEFAULT_SETTINGS, ...(inst.settings || {}) };
+  const s = inst.settings;
+
+  $("#setRam").value = s.ramMb;
+  $("#setRamValue").value = s.ramMb;
+  $("#setJvm").value = s.jvmArgs;
+  $("#setJava").value = s.javaPath;
+  $("#setWidth").value = s.width;
+  $("#setHeight").value = s.height;
+  $("#settingsFolder").value = inst.path;
+  $("#settingsStatus").textContent = "";
+}
+
+function saveSettings() {
+  const inst = currentInstance();
+  if (!inst) return;
+
+  const ramMb = clamp(parseInt($("#setRamValue").value, 10) || DEFAULT_SETTINGS.ramMb, 1024, 16384);
+  const width = clamp(parseInt($("#setWidth").value, 10) || DEFAULT_SETTINGS.width, 320, 7680);
+  const height = clamp(parseInt($("#setHeight").value, 10) || DEFAULT_SETTINGS.height, 240, 4320);
+
+  inst.settings = {
+    ramMb,
+    jvmArgs: $("#setJvm").value.trim(),
+    javaPath: $("#setJava").value.trim(),
+    width,
+    height,
+  };
+
+  saveState();
+  renderSettings();
+  $("#settingsStatus").textContent = "Đã lưu cài đặt.";
+  showToastStatus("Đã lưu cài đặt instance.");
+}
+
+function resetSettings() {
+  const inst = currentInstance();
+  if (!inst) return;
+  inst.settings = { ...DEFAULT_SETTINGS };
+  saveState();
+  renderSettings();
+  $("#settingsStatus").textContent = "Đã khôi phục mặc định.";
+}
+
+/* ------------------------------------------------------------
+   DETAIL — rename + crash
+   ------------------------------------------------------------ */
+function openRenameDialog(id) {
+  const inst = getInstance(id);
+  if (!inst) return;
+
+  const dialog = showDialog({
+    title: "Đổi tên instance",
+    primary: "Lưu",
+    closeText: "Hủy",
+    body: `
+      <label class="field"><span>Tên mới</span>
+        <input class="textbox" id="renameInput" value="${esc(inst.name)}" />
+      </label>
+      <div class="infobar info">
+        <span class="glyph">&#xE946;</span>
+        <div>Demo chỉ đổi tên hiển thị. App thật sẽ đổi cả tên thư mục instance.</div>
+      </div>`,
+    onPrimary: () => {
+      const input = $("#renameInput", dialog.host);
+      const name = input.value.trim();
+      if (!name) {
+        input.focus();
+        return false;
+      }
+      inst.name = name;
+      saveState();
+      renderInstances();
+      if (state.screen === "detail" && state.activeInstanceId === inst.id) {
+        $("#detailName").textContent = name;
+      }
+      showToastStatus(`Đã đổi tên thành "${name}".`);
+      return true;
+    },
+  });
+
+  setTimeout(() => $("#renameInput", dialog.host)?.select(), 50);
+}
+
+function simulateCrash() {
+  const inst = state.instances.find((i) => i.running);
+  if (!inst) {
+    showToastStatus("Không có instance nào đang chạy. Bấm Launch trước đã.");
+    return;
+  }
+
+  if (state.logTimers[inst.id]) {
+    clearInterval(state.logTimers[inst.id]);
+    delete state.logTimers[inst.id];
+  }
+  inst.running = false;
+  inst.launching = false;
+  inst.pid = null;
+  inst.status = "Đã crash (exit code 1)";
+
+  const report = `crash-${dateStamp()}-client.txt`;
+  pushLog(inst.id, "[Render thread/ERROR]: java.lang.OutOfMemoryError: Java heap space");
+  pushLog(inst.id, "[Render thread/ERROR]: \tat net.minecraft.client.Minecraft.run(Minecraft.java:1015)");
+  pushLog(inst.id, `[Launcher/ERROR]: Game crashed with exit code 1. Report: crash-reports/${report}`);
+  saveState();
+
+  if (state.screen === "instances") renderInstances();
+  if (state.screen === "detail" && state.activeInstanceId === inst.id) {
+    $("#detailLaunchStatus").textContent = inst.status;
+    updateDetailLaunchButton();
+    renderLogs();
+  }
+
+  showDialog({
+    title: "Instance đã crash",
+    primary: "Mở crash report",
+    closeText: "Đóng",
+    body: `
+      <div class="infobar error">
+        <span class="glyph">&#xE7BA;</span>
+        <div><strong>${esc(inst.name)} đã thoát bất thường</strong><p>Exit code 1 · ${now()}</p></div>
+      </div>
+      <label class="field"><span>Crash report</span>
+        <input class="textbox" readonly value="${esc(inst.path)}\\crash-reports\\${report}" />
+      </label>
+      <p class="caption text-2">Demo: mở report chỉ hiện thông báo. App thật mở file bằng Notepad/Explorer.</p>`,
+    onPrimary: () => {
+      showToastStatus(`Đã mở crash-reports/${report} (demo).`);
+      return true;
+    },
+  });
+}
+
+/* ------------------------------------------------------------
    ACCOUNTS
    ------------------------------------------------------------ */
 function avatarUrl(name) {
@@ -600,9 +1073,12 @@ function getAccount(id) {
    ------------------------------------------------------------ */
 function openContextMenu(x, y, id) {
   const menu = $("#contextMenu");
+  const inst = getInstance(id);
+  delete menu.dataset.modIndex;
   menu.innerHTML = `
-    <button data-ctx="play"><span class="glyph">&#xE768;</span>Play</button>
+    <button data-ctx="${inst?.running ? "stop" : "play"}"><span class="glyph">${inst?.running ? "&#xE71A;" : "&#xE768;"}</span>${inst?.running ? "Stop" : "Play"}</button>
     <button data-ctx="edit"><span class="glyph">&#xE713;</span>Edit</button>
+    <button data-ctx="rename"><span class="glyph">&#xE8AC;</span>Rename</button>
     <button data-ctx="folder"><span class="glyph">&#xE838;</span>Open folder</button>
     <hr />
     <button data-ctx="delete" class="danger"><span class="glyph">&#xE74D;</span>Delete</button>`;
@@ -756,8 +1232,12 @@ function openNewInstanceDialog() {
         loaderVersion,
         path: `C:\\Users\\TOSHIBA\\AppData\\Roaming\\Vazer\\Minecraft\\instances\\${id}`,
         lastPlayed: null,
+        lastPlayedTs: 0,
+        createdTs: Date.now(),
+        settings: { ...DEFAULT_SETTINGS },
       });
       state.mods[id] = [];
+      state.worlds[id] = [];
       saveState();
       renderInstances();
       showToastStatus(`Đã tạo instance "${name}".`);
@@ -1223,6 +1703,16 @@ function wireEvents() {
   // Instances
   $("#newInstanceBtn").addEventListener("click", openNewInstanceDialog);
 
+  $("#instanceSearch").addEventListener("input", (e) => {
+    state.instanceQuery = e.target.value;
+    renderInstances();
+  });
+
+  $("#instanceSort").addEventListener("change", (e) => {
+    state.instanceSort = e.target.value;
+    renderInstances();
+  });
+
   $("#instanceGrid").addEventListener("click", async (e) => {
     const card = e.target.closest(".instance-card");
     if (!card) return;
@@ -1231,7 +1721,8 @@ function wireEvents() {
 
     if (action === "play") {
       e.stopPropagation();
-      await launchInstance(id);
+      if (getInstance(id)?.running) stopInstance(id);
+      else await launchInstance(id);
     } else if (action === "edit") {
       e.stopPropagation();
       openDetail(id);
@@ -1254,8 +1745,16 @@ function wireEvents() {
   });
 
   $("#contextMenu").addEventListener("click", async (e) => {
-    const btn = e.target.closest("[data-ctx]");
     const menu = $("#contextMenu");
+    const modBtn = e.target.closest("[data-modmenu]");
+    if (modBtn) {
+      const index = Number(menu.dataset.modIndex);
+      menu.hidden = true;
+      await handleModMenu(modBtn.dataset.modmenu, index);
+      return;
+    }
+
+    const btn = e.target.closest("[data-ctx]");
     if (!btn) return;
     const id = menu.dataset.instanceId;
     const inst = getInstance(id);
@@ -1263,12 +1762,20 @@ function wireEvents() {
 
     switch (btn.dataset.ctx) {
       case "play": await launchInstance(id); break;
+      case "stop": stopInstance(id); break;
       case "edit": openDetail(id); break;
+      case "rename": openRenameDialog(id); break;
       case "folder": showToastStatus("Đã mở thư mục instance (demo)."); break;
       case "delete":
         if (await confirmDialog(`Xóa "${inst.name}"?`, "Toàn bộ thư mục instance sẽ bị xóa khỏi disk. Không thể hoàn tác.")) {
           state.instances = state.instances.filter((i) => i.id !== id);
           delete state.mods[id];
+          delete state.worlds[id];
+          delete state.logs[id];
+          if (state.logTimers[id]) {
+            clearInterval(state.logTimers[id]);
+            delete state.logTimers[id];
+          }
           ensureActiveInstance();
           saveState();
           renderInstances();
@@ -1279,7 +1786,10 @@ function wireEvents() {
 
   // Detail header
   $("#detailLaunchBtn").addEventListener("click", () => {
-    launchInstance(state.activeInstanceId, { fromDetail: true });
+    const inst = currentInstance();
+    if (!inst) return;
+    if (inst.running) stopInstance(inst.id);
+    else launchInstance(inst.id, { fromDetail: true });
   });
 
   // Tabs
@@ -1302,8 +1812,36 @@ function wireEvents() {
       mod.enabled = input.checked;
       saveState();
       setDetailStatus(`${input.checked ? "Đã bật" : "Đã tắt"} ${mod.file}.`);
+      renderMods();
     }
   });
+
+  // Mod row menu (delegated)
+  $("#modList").addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-mod-menu]");
+    if (!btn) return;
+    openModMenu(e.clientX, e.clientY, Number(btn.dataset.modMenu));
+  });
+
+  // Worlds
+  $("#worldList").addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-world-backup]");
+    if (!btn) return;
+    await backupWorld(Number(btn.dataset.worldBackup));
+  });
+  $("#backupAllWorldsBtn").addEventListener("click", backupAllWorlds);
+  $("#openWorldsFolderBtn").addEventListener("click", () => showToastStatus("Đã mở thư mục saves (demo)."));
+
+  // Settings
+  $("#setRam").addEventListener("input", (e) => {
+    $("#setRamValue").value = e.target.value;
+  });
+  $("#setRamValue").addEventListener("input", (e) => {
+    const value = clamp(parseInt(e.target.value, 10) || DEFAULT_SETTINGS.ramMb, 1024, 16384);
+    $("#setRam").value = value;
+  });
+  $("#saveSettingsBtn").addEventListener("click", saveSettings);
+  $("#resetSettingsBtn").addEventListener("click", resetSettings);
 
   // Logs toolbar
   $("#clearLogBtn").addEventListener("click", () => {
@@ -1333,6 +1871,12 @@ function wireEvents() {
     if (await confirmDialog(`Xóa "${inst.name}"?`, "Toàn bộ thư mục instance sẽ bị xóa khỏi disk. Không thể hoàn tác.")) {
       state.instances = state.instances.filter((i) => i.id !== inst.id);
       delete state.mods[inst.id];
+      delete state.worlds[inst.id];
+      delete state.logs[inst.id];
+      if (state.logTimers[inst.id]) {
+        clearInterval(state.logTimers[inst.id]);
+        delete state.logTimers[inst.id];
+      }
       ensureActiveInstance();
       saveState();
       showScreen("instances");
@@ -1374,6 +1918,7 @@ function wireEvents() {
   });
 
   // Demo bar
+  $("#simulateCrashBtn").addEventListener("click", simulateCrash);
   $("#themeToggle").addEventListener("click", () => {
     const html = document.documentElement;
     const next = html.dataset.theme === "dark" ? "light" : "dark";
@@ -1407,10 +1952,12 @@ function showToastStatus(text) {
    INIT
    ------------------------------------------------------------ */
 loadState();
+normalizeState();
 if (!state.instances.some((i) => i.id === state.activeInstanceId) && state.instances[0]) {
   state.activeInstanceId = state.instances[0].id;
 }
 $("#themeToggle").textContent = document.documentElement.dataset.theme === "light" ? "Light" : "Dark";
+$("#instanceSort").value = state.instanceSort;
 
 wireEvents();
 renderInstances();

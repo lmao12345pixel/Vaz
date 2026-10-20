@@ -35,17 +35,28 @@
       <section class="page" id="page-instances">
         <div class="page-header">
           <h1 class="page-title">Instances</h1>
-          <button class="btn" id="newInstanceBtn">
-            <span class="glyph">&#xE710;</span><span>New</span>
-          </button>
+          <div class="header-actions">
+            <div class="searchbox compact">
+              <span class="glyph">&#xE721;</span>
+              <input id="instanceSearch" placeholder="Tìm instance..." autocomplete="off" />
+            </div>
+            <select class="select" id="instanceSort" title="Sắp xếp">
+              <option value="lastPlayed">Chơi gần nhất</option>
+              <option value="name">Tên A-Z</option>
+              <option value="created">Mới tạo</option>
+            </select>
+            <button class="btn" id="newInstanceBtn">
+              <span class="glyph">&#xE710;</span><span>New</span>
+            </button>
+          </div>
         </div>
 
         <div class="card-grid" id="instanceGrid"></div>
 
         <div class="empty-state" id="instancesEmpty" hidden>
           <span class="glyph empty-icon">&#xE7F8;</span>
-          <p>Chưa có instance nào.</p>
-          <p class="text-3">Bấm + để tạo instance mới.</p>
+          <p id="instancesEmptyTitle">Chưa có instance nào.</p>
+          <p class="text-3" id="instancesEmptyHint">Bấm + để tạo instance mới.</p>
         </div>
       </section>
 
@@ -60,7 +71,9 @@
             </div>
             <div class="caption accent" id="detailLaunchStatus"></div>
           </div>
-          <button class="btn" id="detailLaunchBtn">Launch</button>
+          <button class="btn accent" id="detailLaunchBtn">
+            <span class="glyph">&#xE768;</span><span id="detailLaunchLabel">Launch</span>
+          </button>
         </div>
 
         <div class="infobar error" id="detailError" hidden>
@@ -74,6 +87,7 @@
         <div class="tabview">
           <div class="tabstrip" role="tablist">
             <button class="tab is-selected" data-tab="mods" role="tab">Mods</button>
+            <button class="tab" data-tab="worlds" role="tab">Worlds</button>
             <button class="tab" data-tab="logs" role="tab">Logs</button>
             <button class="tab" data-tab="settings" role="tab">Settings</button>
           </div>
@@ -105,6 +119,24 @@
             </div>
           </div>
 
+          <!-- Worlds -->
+          <div class="tab-panel" id="tab-worlds" hidden>
+            <div class="toolbar">
+              <button class="btn" id="openWorldsFolderBtn"><span class="glyph">&#xE838;</span><span>Open worlds folder</span></button>
+              <button class="btn" id="backupAllWorldsBtn"><span class="glyph">&#xE896;</span><span>Backup all</span></button>
+              <span class="caption text-2" id="worldsSummary"></span>
+            </div>
+            <div class="progress thin" id="worldsProgress" hidden><div></div></div>
+            <div class="caption text-2" id="worldsStatus"></div>
+
+            <div class="list" id="worldList"></div>
+            <div class="empty-state small" id="worldsEmpty" hidden>
+              <span class="glyph empty-icon">&#xE81E;</span>
+              <p class="text-2">Instance này chưa có world nào.</p>
+              <p class="text-3">Vào game tạo world mới rồi quay lại đây để backup.</p>
+            </div>
+          </div>
+
           <!-- Logs -->
           <div class="tab-panel" id="tab-logs" hidden>
             <div class="toolbar">
@@ -125,13 +157,44 @@
           <!-- Settings -->
           <div class="tab-panel" id="tab-settings" hidden>
             <div class="settings-stack">
-              <div class="infobar warning">
-                <span class="glyph">&#xE7BA;</span>
-                <div><strong>RAM / JVM args</strong><p>RAM / JVM args chưa có trong Core. Follow-up.</p></div>
+              <div class="setting-group">
+                <label class="field-label" for="setRam">RAM cấp cho instance</label>
+                <div class="slider-row">
+                  <input type="range" id="setRam" min="1024" max="16384" step="512" />
+                  <input class="textbox narrow" type="number" id="setRamValue" min="1024" max="16384" step="512" />
+                  <span class="text-2">MB</span>
+                </div>
+                <p class="caption text-3">Khuyến nghị 4096 MB; 8192 MB nếu chơi modpack nặng. Tối đa 16384 MB.</p>
               </div>
-              <label class="field-label">Thư mục instance:</label>
+
+              <label class="field"><span>JVM arguments</span>
+                <textarea class="textbox area" id="setJvm" rows="3" placeholder="-XX:+UseG1GC -XX:+UnlockExperimentalVMOptions"></textarea>
+              </label>
+
+              <div class="settings-grid">
+                <label class="field"><span>Java path (trống = tự dò)</span>
+                  <input class="textbox" id="setJava" placeholder="C:\Program Files\Java\jdk-21\bin\javaw.exe" />
+                </label>
+                <label class="field"><span>Độ phân giải</span>
+                  <div class="size-row">
+                    <input class="textbox narrow" type="number" id="setWidth" min="320" max="7680" step="1" />
+                    <span class="text-2">×</span>
+                    <input class="textbox narrow" type="number" id="setHeight" min="240" max="4320" step="1" />
+                  </div>
+                </label>
+              </div>
+
+              <div class="toolbar">
+                <button class="btn accent" id="saveSettingsBtn"><span class="glyph">&#xE74E;</span><span>Lưu</span></button>
+                <button class="btn" id="resetSettingsBtn"><span class="glyph">&#xE777;</span><span>Mặc định</span></button>
+                <span class="caption text-2" id="settingsStatus"></span>
+              </div>
+
+              <div class="divider wide"></div>
+
+              <label class="field-label">Thư mục instance</label>
               <input class="textbox" id="settingsFolder" readonly />
-              <button class="btn left" id="deleteInstanceBtn">Delete instance</button>
+              <button class="btn danger left" id="deleteInstanceBtn"><span class="glyph">&#xE74D;</span><span>Delete instance</span></button>
             </div>
           </div>
         </div>
@@ -174,6 +237,7 @@
 <div class="demo-bar">
   <span class="demo-dot"></span>
   <span>Prototype · mô phỏng</span>
+  <button class="demo-btn" id="simulateCrashBtn" title="Giả lập game crash ở instance đang chạy">Simulate crash</button>
   <button class="demo-btn" id="themeToggle">Dark</button>
   <button class="demo-btn" id="resetDemo">Reset</button>
 </div>

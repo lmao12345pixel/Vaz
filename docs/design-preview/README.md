@@ -25,17 +25,30 @@ Không cần `npm install`, không cần build.
 
 | Màn hình | Nội dung |
 | --- | --- |
-| **Instances** | Grid card 220×130, New Instance dialog, Play (có trạng thái), context menu chuột phải (Play / Edit / Open folder / Delete) |
-| **Instance Detail** | Header + Launch, 3 tab **Mods / Logs / Settings**, toolbar phân nhóm có divider, mod list có toggle + badge update |
-| **Logs** | Live log giả lập theo kiểu `latest.log`, Clear Log, Copy to Clipboard, Auto-scroll |
-| **Settings** | InfoBar RAM/JVM (đúng trạng thái hiện tại), đường dẫn instance, Delete instance |
+| **Instances** | Grid card 220×130, search + sort (Chơi gần nhất / Tên A-Z / Mới tạo), New Instance dialog, Play/Stop có trạng thái + chip "Đang chạy", context menu chuột phải (Play/Stop / Edit / Rename / Open folder / Delete) |
+| **Instance Detail** | Header + Launch/Stop, 4 tab **Mods / Worlds / Logs / Settings**, toolbar phân nhóm có divider, mod list có toggle + badge update + menu `⋯` |
+| **Mods** | Check updates / Update all, menu từng mod: cập nhật riêng, chọn phiên bản (dialog radio), gỡ mod có xác nhận |
+| **Worlds** | Danh sách world (size, lần chơi cuối, số backup), Backup từng world + Backup all có progress, Open worlds folder |
+| **Logs** | Live log giả lập theo kiểu `latest.log` (có dòng JVM args/RAM/resolution), Clear Log, Copy to Clipboard, Auto-scroll |
+| **Settings** | Form thật: RAM slider + số (1024–16384 MB), JVM args, Java path, độ phân giải, Lưu/Mặc định; đường dẫn instance, Delete instance |
 | **Accounts** | Card tài khoản + avatar Minotar 48×48, Set active, Xóa, Add Offline, Add Microsoft |
 | **Mod Browser** | Dialog rộng, search debounce 300 ms (Enter để tìm ngay), filter Loader/MC/Sort, kết quả dạng list, cài mod có progress % và tự cài dependency (Fabric API) |
 | **Install flows** | Cài mod → xuất hiện ngay trong tab Mods + reload vẫn còn; Check updates/Update all đổi version thật; Install .mrpack và OptiFine thêm mod vào instance |
+| **Crash demo** | Nút **Simulate crash** trên thanh demo: dừng instance đang chạy, ghi log stack trace, mở dialog crash (exit code, đường dẫn crash report, nút mở report) |
+
+## Tính năng mới (v2)
+
+1. **Settings thật** — RAM/JVM/Java/resolution lưu theo từng instance; log Launch in đúng `-Xmx…M` và kích thước cửa sổ.
+2. **Session control** — Play ↔ Stop ở card và header; chip "Đang chạy"; chặn launch trùng; Stop ghi log `Game stopped by user.`
+3. **Per-mod actions** — menu `⋯` mỗi mod: cập nhật riêng (progress), chọn phiên bản, gỡ mod.
+4. **Search/sort/rename** — tìm theo tên/MC/loader, sắp xếp, đổi tên instance, hiện "Chơi lần cuối".
+5. **Worlds + backup** — tab Worlds, backup giả lập có progress và đếm số backup.
+6. **Crash simulation** — test UX khi game crash mà không cần chạy game thật.
+
 
 ## Chỉnh sửa
 
-- **Mock data** — đầu file `app.js`, object `MOCK`: instances, mods, accounts, catalog Modrinth.
+- **Mock data** — đầu file `app.js`, object `MOCK`: instances, mods, worlds, accounts, catalog Modrinth.
 - **Design tokens** — đầu file `styles.css`: màu, radius, font. Đổi `:root` là đổi toàn bộ.
 - **Layout từng màn** — `index.html` (markup tĩnh) + `styles.css` (phần tương ứng).
 - **Hành vi** — `app.js`, các hàm `render*`, `open*`, `launchInstance`.
@@ -56,5 +69,7 @@ Khi một bố cục đã ổn trên web, port sang XAML theo đúng thứ tự:
 
 - Không gọi Modrinth/Mojang/Microsoft thật; chỉ tải avatar + icon qua CDN công khai.
 - Không mở game thật — Launch chỉ mô phỏng tiến trình/PID và stream log.
+- Backup world / crash report chỉ là mô phỏng UI; không tạo file thật.
+- Thay đổi tên chỉ đổi tên hiển thị (app thật sẽ đổi tên thư mục).
 - Trạng thái mock lưu trong `localStorage`; bấm **Reset** trên thanh demo để quay lại dữ liệu gốc.
 - Không có dark/light theo hệ thống — dùng nút **Dark/Light** ở thanh demo dưới cùng bên phải.
