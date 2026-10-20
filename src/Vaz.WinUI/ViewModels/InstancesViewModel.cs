@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
+using System.IO;
 using Vazer.Core.Abstractions;
 
 namespace Vaz.WinUI.ViewModels;
@@ -69,6 +70,28 @@ public sealed partial class InstancesViewModel : ObservableObject
             Instances.Add(new InstanceCardItem(inst));
         }
         InstanceCount = Instances.Count;
+    }
+
+    /// <summary>Xóa instance (kèm file trên disk) rồi refresh danh sách.</summary>
+    public async Task DeleteInstanceAsync(InstanceCardItem? item)
+    {
+        if (item == null) return;
+
+        await _instances.DeleteAsync(item.Id, deleteFiles: true);
+        Instances.Remove(item);
+        InstanceCount = Instances.Count;
+    }
+
+    /// <summary>Mở thư mục instance trong Explorer.</summary>
+    public static void OpenFolder(InstanceCardItem? item)
+    {
+        if (item == null || string.IsNullOrEmpty(item.Instance.Path)) return;
+        if (!Directory.Exists(item.Instance.Path)) return;
+
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", item.Instance.Path)
+        {
+            UseShellExecute = true
+        });
     }
 
     [RelayCommand]

@@ -66,6 +66,51 @@ public sealed partial class InstancesPage : Page
         }
     }
 
+    private InstanceCardItem? FindCard(object sender)
+    {
+        var id = (sender as FrameworkElement)?.Tag as string;
+        if (string.IsNullOrEmpty(id)) return null;
+        return ViewModel.Instances.FirstOrDefault(i => i.Id == id);
+    }
+
+    private void ContextPlay_Click(object sender, RoutedEventArgs e)
+    {
+        var card = FindCard(sender);
+        if (card != null) _ = ViewModel.PlayCommand.ExecuteAsync(card);
+    }
+
+    private void ContextEdit_Click(object sender, RoutedEventArgs e)
+    {
+        var card = FindCard(sender);
+        if (card != null) NavigateToDetail(card.Id);
+    }
+
+    private void ContextOpenFolder_Click(object sender, RoutedEventArgs e)
+    {
+        InstancesViewModel.OpenFolder(FindCard(sender));
+    }
+
+    private async void ContextDelete_Click(object sender, RoutedEventArgs e)
+    {
+        var card = FindCard(sender);
+        if (card == null) return;
+
+        var confirm = new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            Title = $"Xóa \"{card.Name}\"?",
+            Content = "Toàn bộ thư mục instance sẽ bị xóa khỏi disk. Không thể hoàn tác.",
+            PrimaryButtonText = "Xóa",
+            CloseButtonText = "Hủy",
+            DefaultButton = ContentDialogButton.Close
+        };
+
+        if (await confirm.ShowAsync() == ContentDialogResult.Primary)
+        {
+            await ViewModel.DeleteInstanceAsync(card);
+        }
+    }
+
     private void NavigateToDetail(string instanceId)
     {
         var frame = ((App.MainWindow?.Content as NavigationView)
