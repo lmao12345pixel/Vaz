@@ -534,7 +534,7 @@ function setTab(tab) {
 /* ------------------------------------------------------------
    DETAIL — mods
    ------------------------------------------------------------ */
-function renderMods() {
+function renderMods(animateBadges = false) {
   const mods = currentMods();
   const list = $("#modList");
   const empty = $("#modsEmpty");
@@ -549,7 +549,7 @@ function renderMods() {
         <div class="mod-file" title="${esc(mod.file)}">${esc(mod.file)}</div>
         <div class="mod-version">${esc(label)} · v${esc(mod.version)}</div>
       </div>
-      ${mod.update ? `<span class="badge">Cập nhật ${esc(mod.update)}</span>` : ""}
+      ${mod.update ? `<span class="badge${animateBadges ? " just-badged" : ""}">Cập nhật ${esc(mod.update)}</span>` : ""}
       <button class="btn icon-only mod-menu-btn" data-mod-menu="${i}" title="Tùy chọn mod">
         <span class="glyph">&#xE712;</span>
       </button>
@@ -561,9 +561,127 @@ function renderMods() {
   }).join("");
 
   empty.hidden = mods.length > 0;
-  const updates = mods.filter((m) => m.update).length;
-  $("#updatesBar").hidden = updates === 0;
-  $("#updatesBarText").textContent = `${updates} mod có bản cập nhật.`;
+  syncUpdatesBar(animateBadges);
+}
+
+/** Đồng bộ thanh "N mod có bản cập nhật" (không re-render cả danh sách). */
+function syncUpdatesBar(animateEnter = false) {
+  const count = currentMods().filter((m) => m.update).length;
+  const bar = $("#updatesBar");
+  const wasHidden = bar.hidden;
+  bar.hidden = count === 0;
+  $("#updatesBarText").textContent = `${count} mod có bản cập nhật.`;
+
+  if (animateEnter && wasHidden && count > 0) {
+    bar.classList.remove("is-enter");
+    void bar.offsetWidth;
+    bar.classList.add("is-enter");
+    bar.addEventListener("animationend", () => bar.classList.remove("is-enter"), { once: true });
+  }
+}
+
+/** Cập nhật DOM của một dòng mod sau khi version đổi — không re-render cả list. */
+function commitRowUpdate(index, mod, project, version) {
+  const row = rowAt(index);
+  if (!row) return;
+
+  const fileEl = row.querySelector(".mod-file");
+  const versionEl = row.querySelector(".mod-version");
+  if (fileEl) fileEl.textContent = mod.file;
+  if (versionEl) versionEl.textContent = `${project ? project.name : mod.file} · v${version}`;
+
+  const badge = row.querySelector(".badge");
+  if (badge) {
+    badge.classList.add("is-out");
+    setTimeout(() => badge.remove(), 240);
+  }
+
+  row.classList.remove("is-updating");
+  row.classList.add("is-updated");
+  setTimeout(() => row.classList.remove("is-updated"), 950);
+}
+
+/* ---------- Motion helpers ---------- */
+function prefersReducedMotion() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function attachRipple(e) {
+  if (prefersReducedMotion() || e.button !== 0) return;
+  const target = e.target.closest(".btn, .demo-btn");
+  if (!target || target.disabled) return;
+
+  const rect = target.getBoundingClientRect();
+  const size = Math.max(rect.width, rect.height) * 2;
+  const ripple = document.createElement("span");
+  ripple.className = "ripple";
+  ripple.style.width = ripple.style.height = `${size}px`;
+  ripple.style.left = `${e.clientX - rect.left - size / 2}px`;
+  ripple.style.top = `${e.clientY - rect.top - size / 2}px`;
+  target.appendChild(ripple);
+  ripple.addEventListener("animationend", () => ripple.remove(), { once: true });
+}
+
+function setButtonBusy(btn, busy, label = "Đang xử lý...") {
+  if (!btn) return;
+  if (busy) {
+    if (!btn.dataset.idleHtml) {
+      // Không lưu ripple đang chạy vào markup gốc, tránh nó "sống lại" sau khi restore.
+      const idle = btn.cloneNode(true);
+      idle.querySelectorAll(".ripple").forEach((r) => r.remove());
+      btn.dataset.idleHtml = idle.innerHTML;
+    }
+    btn.disabled = true;
+    btn.classList.add("is-busy");
+    btn.innerHTML = `<span class="spinner"></span><span>${esc(label)}</span>`;
+  } else {
+    if (btn.dataset.idleHtml) {
+      btn.innerHTML = btn.dataset.idleHtml;
+      delete btn.dataset.idleHtml;
+    }
+    btn.disabled = false;
+    btn.classList.remove("is-busy");
+  }
+}
+
+function pulseStatus() {
+  const el = $("#detailStatus");
+  el.classList.remove("is-pulse");
+  void el.offsetWidth;
+  el.classList.add("is-pulse");
+}
+
+function bumpUpdatesBar() {
+  const bar = $("#updatesBar");
+  if (bar.hidden) return;
+  bar.classList.remove("is-bump");
+  void bar.offsetWidth;
+  bar.classList.add("is-bump");
+}
+
+function rowAt(index) {
+  return $("#modList").querySelectorAll(".mod-row")[index] || null;
+}
+
+function markRowChecking(index, delay = 0) {
+  const row = rowAt(index);
+  if (!row) return;
+  setTimeout(() => {
+    row.classList.add("is-checking");
+    setTimeout(() => row.classList.remove("is-checking"), 600);
+  }, delay);
+}
+
+function setRowUpdating(index, on) {
+  rowAt(index)?.classList.toggle("is-updating", on);
+}
+
+function flashProgressDone() {
+  const bar = $("#detailProgress");
+  bar.classList.remove("is-done");
+  void bar.offsetWidth;
+  bar.classList.add("is-done");
+  setTimeout(() => bar.classList.remove("is-done"), 750);
 }
 
 async function checkUpdates() {
@@ -573,7 +691,10 @@ async function checkUpdates() {
     return;
   }
 
+  const btn = $("#checkUpdatesBtn");
+  setButtonBusy(btn, true, "Đang kiểm tra...");
   setDetailStatus("Đang kiểm tra cập nhật...");
+  mods.forEach((_, i) => markRowChecking(i, i * 90));
   await sleep(900);
 
   let count = 0;
@@ -586,11 +707,14 @@ async function checkUpdates() {
     if (newer) count++;
   });
 
-  renderMods();
+  renderMods(true);
   saveState();
+  setButtonBusy(btn, false);
   setDetailStatus(count > 0
     ? `Có ${count} mod có bản cập nhật mới.`
     : "Tất cả mod đã là bản mới nhất.");
+  pulseStatus();
+  bumpUpdatesBar();
 }
 
 async function updateAll() {
@@ -602,14 +726,19 @@ async function updateAll() {
   }
 
   const inst = currentInstance();
+  const btn = $("#updateAllBtn");
+  setButtonBusy(btn, true, "Đang cập nhật...");
   $("#detailProgress").hidden = false;
   let done = 0;
 
   for (const mod of pending) {
+    const index = mods.indexOf(mod);
     const project = mod.projectId ? MOCK.catalog.find((p) => p.id === mod.projectId) : null;
     const label = project ? project.name : mod.file;
     const from = mod.version;
     const to = mod.update;
+
+    setRowUpdating(index, true);
 
     for (let p = 0; p <= 100; p += 10) {
       setDetailProgress(p);
@@ -623,14 +752,20 @@ async function updateAll() {
       : mod.file.replace(from, to);
     mod.update = null;
     done++;
-    renderMods();
+    commitRowUpdate(index, mod, project, to);
+    syncUpdatesBar();
+    bumpUpdatesBar();
+    await sleep(120);
   }
 
+  flashProgressDone();
+  await sleep(320);
   $("#detailProgress").hidden = true;
   setDetailProgress(0);
-  renderMods();
   saveState();
+  setButtonBusy(btn, false);
   setDetailStatus(`Đã cập nhật xong ${done} mod.`);
+  pulseStatus();
 }
 
 /** Giảm segment số cuối: 0.6.13 -> 0.6.12 */
@@ -653,20 +788,26 @@ async function updateSingleMod(index) {
   const to = mod.update;
 
   $("#detailProgress").hidden = false;
+  setRowUpdating(index, true);
   for (let p = 0; p <= 100; p += 10) {
     setDetailProgress(p);
     setDetailStatus(`Đang cập nhật ${label} ${from} → ${to}... ${p}%`);
     await sleep(70);
   }
-  $("#detailProgress").hidden = true;
-  setDetailProgress(0);
 
   mod.version = to;
   mod.file = project ? modFileName(project, inst, to) : mod.file.replace(from, to);
   mod.update = null;
-  renderMods();
+  commitRowUpdate(index, mod, project, to);
+  syncUpdatesBar();
+  bumpUpdatesBar();
+  flashProgressDone();
+  await sleep(320);
+  $("#detailProgress").hidden = true;
+  setDetailProgress(0);
   saveState();
   setDetailStatus(`Đã cập nhật ${label} lên ${to}.`);
+  pulseStatus();
 }
 
 function openVersionPicker(index) {
@@ -1981,6 +2122,8 @@ function wireEvents() {
     try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
     location.reload();
   });
+
+  document.addEventListener("pointerdown", attachRipple);
 
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") $("#contextMenu").hidden = true;

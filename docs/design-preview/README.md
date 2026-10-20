@@ -54,6 +54,14 @@ Không cần `npm install`, không cần build.
 - **Tôn trọng người dùng**: `prefers-reduced-motion: reduce` tắt animation/transition chuyển động.
 - Muốn đổi nhanh "chất": sửa `--accent`, `--accent-2`, `--grad-accent`, `--ease-out` ở đầu `styles.css`; layout/effect nằm ở block `v3` cuối file.
 
+## Motion v4 — "Tactile update"
+
+- **Nút bấm**: ripple theo vị trí con trỏ (pointerdown), icon nhích/nảy khi hover (icon Sync xoay 180°), nhấn lún 0.97 rồi bật lại bằng spring.
+- **Update flow**: nút Check updates / Update all chuyển sang trạng thái busy (spinner + glow thở); từng dòng mod quét sáng khi kiểm tra; dòng đang cập nhật có vệt progress chạy ở đáy; badge cập nhật pop-in, biến mất bằng fade-scale; dòng vừa cập nhật flash teal; progress bar có fill mượt và glow khi xong; status pulse khi hoàn tất.
+- **Đồng bộ DOM**: `commitRowUpdate()` + `syncUpdatesBar()` cập nhật đúng dòng/thanh đếm mà không re-render cả list, nên animation không bị cắt.
+- Tất cả tự tắt khi `prefers-reduced-motion: reduce` (ripple cũng không được tạo).
+- Code chính: `attachRipple`, `setButtonBusy`, `markRowChecking`, `setRowUpdating`, `commitRowUpdate` trong `app.js`; block `v4` cuối `styles.css`.
+
 ## Chỉnh sửa
 
 - **Mock data** — đầu file `app.js`, object `MOCK`: instances, mods, worlds, accounts, catalog Modrinth.
