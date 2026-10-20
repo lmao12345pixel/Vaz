@@ -62,6 +62,17 @@ Không cần `npm install`, không cần build.
 - Tất cả tự tắt khi `prefers-reduced-motion: reduce` (ripple cũng không được tạo).
 - Code chính: `attachRipple`, `setButtonBusy`, `markRowChecking`, `setRowUpdating`, `commitRowUpdate` trong `app.js`; block `v4` cuối `styles.css`.
 
+## Motion v5 — "Wave 1"
+
+- **Card ↔ Detail morph**: card bay thành header (WAAPI ghost 380ms), header fade/scale nhẹ; nút Back hoặc nav Instances chạy ngược lại đúng đường.
+- **Tab chuyển hướng**: panel cũ trượt 16px theo hướng đi, panel mới vào từ phía đối diện; tab glider vẫn trượt theo.
+- **Install pipeline**: dòng mod trong Mod Browser bung ra 3 bước **Tải → Kiểm tra → Cài** (dot pulse/check), chip dependency hiện lần lượt, xong thì gập lại thành "Đã cài".
+- **Log line motion**: dòng mới trượt 6px + fade; WARN/ERROR có nền màu; nút **Cuối log** hiện khi cuộn lên.
+- **Command palette**: `Ctrl+K` mở palette fuzzy — mở/launch instance, Accounts, tạo instance, đổi theme, Download Mods; ↑/↓ + Enter, Esc đóng.
+- **Log intelligence**: ô tìm trong log, chip ALL/INFO/WARN/ERROR, nút **Lỗi đầu tiên** (scroll + flash), nút Copy chỉ copy các dòng đang lọc.
+- **Multi-select mods**: nút **Select** bật checkbox; click thường chọn từng mod, Shift-click chọn khoảng; thanh bulk Enable / Disable / Uninstall / Bỏ chọn.
+- Tất cả hiệu ứng tôn trọng `prefers-reduced-motion` (morph/ripple/tab slide tự tắt).
+
 ## Chỉnh sửa
 
 - **Mock data** — đầu file `app.js`, object `MOCK`: instances, mods, worlds, accounts, catalog Modrinth.

@@ -68,7 +68,12 @@
       <section class="page" id="page-detail" hidden>
         <div class="page-header">
           <div class="header-stack">
-            <h1 class="page-title" id="detailName">—</h1>
+            <div class="detail-title-row">
+              <button class="btn icon-only detail-back" id="detailBackBtn" title="Quay lại Instances" aria-label="Quay lại Instances">
+                <span class="glyph">&#xE72B;</span>
+              </button>
+              <h1 class="page-title" id="detailName">—</h1>
+            </div>
             <div class="meta-row">
               <span id="detailVersion"></span>
               <span class="text-2" id="detailLoader"></span>
@@ -112,9 +117,18 @@
               </div>
               <div class="divider"></div>
               <button class="btn" id="openModsFolderBtn"><span class="glyph">&#xE838;</span><span>Open mods folder</span></button>
+              <button class="btn" id="selectModsBtn" aria-pressed="false"><span class="glyph">&#xE762;</span><span>Select</span></button>
               <div class="infobar info inline" id="updatesBar" hidden>
                 <span class="glyph">&#xE946;</span><span id="updatesBarText"></span>
               </div>
+            </div>
+
+            <div class="bulk-bar" id="bulkBar" hidden>
+              <span class="bulk-count" id="bulkCount">0 đã chọn</span>
+              <button class="btn" data-bulk="enable"><span class="glyph">&#xE73E;</span><span>Enable</span></button>
+              <button class="btn" data-bulk="disable"><span class="glyph">&#xE738;</span><span>Disable</span></button>
+              <button class="btn danger" data-bulk="uninstall"><span class="glyph">&#xE74D;</span><span>Uninstall</span></button>
+              <button class="btn" data-bulk="clear"><span class="glyph">&#xE711;</span><span>Bỏ chọn</span></button>
             </div>
 
             <div class="list" id="modList"></div>
@@ -144,10 +158,23 @@
 
           <!-- Logs -->
           <div class="tab-panel" id="tab-logs" hidden>
-            <div class="toolbar">
+            <div class="toolbar log-toolbar">
               <button class="btn" id="clearLogBtn"><span class="glyph">&#xE894;</span><span>Clear Log</span></button>
               <button class="btn" id="copyLogBtn"><span class="glyph">&#xE8C8;</span><span>Copy to Clipboard</span></button>
               <label class="checkbox"><input type="checkbox" id="autoScrollChk" checked /><span class="box"></span>Auto-scroll</label>
+              <div class="divider"></div>
+              <div class="searchbox compact log-search">
+                <span class="glyph">&#xE721;</span>
+                <input id="logSearch" placeholder="Tìm trong log..." autocomplete="off" />
+              </div>
+              <div class="sev-chips" id="logLevels" role="group" aria-label="Lọc mức log">
+                <button class="sev-chip is-selected" data-log-level="ALL">ALL</button>
+                <button class="sev-chip" data-log-level="INFO">INFO</button>
+                <button class="sev-chip" data-log-level="WARN">WARN</button>
+                <button class="sev-chip" data-log-level="ERROR">ERROR</button>
+              </div>
+              <button class="btn" id="jumpFirstErrorBtn"><span class="glyph">&#xE7BA;</span><span>Lỗi đầu tiên</span></button>
+              <span class="caption text-3" id="logCount"></span>
             </div>
 
             <div class="log-shell">
@@ -155,7 +182,10 @@
                 <span class="glyph empty-icon">&#xE9F9;</span>
                 <p class="text-2">Chưa có log nào. Bấm Launch để bắt đầu.</p>
               </div>
-              <pre class="log-view" id="logView" hidden></pre>
+              <div class="log-view" id="logView" hidden></div>
+              <button class="log-jump" id="logJumpBtn" hidden>
+                <span class="glyph">&#xE74B;</span><span>Cuối log</span>
+              </button>
             </div>
           </div>
 
@@ -229,6 +259,23 @@
       </section>
 
     </main>
+  </div>
+</div>
+
+<!-- Command palette (Ctrl+K) -->
+<div class="palette-host" id="paletteHost" hidden>
+  <div class="palette" role="dialog" aria-modal="true" aria-label="Command palette">
+    <div class="palette-search">
+      <span class="glyph">&#xE721;</span>
+      <input id="paletteInput" placeholder="Gõ lệnh hoặc tên instance..." autocomplete="off" spellcheck="false" />
+      <kbd class="palette-kbd">Esc</kbd>
+    </div>
+    <div class="palette-list" id="paletteList" role="listbox"></div>
+    <div class="palette-foot">
+      <span><kbd class="palette-kbd">↑</kbd><kbd class="palette-kbd">↓</kbd> chọn</span>
+      <span><kbd class="palette-kbd">Enter</kbd> chạy</span>
+      <span><kbd class="palette-kbd">Ctrl</kbd>+<kbd class="palette-kbd">K</kbd> mở</span>
+    </div>
   </div>
 </div>
 

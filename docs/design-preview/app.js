@@ -181,6 +181,10 @@ const state = {
     busy: false,
     installingSlug: null,
   },
+  logFilter: { query: "", level: "ALL" },
+  logRenderKey: null,
+  modSelection: { active: false, files: new Set(), lastIndex: null },
+  palette: { open: false, index: 0, items: [] },
 };
 
 /* ------------------------------------------------------------
@@ -318,6 +322,10 @@ function moveTabGlider() {
 }
 
 function showScreen(name) {
+  const leavingDetail = state.screen === "detail" && name !== "detail";
+  const headerEl = leavingDetail ? $(".page-header", $("#page-detail")) : null;
+  const headerRect = headerEl ? headerEl.getBoundingClientRect() : null;
+
   state.screen = name;
   $$(".nav-item").forEach((b) => b.classList.toggle("is-selected", b.dataset.screen === name));
   $("#page-instances").hidden = name !== "instances";
@@ -327,17 +335,62 @@ function showScreen(name) {
 
   if (name === "instances") renderInstances();
   if (name === "accounts") renderAccounts();
+
+  if (leavingDetail && name === "instances" && headerRect && headerEl) {
+    const card = $$(".instance-card").find((c) => c.dataset.id === state.activeInstanceId);
+    if (card) {
+      morphGhost(headerEl, headerRect, card.getBoundingClientRect());
+      card.classList.add("is-morph-target");
+      setTimeout(() => card.classList.remove("is-morph-target"), 460);
+    }
+  }
+
   requestAnimationFrame(() => {
     moveNavGlider();
     if (name === "detail") moveTabGlider();
   });
 }
 
-function openDetail(id) {
+/** Card ↔ Detail morph: một "bóng" bay theo cùng đường vào/ra. */
+function morphGhost(sourceEl, from, to) {
+  if (prefersReducedMotion() || !sourceEl || !to || from.width === 0) return;
+
+  const ghost = sourceEl.cloneNode(true);
+  ghost.querySelectorAll("[id]").forEach((n) => n.removeAttribute("id"));
+  ghost.classList.add("morph-ghost");
+  ghost.removeAttribute("tabindex");
+  Object.assign(ghost.style, {
+    left: `${from.left}px`,
+    top: `${from.top}px`,
+    width: `${from.width}px`,
+    height: `${from.height}px`,
+  });
+  document.body.appendChild(ghost);
+
+  const anim = ghost.animate([
+    { left: `${from.left}px`, top: `${from.top}px`, width: `${from.width}px`, height: `${from.height}px`, opacity: 0.96, borderRadius: "12px" },
+    { left: `${to.left}px`, top: `${to.top}px`, width: `${to.width}px`, height: `${to.height}px`, opacity: 0, borderRadius: "10px" },
+  ], {
+    duration: 380,
+    easing: "cubic-bezier(.22,1,.36,1)",
+    fill: "forwards",
+  });
+  anim.onfinish = () => ghost.remove();
+}
+
+function closeDetail() {
+  showScreen("instances");
+}
+
+function openDetail(id, sourceCard = null) {
   const inst = getInstance(id);
   if (!inst) return;
+  const from = sourceCard ? sourceCard.getBoundingClientRect() : null;
   state.activeInstanceId = id;
   state.tab = "mods";
+  state.modSelection.active = false;
+  state.modSelection.files.clear();
+  state.modSelection.lastIndex = null;
 
   $("#detailName").textContent = inst.name;
   $("#detailVersion").textContent = inst.mc;
@@ -356,6 +409,13 @@ function openDetail(id) {
   if (inst.running) streamLogs(id);
 
   showScreen("detail");
+
+  if (from && sourceCard) {
+    const header = $(".page-header", $("#page-detail"));
+    morphGhost(sourceCard, from, header.getBoundingClientRect());
+    header.classList.add("is-morphing");
+    setTimeout(() => header.classList.remove("is-morphing"), 400);
+  }
 }
 
 /* ------------------------------------------------------------
@@ -518,13 +578,43 @@ function setDetailProgress(pct) {
 /* ------------------------------------------------------------
    DETAIL — tabs
    ------------------------------------------------------------ */
+const TAB_ORDER = ["mods", "worlds", "logs", "settings"];
+
 function setTab(tab) {
+  const prev = state.tab;
+  const animate = prev !== tab && state.screen === "detail" && !prefersReducedMotion();
   state.tab = tab;
   $$(".tab").forEach((t) => t.classList.toggle("is-selected", t.dataset.tab === tab));
-  $("#tab-mods").hidden = tab !== "mods";
-  $("#tab-worlds").hidden = tab !== "worlds";
-  $("#tab-logs").hidden = tab !== "logs";
-  $("#tab-settings").hidden = tab !== "settings";
+
+  const panels = TAB_ORDER.map((t) => ({ name: t, el: $(`#tab-${t}`) }));
+  panels.forEach(({ name, el }) => {
+    if (name !== tab && name !== prev) el.hidden = true;
+  });
+
+  const nextPanel = $(`#tab-${tab}`);
+  const prevPanel = prev !== tab ? $(`#tab-${prev}`) : null;
+
+  if (animate && prevPanel && !prevPanel.hidden) {
+    const dir = TAB_ORDER.indexOf(tab) > TAB_ORDER.indexOf(prev) ? 1 : -1;
+    const inClass = dir > 0 ? "tab-in-right" : "tab-in-left";
+    const outClass = dir > 0 ? "tab-out-left" : "tab-out-right";
+
+    nextPanel.hidden = false;
+    prevPanel.classList.remove("tab-in-left", "tab-in-right", "tab-out-left", "tab-out-right");
+    nextPanel.classList.remove("tab-in-left", "tab-in-right", "tab-out-left", "tab-out-right");
+    prevPanel.classList.add(outClass);
+    nextPanel.classList.add(inClass);
+
+    setTimeout(() => {
+      if (state.tab !== tab) return;
+      prevPanel.hidden = true;
+      prevPanel.classList.remove(outClass);
+      nextPanel.classList.remove(inClass);
+    }, 260);
+  } else {
+    panels.forEach(({ name, el }) => { el.hidden = name !== tab; });
+  }
+
   if (tab === "logs") renderLogs();
   if (tab === "worlds") renderWorlds();
   if (tab === "settings") renderSettings();
@@ -538,13 +628,18 @@ function renderMods(animateBadges = false) {
   const mods = currentMods();
   const list = $("#modList");
   const empty = $("#modsEmpty");
+  const selecting = state.modSelection.active;
 
   list.innerHTML = mods.map((mod, i) => {
     const project = mod.projectId ? MOCK.catalog.find((p) => p.id === mod.projectId) : null;
     const label = project ? project.name : mod.file;
+    const selected = state.modSelection.files.has(mod.file);
+    const lead = selecting
+      ? `<label class="mod-check"><input type="checkbox" data-mod-select="${i}" ${selected ? "checked" : ""} /><span class="box"></span></label>`
+      : `<span class="glyph">&#xE74C;</span>`;
     return `
-    <div class="list-row mod-row${mod.enabled ? "" : " is-disabled"}">
-      <span class="glyph">&#xE74C;</span>
+    <div class="list-row mod-row${mod.enabled ? "" : " is-disabled"}${selected ? " is-selected" : ""}${selecting ? " is-selectable" : ""}" data-mod-row="${i}">
+      ${lead}
       <div class="mod-main">
         <div class="mod-file" title="${esc(mod.file)}">${esc(mod.file)}</div>
         <div class="mod-version">${esc(label)} · v${esc(mod.version)}</div>
@@ -562,6 +657,84 @@ function renderMods(animateBadges = false) {
 
   empty.hidden = mods.length > 0;
   syncUpdatesBar(animateBadges);
+  syncBulkBar();
+}
+
+/** Đồng bộ thanh chọn nhiều mod + trạng thái nút Select. */
+function syncBulkBar() {
+  const active = state.modSelection.active;
+  const count = state.modSelection.files.size;
+  $("#selectModsBtn").classList.toggle("is-active", active);
+  $("#selectModsBtn").setAttribute("aria-pressed", String(active));
+  $("#bulkBar").hidden = !active;
+  $("#bulkCount").textContent = `${count} đã chọn`;
+}
+
+function toggleModSelection(index, { shift = false, checked = null } = {}) {
+  const mods = currentMods();
+  const mod = mods[index];
+  if (!mod) return;
+
+  const files = state.modSelection.files;
+  if (shift && state.modSelection.lastIndex != null) {
+    const a = Math.min(state.modSelection.lastIndex, index);
+    const b = Math.max(state.modSelection.lastIndex, index);
+    const select = checked ?? !files.has(mod.file);
+    for (let i = a; i <= b; i++) {
+      if (select) files.add(mods[i].file);
+      else files.delete(mods[i].file);
+    }
+  } else {
+    const select = checked ?? !files.has(mod.file);
+    if (select) files.add(mod.file);
+    else files.delete(mod.file);
+  }
+
+  state.modSelection.lastIndex = index;
+  renderMods();
+}
+
+async function bulkModAction(action) {
+  const mods = currentMods();
+  const files = state.modSelection.files;
+
+  if (action === "clear") {
+    state.modSelection.active = false;
+    files.clear();
+    state.modSelection.lastIndex = null;
+    renderMods();
+    return;
+  }
+
+  const targets = mods.filter((m) => files.has(m.file));
+  if (targets.length === 0) {
+    showToastStatus("Chưa chọn mod nào.");
+    return;
+  }
+
+  if (action === "enable" || action === "disable") {
+    const enabled = action === "enable";
+    targets.forEach((m) => { m.enabled = enabled; });
+    saveState();
+    setDetailStatus(`${enabled ? "Đã bật" : "Đã tắt"} ${targets.length} mod.`);
+    renderMods();
+    return;
+  }
+
+  if (action === "uninstall") {
+    const ok = await confirmDialog(
+      `Gỡ ${targets.length} mod?`,
+      "Các file mod đã chọn sẽ bị xóa khỏi instance. Không thể hoàn tác.",
+      "Gỡ"
+    );
+    if (!ok) return;
+    state.mods[state.activeInstanceId] = mods.filter((m) => !files.has(m.file));
+    files.clear();
+    state.modSelection.lastIndex = null;
+    saveState();
+    setDetailStatus(`Đã gỡ ${targets.length} mod.`);
+    renderMods();
+  }
 }
 
 /** Đồng bộ thanh "N mod có bản cập nhật" (không re-render cả danh sách). */
@@ -960,18 +1133,93 @@ function pushLog(id, line) {
   }
 }
 
-function renderLogs() {
+function logSeverity(line) {
+  if (/\bERROR\b|Exception|\bCaused by:/.test(line)) return "ERROR";
+  if (/\bWARN\b/.test(line)) return "WARN";
+  return "INFO";
+}
+
+function filteredLogLines() {
   const lines = state.logs[state.activeInstanceId] || [];
+  const level = state.logFilter.level;
+  const q = state.logFilter.query.trim().toLowerCase();
+  return lines.filter((line) => {
+    if (level !== "ALL" && logSeverity(line) !== level) return false;
+    return !q || line.toLowerCase().includes(q);
+  });
+}
+
+function logLineHtml(line) {
+  const sev = logSeverity(line);
+  return `<div class="log-line${sev === "ERROR" ? " is-error" : sev === "WARN" ? " is-warn" : ""}">${esc(line)}</div>`;
+}
+
+function updateLogJump() {
+  const view = $("#logView");
+  const btn = $("#logJumpBtn");
+  if (!view || !btn) return;
+  const far = !view.hidden && view.scrollHeight - view.scrollTop - view.clientHeight > 60;
+  btn.hidden = !far;
+}
+
+function jumpToFirstError() {
+  const lines = filteredLogLines();
+  const index = lines.findIndex((line) => logSeverity(line) === "ERROR");
+  if (index < 0) {
+    showToastStatus("Không có dòng ERROR trong log hiện tại.");
+    return;
+  }
+  const el = $("#logView").children[index];
+  if (!el) return;
+  el.scrollIntoView({ block: "center", behavior: prefersReducedMotion() ? "auto" : "smooth" });
+  el.classList.add("is-flash");
+  setTimeout(() => el.classList.remove("is-flash"), 1000);
+}
+
+function renderLogs() {
+  const id = state.activeInstanceId;
+  const all = state.logs[id] || [];
+  const filtered = filteredLogLines();
   const view = $("#logView");
   const empty = $("#logsEmpty");
 
-  view.hidden = lines.length === 0;
-  empty.hidden = lines.length > 0;
-  view.textContent = lines.join("\n");
+  $("#logCount").textContent = all.length ? `${filtered.length}/${all.length} dòng` : "";
+  view.hidden = filtered.length === 0;
+  empty.hidden = filtered.length > 0;
+  empty.querySelector("p").textContent = all.length
+    ? "Không có dòng log nào khớp bộ lọc."
+    : "Chưa có log nào. Bấm Launch để bắt đầu.";
 
-  if (lines.length && $("#autoScrollChk").checked) {
+  if (filtered.length === 0) {
+    view.innerHTML = "";
+    view.dataset.count = "0";
+    state.logRenderKey = `${id}|${state.logFilter.level}|${state.logFilter.query}|0`;
+    $("#logJumpBtn").hidden = true;
+    return;
+  }
+
+  const wasNearBottom = view.scrollHeight - view.scrollTop - view.clientHeight < 60;
+  const key = `${id}|${state.logFilter.level}|${state.logFilter.query}|${filtered.length}`;
+  const prev = state.logRenderKey ? state.logRenderKey.split("|") : null;
+  const sameBase = prev && prev[0] === id && prev[1] === state.logFilter.level && prev[2] === state.logFilter.query;
+  const rendered = Number(view.dataset.count || 0);
+
+  if (sameBase && filtered.length === Number(prev[3]) + 1 && filtered.length === rendered + 1) {
+    view.insertAdjacentHTML("beforeend", logLineHtml(filtered[filtered.length - 1]));
+    const last = view.lastElementChild;
+    last.classList.add("is-new");
+    last.addEventListener("animationend", () => last.classList.remove("is-new"), { once: true });
+  } else if (!sameBase || filtered.length !== rendered) {
+    view.innerHTML = filtered.map(logLineHtml).join("");
+  }
+
+  view.dataset.count = String(filtered.length);
+  state.logRenderKey = key;
+
+  if ($("#autoScrollChk").checked && (wasNearBottom || !sameBase)) {
     view.scrollTop = view.scrollHeight;
   }
+  updateLogJump();
 }
 
 /* ------------------------------------------------------------
@@ -1614,7 +1862,7 @@ function renderModResults(dialog, { preserveStatus = false } = {}) {
     const installing = state.modBrowser.installingSlug === p.slug;
     const disabled = installed || state.modBrowser.busy;
     return `
-      <div class="mod-result${installing ? " is-installing" : ""}">
+      <div class="mod-result${installing ? " is-installing" : ""}" data-slug="${esc(p.slug)}">
         <img class="mod-icon" src="https://cdn.modrinth.com/data/${p.id}/icon.png" alt="" data-fallback="${esc(p.name[0])}" />
         <div>
           <div class="mod-title">${esc(p.name)}</div>
@@ -1626,6 +1874,14 @@ function renderModResults(dialog, { preserveStatus = false } = {}) {
           <button class="btn" data-install="${esc(p.slug)}" ${disabled ? "disabled" : ""}>
             ${installing ? `<span class="spinner"></span> Đang cài` : installed ? "Đã cài" : "Cài"}
           </button>
+        </div>
+        <div class="pipeline" hidden>
+          <div class="pipeline-stages">
+            <div class="stage" data-stage="download"><span class="stage-dot"></span><span>Tải</span></div>
+            <div class="stage" data-stage="verify"><span class="stage-dot"></span><span>Kiểm tra</span></div>
+            <div class="stage" data-stage="install"><span class="stage-dot"></span><span>Cài</span></div>
+          </div>
+          <div class="pipeline-deps"></div>
         </div>
       </div>`;
   }).join("");
@@ -1654,6 +1910,20 @@ function renderModResults(dialog, { preserveStatus = false } = {}) {
   });
 }
 
+function pipelineStages(row) {
+  return {
+    download: $('[data-stage="download"]', row),
+    verify: $('[data-stage="verify"]', row),
+    install: $('[data-stage="install"]', row),
+  };
+}
+
+function setStageState(stageEl, stateName) {
+  if (!stageEl) return;
+  stageEl.classList.toggle("is-active", stateName === "active");
+  stageEl.classList.toggle("is-done", stateName === "done");
+}
+
 async function installMod(dialog, slug) {
   const inst = currentInstance();
   const project = catalogProject(slug);
@@ -1662,6 +1932,10 @@ async function installMod(dialog, slug) {
 
   const deps = resolveDependencies(project, inst);
   const queue = [project, ...deps];
+  const row = $$(".mod-result", dialog.host).find((r) => r.dataset.slug === project.slug);
+  const pipeline = row ? $(".pipeline", row) : null;
+  const depBox = row ? $(".pipeline-deps", row) : null;
+  const stages = row ? pipelineStages(row) : null;
 
   state.modBrowser.busy = true;
   state.modBrowser.installingSlug = project.slug;
@@ -1670,32 +1944,56 @@ async function installMod(dialog, slug) {
   const status = $("#mbStatus", dialog.host);
   progress.hidden = false;
   progress.firstElementChild.style.width = "0%";
-  status.textContent = `Đang tải ${project.name}... 0%`;
-  renderModResults(dialog, { preserveStatus: true });
+
+  if (row) {
+    row.classList.add("is-installing");
+    $$("[data-install]", dialog.host).forEach((b) => { b.disabled = true; });
+    const btn = $("[data-install]", row);
+    if (btn) btn.innerHTML = `<span class="spinner"></span> Đang cài`;
+    if (pipeline) pipeline.hidden = false;
+    if (depBox) {
+      depBox.innerHTML = deps
+        .map((d, i) => `<span class="dep-chip" style="--d:${i}">+ ${esc(d.name)}</span>`)
+        .join("");
+    }
+  }
+
+  const updateStages = (pct) => {
+    if (!stages) return;
+    setStageState(stages.download, pct >= 45 ? "done" : "active");
+    setStageState(stages.verify, pct >= 70 ? "done" : pct >= 45 ? "active" : "");
+    setStageState(stages.install, pct >= 100 ? "done" : pct >= 70 ? "active" : "");
+  };
 
   let added = 0;
+  for (let qi = 0; qi < queue.length; qi++) {
+    const item = queue[qi];
+    const isDependency = qi > 0;
 
-  for (const item of queue) {
-    const isDependency = item !== project;
-
-    for (let p = 0; p <= 100; p += rand(8, 14)) {
+    for (let p = 0; p < 100; p += rand(10, 16)) {
       const pct = Math.min(p, 100);
-      progress.firstElementChild.style.width = pct + "%";
+      const overall = Math.round((qi * 100 + pct) / queue.length);
+      progress.firstElementChild.style.width = overall + "%";
       status.textContent = isDependency
-        ? `Đang cài dependency ${item.name}... ${pct}%`
-        : `Đang tải ${item.name}... ${pct}%`;
-      await sleep(90);
+        ? `Đang cài dependency ${item.name}... ${overall}%`
+        : pct < 55
+          ? `Đang tải ${item.name}... ${overall}%`
+          : `Đang cài ${item.name}... ${overall}%`;
+      updateStages(pct);
+      await sleep(80);
     }
 
+    updateStages(100);
     if (addInstalledMod(item, inst)) added++;
     if (state.screen === "detail") renderMods();
   }
 
-  state.modBrowser.busy = false;
-  state.modBrowser.installingSlug = null;
+  progress.firstElementChild.style.width = "100%";
   progress.hidden = true;
   progress.firstElementChild.style.width = "0%";
-  renderModResults(dialog, { preserveStatus: true });
+
+  state.modBrowser.busy = false;
+  state.modBrowser.installingSlug = null;
 
   const depCount = Math.max(0, added - 1);
   status.textContent = depCount > 0
@@ -1704,6 +2002,13 @@ async function installMod(dialog, slug) {
 
   saveState();
   if (state.screen === "detail") renderMods();
+
+  // Pipeline gập lại sau khi xong, rồi trả hàng về trạng thái "Đã cài".
+  if (pipeline) {
+    pipeline.classList.add("is-complete");
+    await sleep(360);
+  }
+  renderModResults(dialog, { preserveStatus: true });
 }
 
 /* ------------------------------------------------------------
@@ -1873,10 +2178,131 @@ function installOptiFine() {
 /* ------------------------------------------------------------
    EVENT WIRING
    ------------------------------------------------------------ */
+/* ------------------------------------------------------------
+   COMMAND PALETTE (Ctrl+K)
+   ------------------------------------------------------------ */
+function paletteActions() {
+  const items = [];
+
+  state.instances.forEach((inst) => {
+    items.push({
+      icon: "E7F8",
+      title: inst.name,
+      sub: `${inst.mc} · ${inst.loader} — mở instance`,
+      keywords: "mở open instance chi tiết",
+      run: () => openDetail(inst.id),
+    });
+    items.push({
+      icon: inst.running ? "E71A" : "E768",
+      title: `${inst.running ? "Dừng" : "Chơi"} ${inst.name}`,
+      sub: inst.running ? `Đang chạy · PID ${inst.pid}` : "Khởi chạy instance",
+      keywords: "launch play stop chơi dừng",
+      run: () => (inst.running ? stopInstance(inst.id) : launchInstance(inst.id)),
+    });
+  });
+
+  items.push(
+    { icon: "E77B", title: "Accounts", sub: "Mở trang tài khoản", keywords: "account tài khoản", run: () => showScreen("accounts") },
+    { icon: "E710", title: "Tạo instance mới", sub: "Mở dialog New Instance", keywords: "new tạo instance", run: openNewInstanceDialog },
+    {
+      icon: "E793",
+      title: "Đổi giao diện sáng / tối",
+      sub: "Chuyển theme Dark ↔ Light",
+      keywords: "theme dark light sáng tối giao diện",
+      run: () => $("#themeToggle").click(),
+    }
+  );
+
+  if (state.screen === "detail") {
+    items.push(
+      { icon: "E710", title: "Download Mods", sub: "Mở Mod Browser cho instance này", keywords: "mod browser tải cài mod", run: openModBrowser },
+      { icon: "E838", title: "Mở thư mục mods", sub: currentInstance()?.path || "", keywords: "folder thư mục mods", run: () => showToastStatus("Đã mở thư mục mods (demo).") }
+    );
+  }
+
+  return items;
+}
+
+function refreshPalette(query) {
+  const tokens = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const all = paletteActions();
+  const items = all.filter((it) => {
+    const hay = `${it.title} ${it.sub} ${it.keywords}`.toLowerCase();
+    return tokens.every((t) => hay.includes(t));
+  });
+  state.palette.items = items;
+  state.palette.index = 0;
+  renderPalette();
+}
+
+function renderPalette() {
+  const list = $("#paletteList");
+  const items = state.palette.items;
+  const index = state.palette.index;
+
+  if (items.length === 0) {
+    list.innerHTML = `<div class="palette-empty">Không có lệnh nào khớp.</div>`;
+    return;
+  }
+
+  list.innerHTML = items.map((it, i) => `
+    <button class="palette-item${i === index ? " is-selected" : ""}" data-palette-index="${i}" role="option" aria-selected="${i === index}">
+      <span class="glyph palette-icon">&#x${it.icon};</span>
+      <span class="palette-main">
+        <span class="palette-title">${esc(it.title)}</span>
+        <span class="palette-sub">${esc(it.sub)}</span>
+      </span>
+      <span class="glyph palette-enter">&#xE751;</span>
+    </button>`).join("");
+
+  const selected = $(".palette-item.is-selected", list);
+  if (selected) selected.scrollIntoView({ block: "nearest" });
+}
+
+function openPalette() {
+  state.palette.open = true;
+  const host = $("#paletteHost");
+  host.hidden = false;
+  $("#paletteInput").value = "";
+  refreshPalette("");
+  requestAnimationFrame(() => {
+    host.classList.add("is-open");
+    $("#paletteInput").focus();
+  });
+}
+
+function closePalette() {
+  state.palette.open = false;
+  const host = $("#paletteHost");
+  host.classList.remove("is-open");
+  host.hidden = true;
+}
+
+function movePalette(delta) {
+  const count = state.palette.items.length;
+  if (count === 0) return;
+  state.palette.index = (state.palette.index + delta + count) % count;
+  renderPalette();
+}
+
+function runPaletteItem(index) {
+  const item = state.palette.items[index];
+  if (!item) return;
+  closePalette();
+  item.run();
+}
+
+/* ------------------------------------------------------------
+   EVENTS
+   ------------------------------------------------------------ */
 function wireEvents() {
   // Nav
   $$(".nav-item").forEach((btn) => {
-    btn.addEventListener("click", () => showScreen(btn.dataset.screen));
+    btn.addEventListener("click", () => {
+      const target = btn.dataset.screen;
+      if (target === "instances" && state.screen === "detail") closeDetail();
+      else showScreen(target);
+    });
   });
 
   // Instances
@@ -1917,9 +2343,9 @@ function wireEvents() {
       else await launchInstance(id);
     } else if (action === "edit") {
       e.stopPropagation();
-      openDetail(id);
+      openDetail(id, card);
     } else {
-      openDetail(id);
+      openDetail(id, card);
     }
   });
 
@@ -1933,7 +2359,7 @@ function wireEvents() {
   $("#instanceGrid").addEventListener("keydown", (e) => {
     if (e.key !== "Enter" && e.key !== " ") return;
     const card = e.target.closest(".instance-card");
-    if (card) { e.preventDefault(); openDetail(card.dataset.id); }
+    if (card) { e.preventDefault(); openDetail(card.dataset.id, card); }
   });
 
   $("#contextMenu").addEventListener("click", async (e) => {
@@ -1977,6 +2403,7 @@ function wireEvents() {
   });
 
   // Detail header
+  $("#detailBackBtn").addEventListener("click", closeDetail);
   $("#detailLaunchBtn").addEventListener("click", () => {
     const inst = currentInstance();
     if (!inst) return;
@@ -1992,11 +2419,27 @@ function wireEvents() {
   $("#updateAllBtn").addEventListener("click", updateAll);
   $("#openModBrowserBtn").addEventListener("click", openModBrowser);
   $("#openModsFolderBtn").addEventListener("click", () => showToastStatus("Đã mở thư mục mods (demo)."));
+  $("#selectModsBtn").addEventListener("click", () => {
+    state.modSelection.active = !state.modSelection.active;
+    state.modSelection.files.clear();
+    state.modSelection.lastIndex = null;
+    renderMods();
+    if (state.modSelection.active) setDetailStatus("Chọn mod để bật/tắt hoặc gỡ hàng loạt.");
+  });
+  $("#bulkBar").addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-bulk]");
+    if (btn) await bulkModAction(btn.dataset.bulk);
+  });
   $("#mrpackBtn").addEventListener("click", installMrpack);
   $("#optifineBtn").addEventListener("click", installOptiFine);
 
   // Mod list toggle (delegated)
   $("#modList").addEventListener("change", (e) => {
+    const select = e.target.closest("[data-mod-select]");
+    if (select) {
+      toggleModSelection(Number(select.dataset.modSelect), { shift: e.shiftKey, checked: select.checked });
+      return;
+    }
     const input = e.target.closest("[data-mod-toggle]");
     if (!input) return;
     const mod = currentMods()[Number(input.dataset.modToggle)];
@@ -2008,11 +2451,17 @@ function wireEvents() {
     }
   });
 
-  // Mod row menu (delegated)
+  // Mod row menu + multi-select (delegated)
   $("#modList").addEventListener("click", (e) => {
     const btn = e.target.closest("[data-mod-menu]");
-    if (!btn) return;
-    openModMenu(e.clientX, e.clientY, Number(btn.dataset.modMenu));
+    if (btn) {
+      openModMenu(e.clientX, e.clientY, Number(btn.dataset.modMenu));
+      return;
+    }
+    if (!state.modSelection.active) return;
+    if (e.target.closest(".switch, .mod-check, .mod-menu-btn")) return;
+    const row = e.target.closest("[data-mod-row]");
+    if (row) toggleModSelection(Number(row.dataset.modRow), { shift: e.shiftKey });
   });
 
   // Worlds
@@ -2038,10 +2487,12 @@ function wireEvents() {
   // Logs toolbar
   $("#clearLogBtn").addEventListener("click", () => {
     state.logs[state.activeInstanceId] = [];
+    state.logRenderKey = null;
     renderLogs();
+    updateLogJump();
   });
   $("#copyLogBtn").addEventListener("click", async () => {
-    const text = (state.logs[state.activeInstanceId] || []).join("\n");
+    const text = filteredLogLines().join("\n");
     try {
       await navigator.clipboard.writeText(text);
       $("#copyLogBtn").lastElementChild.textContent = "Đã copy";
@@ -2056,6 +2507,26 @@ function wireEvents() {
       ta.remove();
     }
   });
+
+  $("#logSearch").addEventListener("input", (e) => {
+    state.logFilter.query = e.target.value;
+    renderLogs();
+  });
+
+  $("#logLevels").addEventListener("click", (e) => {
+    const chip = e.target.closest("[data-log-level]");
+    if (!chip) return;
+    state.logFilter.level = chip.dataset.logLevel;
+    $$(".sev-chip").forEach((c) => c.classList.toggle("is-selected", c === chip));
+    renderLogs();
+  });
+
+  $("#jumpFirstErrorBtn").addEventListener("click", jumpToFirstError);
+  $("#logJumpBtn").addEventListener("click", () => {
+    const view = $("#logView");
+    view.scrollTo({ top: view.scrollHeight, behavior: prefersReducedMotion() ? "auto" : "smooth" });
+  });
+  $("#logView").addEventListener("scroll", updateLogJump, { passive: true });
 
   // Settings
   $("#deleteInstanceBtn").addEventListener("click", async () => {
@@ -2125,8 +2596,33 @@ function wireEvents() {
 
   document.addEventListener("pointerdown", attachRipple);
 
+  // Command palette
+  $("#paletteInput").addEventListener("input", (e) => refreshPalette(e.target.value));
+  $("#paletteInput").addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown") { e.preventDefault(); movePalette(1); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); movePalette(-1); }
+    else if (e.key === "Enter") { e.preventDefault(); runPaletteItem(state.palette.index); }
+    else if (e.key === "Escape") { e.preventDefault(); closePalette(); }
+  });
+  $("#paletteList").addEventListener("click", (e) => {
+    const item = e.target.closest("[data-palette-index]");
+    if (item) runPaletteItem(Number(item.dataset.paletteIndex));
+  });
+  $("#paletteHost").addEventListener("click", (e) => {
+    if (e.target === e.currentTarget) closePalette();
+  });
+
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") $("#contextMenu").hidden = true;
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+      e.preventDefault();
+      if (state.palette.open) closePalette();
+      else openPalette();
+      return;
+    }
+    if (e.key === "Escape") {
+      $("#contextMenu").hidden = true;
+      if (state.palette.open) closePalette();
+    }
   });
 }
 
