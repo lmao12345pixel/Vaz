@@ -299,6 +299,24 @@ function resolveDependencies(project, inst) {
 /* ------------------------------------------------------------
    ROUTING
    ------------------------------------------------------------ */
+function moveNavGlider() {
+  const glider = $("#navGlider");
+  const active = $(".nav-item.is-selected");
+  if (!glider || !active) return;
+  glider.style.height = active.offsetHeight + "px";
+  glider.style.transform = `translateY(${active.offsetTop}px)`;
+  glider.classList.add("is-ready");
+}
+
+function moveTabGlider() {
+  const glider = $("#tabGlider");
+  const active = $(".tab.is-selected");
+  if (!glider || !active || active.offsetWidth === 0) return;
+  glider.style.width = Math.max(0, active.offsetWidth - 16) + "px";
+  glider.style.transform = `translateX(${active.offsetLeft + 8}px)`;
+  glider.classList.add("is-ready");
+}
+
 function showScreen(name) {
   state.screen = name;
   $$(".nav-item").forEach((b) => b.classList.toggle("is-selected", b.dataset.screen === name));
@@ -309,6 +327,10 @@ function showScreen(name) {
 
   if (name === "instances") renderInstances();
   if (name === "accounts") renderAccounts();
+  requestAnimationFrame(() => {
+    moveNavGlider();
+    if (name === "detail") moveTabGlider();
+  });
 }
 
 function openDetail(id) {
@@ -360,7 +382,7 @@ function renderInstances() {
   const empty = $("#instancesEmpty");
   const list = visibleInstances();
 
-  grid.innerHTML = list.map((inst) => {
+  grid.innerHTML = list.map((inst, i) => {
     const spinner = inst.launching
       ? `<span class="spinner"></span>`
       : `<span class="glyph">${inst.running ? "&#xE71A;" : "&#xE768;"}</span>`;
@@ -371,7 +393,7 @@ function renderInstances() {
     const lastPlayed = inst.lastPlayed ? `Chơi lần cuối: ${esc(inst.lastPlayed)}` : "Chưa chơi lần nào";
 
     return `
-      <div class="instance-card${inst.running ? " is-running" : ""}" data-id="${esc(inst.id)}" tabindex="0">
+      <div class="instance-card${inst.running ? " is-running" : ""}" data-id="${esc(inst.id)}" tabindex="0" style="--i:${i}">
         <div class="name">${esc(inst.name)}</div>
         <div class="meta">
           <span>${esc(inst.mc)} · ${esc(inst.loader)}</span>
@@ -380,7 +402,7 @@ function renderInstances() {
         ${runningChip}
         ${status}
         <div class="card-actions">
-          <button class="btn icon-only" data-action="play" title="${inst.running ? "Stop" : "Launch"}" ${inst.launching ? "disabled" : ""}>${spinner}</button>
+          <button class="btn icon-only play-btn" data-action="play" title="${inst.running ? "Stop" : "Launch"}" ${inst.launching ? "disabled" : ""}>${spinner}</button>
           <button class="btn icon-only" data-action="edit" title="Edit"><span class="glyph">&#xE713;</span></button>
         </div>
       </div>`;
@@ -506,6 +528,7 @@ function setTab(tab) {
   if (tab === "logs") renderLogs();
   if (tab === "worlds") renderWorlds();
   if (tab === "settings") renderSettings();
+  requestAnimationFrame(moveTabGlider);
 }
 
 /* ------------------------------------------------------------
@@ -1107,7 +1130,10 @@ function openContextMenu(x, y, id) {
    ------------------------------------------------------------ */
 function showDialog({ title, body = "", primary = null, closeText = "Đóng", wide = false, onPrimary = null }) {
   const host = $("#dialogHost");
+  const dialogId = `${Date.now()}-${Math.random()}`;
+  host.dataset.dialogId = dialogId;
   host.hidden = false;
+  host.classList.remove("is-closing");
   host.innerHTML = `
     <div class="dialog ${wide ? "wide" : ""}" role="dialog" aria-modal="true">
       <h2 class="dialog-title">${esc(title)}</h2>
@@ -1118,7 +1144,19 @@ function showDialog({ title, body = "", primary = null, closeText = "Đóng", wi
       </div>
     </div>`;
 
-  const close = () => { host.hidden = true; host.innerHTML = ""; };
+  let closing = false;
+  const close = () => {
+    if (closing) return;
+    closing = true;
+    host.classList.add("is-closing");
+    setTimeout(() => {
+      if (host.dataset.dialogId !== dialogId) return;
+      host.hidden = true;
+      host.innerHTML = "";
+      host.classList.remove("is-closing");
+      closing = false;
+    }, 180);
+  };
   $("[data-dialog-close]", host).onclick = close;
   const primaryBtn = $("[data-dialog-primary]", host);
   if (primaryBtn) {
@@ -1703,6 +1741,19 @@ function wireEvents() {
   // Instances
   $("#newInstanceBtn").addEventListener("click", openNewInstanceDialog);
 
+  $("#instanceGrid").addEventListener("pointermove", (e) => {
+    const card = e.target.closest(".instance-card");
+    if (!card) return;
+    const r = card.getBoundingClientRect();
+    card.style.setProperty("--px", `${e.clientX - r.left}px`);
+    card.style.setProperty("--py", `${e.clientY - r.top}px`);
+  }, { passive: true });
+
+  window.addEventListener("resize", () => {
+    moveNavGlider();
+    moveTabGlider();
+  });
+
   $("#instanceSearch").addEventListener("input", (e) => {
     state.instanceQuery = e.target.value;
     renderInstances();
@@ -1945,7 +1996,10 @@ function showToastStatus(text) {
   toast.className = "toast";
   toast.textContent = text;
   document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 1800);
+  setTimeout(() => {
+    toast.classList.add("is-out");
+    setTimeout(() => toast.remove(), 240);
+  }, 1900);
 }
 
 /* ------------------------------------------------------------
@@ -1962,3 +2016,4 @@ $("#instanceSort").value = state.instanceSort;
 wireEvents();
 renderInstances();
 renderAccounts();
+requestAnimationFrame(moveNavGlider);

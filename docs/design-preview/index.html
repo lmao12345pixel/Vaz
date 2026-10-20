@@ -20,6 +20,7 @@
     <aside class="nav">
       <button class="nav-hamburger" aria-label="Open Navigation"><span class="glyph">&#xE700;</span></button>
       <nav class="nav-menu">
+        <span class="nav-glider" id="navGlider" aria-hidden="true"></span>
         <button class="nav-item is-selected" data-screen="instances">
           <span class="nav-icon glyph">&#xE7F8;</span><span>Instances</span>
         </button>
@@ -34,7 +35,10 @@
       <!-- ============ Instances page ============ -->
       <section class="page" id="page-instances">
         <div class="page-header">
-          <h1 class="page-title">Instances</h1>
+          <div class="header-stack">
+            <h1 class="page-title">Instances</h1>
+            <p class="caption text-2">Chọn một instance để chơi, hoặc tạo instance mới.</p>
+          </div>
           <div class="header-actions">
             <div class="searchbox compact">
               <span class="glyph">&#xE721;</span>
@@ -86,6 +90,7 @@
 
         <div class="tabview">
           <div class="tabstrip" role="tablist">
+            <span class="tab-glider" id="tabGlider" aria-hidden="true"></span>
             <button class="tab is-selected" data-tab="mods" role="tab">Mods</button>
             <button class="tab" data-tab="worlds" role="tab">Worlds</button>
             <button class="tab" data-tab="logs" role="tab">Logs</button>

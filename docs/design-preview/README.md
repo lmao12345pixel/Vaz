@@ -25,13 +25,13 @@ Không cần `npm install`, không cần build.
 
 | Màn hình | Nội dung |
 | --- | --- |
-| **Instances** | Grid card 220×130, search + sort (Chơi gần nhất / Tên A-Z / Mới tạo), New Instance dialog, Play/Stop có trạng thái + chip "Đang chạy", context menu chuột phải (Play/Stop / Edit / Rename / Open folder / Delete) |
+| **Instances** | Grid card 240×152, search + sort (Chơi gần nhất / Tên A-Z / Mới tạo), New Instance dialog, Play/Stop có trạng thái + chip "Đang chạy", context menu chuột phải (Play/Stop / Edit / Rename / Open folder / Delete) |
 | **Instance Detail** | Header + Launch/Stop, 4 tab **Mods / Worlds / Logs / Settings**, toolbar phân nhóm có divider, mod list có toggle + badge update + menu `⋯` |
 | **Mods** | Check updates / Update all, menu từng mod: cập nhật riêng, chọn phiên bản (dialog radio), gỡ mod có xác nhận |
 | **Worlds** | Danh sách world (size, lần chơi cuối, số backup), Backup từng world + Backup all có progress, Open worlds folder |
 | **Logs** | Live log giả lập theo kiểu `latest.log` (có dòng JVM args/RAM/resolution), Clear Log, Copy to Clipboard, Auto-scroll |
 | **Settings** | Form thật: RAM slider + số (1024–16384 MB), JVM args, Java path, độ phân giải, Lưu/Mặc định; đường dẫn instance, Delete instance |
-| **Accounts** | Card tài khoản + avatar Minotar 48×48, Set active, Xóa, Add Offline, Add Microsoft |
+| **Accounts** | Card tài khoản + avatar Minotar 52×52 bo góc, Set active, Xóa, Add Offline, Add Microsoft |
 | **Mod Browser** | Dialog rộng, search debounce 300 ms (Enter để tìm ngay), filter Loader/MC/Sort, kết quả dạng list, cài mod có progress % và tự cài dependency (Fabric API) |
 | **Install flows** | Cài mod → xuất hiện ngay trong tab Mods + reload vẫn còn; Check updates/Update all đổi version thật; Install .mrpack và OptiFine thêm mod vào instance |
 | **Crash demo** | Nút **Simulate crash** trên thanh demo: dừng instance đang chạy, ghi log stack trace, mở dialog crash (exit code, đường dẫn crash report, nút mở report) |
@@ -45,6 +45,14 @@ Không cần `npm install`, không cần build.
 5. **Worlds + backup** — tab Worlds, backup giả lập có progress và đếm số backup.
 6. **Crash simulation** — test UX khi game crash mà không cần chạy game thật.
 
+
+## Giao diện v3 — "Aurora cockpit"
+
+- **Palette**: nền navy `#0b0f16`, accent teal `#5eead4` → sky `#7dd3fc` → indigo `#818cf8` (gradient `--grad-accent`). Light theme dùng teal `#0f9d8f` + indigo `#6366f1`.
+- **Ambient**: aurora gradient trôi chậm 38s sau shell + film grain SVG; nav/titlebar/dialog dùng `backdrop-filter` (glass).
+- **Motion**: token `--ease-out` / `--ease-spring`; card vào theo stagger (`--i`), hover nhấc 4px + spotlight theo con trỏ, page fade/slide, tab indicator trượt, switch knob spring, progress shimmer, dialog scale + blur, toast spring, nút nhấn 0.97.
+- **Tôn trọng người dùng**: `prefers-reduced-motion: reduce` tắt animation/transition chuyển động.
+- Muốn đổi nhanh "chất": sửa `--accent`, `--accent-2`, `--grad-accent`, `--ease-out` ở đầu `styles.css`; layout/effect nằm ở block `v3` cuối file.
 
 ## Chỉnh sửa
 
