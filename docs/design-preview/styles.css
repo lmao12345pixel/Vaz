@@ -830,6 +830,15 @@ p { margin: 0; }
 
 .mod-result:hover { background: var(--layer); }
 
+.mod-result.is-installing {
+  background: var(--layer);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.mod-row.is-disabled { opacity: 0.55; }
+
+.mod-main { min-width: 0; }
+
 .mod-icon {
   width: 48px;
   height: 48px;

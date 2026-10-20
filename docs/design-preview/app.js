@@ -51,14 +51,14 @@ const MOCK = {
 
   mods: {
     "test fabric": [
-      { file: "sodium-fabric-0.6.13+mc1.21.1.jar", version: "0.6.13", enabled: true, update: null },
-      { file: "lithium-fabric-0.14.3+mc1.21.1.jar", version: "0.14.3", enabled: true, update: "0.15.0" },
+      { projectId: "AANobbMI", file: "sodium-fabric-0.6.13+mc1.21.1.jar", version: "0.6.13", enabled: true, update: null },
+      { projectId: "gvQqBUqZ", file: "lithium-fabric-0.14.3+mc1.21.1.jar", version: "0.14.3", enabled: true, update: "0.15.0" },
     ],
     "vanilla-1.20.1": [],
     "neoforge-1.21.1": [
-      { file: "jei-1.21.1-neoforge-19.21.0.247.jar", version: "19.21.0", enabled: true, update: null },
-      { file: "ferritecore-7.0.1-neoforge.jar", version: "7.0.1", enabled: true, update: null },
-      { file: "cloth-config-15.0.140-neoforge.jar", version: "15.0.140", enabled: false, update: null },
+      { projectId: "u6dRKJwZ", file: "jei-1.21.1-neoforge-19.21.0.247.jar", version: "19.21.0", enabled: true, update: null },
+      { projectId: "uXXizFIs", file: "ferritecore-7.0.1-neoforge.jar", version: "7.0.1", enabled: true, update: null },
+      { projectId: "9s6osm5g", file: "cloth-config-15.0.140-neoforge.jar", version: "15.0.140", enabled: false, update: null },
     ],
   },
 
@@ -87,10 +87,39 @@ const MOCK = {
     { id: "H8CaAYZC", slug: "starlight", name: "Starlight", author: "PaperMC", desc: "Rewrites the light engine to fix lighting performance and lighting bugs.", downloads: 21_200_000, version: "1.1.5", loaders: ["fabric"], versions: ["1.21.1"] },
     { id: "LNytGWDc", slug: "create", name: "Create", author: "simibubi", desc: "Building tools and aesthetic technology for Minecraft.", downloads: 19_600_000, version: "6.0.4", loaders: ["fabric", "neoforge"], versions: ["1.21.1", "1.20.1"] },
     { id: "1bokaNcj", slug: "xaeros-minimap", name: "Xaero's Minimap", author: "xaero96", desc: "Displays the nearby terrain, and entities such as mobs, players and dropped items in a minimap.", downloads: 18_300_000, version: "24.2.0", loaders: ["fabric", "neoforge"], versions: ["1.21.1", "1.20.1"] },
+    { id: "EsAfCjCV", slug: "appleskin", name: "AppleSkin", author: "squeek502", desc: "Food-related HUD improvements: hunger/saturation values and tooltips.", downloads: 17_100_000, version: "3.0.6", loaders: ["fabric", "neoforge"], versions: ["1.21.1", "1.20.1"] },
+    { id: "nvQzSEkH", slug: "jade", name: "Jade", author: "Snownee", desc: "Shows information about what you are looking at.", downloads: 16_400_000, version: "15.3.0", loaders: ["fabric", "neoforge"], versions: ["1.21.1", "1.20.1"] },
+    { id: "fRiHVvU7", slug: "emi", name: "EMI", author: "Emi", desc: "A featureful and accessible item and recipe viewer.", downloads: 15_200_000, version: "1.1.22", loaders: ["fabric", "neoforge"], versions: ["1.21.1", "1.20.1"] },
+    { id: "nmDcB62a", slug: "modernfix", name: "ModernFix", author: "embeddedt", desc: "Dynamic performance improvements and bug fixes for modern Minecraft.", downloads: 14_600_000, version: "5.23.1", loaders: ["fabric", "neoforge"], versions: ["1.21.1", "1.20.1"] },
+    { id: "g96Z4WVZ", slug: "badoptimizations", name: "BadOptimizations", author: "ThetaDev", desc: "A collection of micro-optimizations for the client.", downloads: 12_900_000, version: "2.2.1", loaders: ["fabric"], versions: ["1.21.1", "1.20.1"] },
+    { id: "1eAoo2KR", slug: "yacl", name: "YetAnotherConfigLib", author: "isXander", desc: "A builder-based configuration library for Fabric mods.", downloads: 11_800_000, version: "3.7.1", loaders: ["fabric"], versions: ["1.21.1", "1.20.1"] },
   ],
 };
 
 const TOTAL_RESULTS = 19_628;
+const MB_PAGE_SIZE = 20;
+const STORAGE_KEY = "vazer-demo-v1";
+
+const VERSION_OPTIONS = ["Auto", "All", "1.21.1", "1.21", "1.20.1", "1.20", "1.19.4", "1.19.2", "1.18.2", "1.16.5"];
+const SORT_OPTIONS = ["Relevance", "Downloads", "Updated", "Newest"];
+
+// Giống Core với resolveDependencies: true — cài kèm mod phụ thuộc.
+// Fabric API chỉ áp dụng cho instance Fabric.
+const DEPENDENCIES = {
+  "sodium-extra": ["fabric-api"],
+  "reeses-sodium-options": ["fabric-api"],
+  iris: ["fabric-api"],
+  indium: ["fabric-api"],
+  modmenu: ["fabric-api"],
+  continuity: ["fabric-api"],
+  create: ["fabric-api"],
+  "xaeros-minimap": ["fabric-api"],
+  jei: ["fabric-api"],
+  entityculling: ["fabric-api"],
+  immediatelyfast: ["fabric-api"],
+  "ferrite-core": ["fabric-api"],
+  starlight: ["fabric-api"],
+};
 
 /* ------------------------------------------------------------
    STATE
@@ -106,16 +135,112 @@ const state = {
   tab: "mods",
   modBrowser: {
     query: "",
-    loader: "any",
-    version: "any",
-    sort: "relevance",
-    limit: 10,
-    installed: {},
+    loader: "Auto",
+    version: "Auto",
+    sort: "Relevance",
+    limit: MB_PAGE_SIZE,
     busy: false,
+    installingSlug: null,
   },
 };
 
+/* ------------------------------------------------------------
+   PERSISTENCE (mock state — để cài mod xong reload vẫn còn)
+   ------------------------------------------------------------ */
+function saveState() {
+  try {
+    const instances = state.instances.map((inst) => {
+      const { launching, status, pid, ...rest } = inst;
+      return rest;
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      instances,
+      mods: state.mods,
+      accounts: state.accounts,
+      activeInstanceId: state.activeInstanceId,
+      theme: document.documentElement.dataset.theme,
+    }));
+  } catch {
+    // private mode / storage đầy — bỏ qua, demo vẫn chạy in-memory
+  }
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (Array.isArray(data.instances)) state.instances = data.instances;
+    if (data.mods && typeof data.mods === "object") state.mods = data.mods;
+    if (Array.isArray(data.accounts)) state.accounts = data.accounts;
+    if (data.activeInstanceId && state.instances.some((i) => i.id === data.activeInstanceId)) {
+      state.activeInstanceId = data.activeInstanceId;
+    }
+    if (data.theme === "light" || data.theme === "dark") {
+      document.documentElement.dataset.theme = data.theme;
+    }
+  } catch {
+    // state hỏng — dùng MOCK
+  }
+}
+
 const getInstance = (id) => state.instances.find((i) => i.id === id);
+const currentInstance = () => getInstance(state.activeInstanceId);
+const currentMods = () => state.mods[state.activeInstanceId] || [];
+const activeAccountName = () => (state.accounts.find((a) => a.active) || {}).name || "Player";
+
+function ensureActiveInstance() {
+  if (!getInstance(state.activeInstanceId)) {
+    state.activeInstanceId = state.instances[0]?.id || null;
+  }
+}
+
+function catalogProject(slugOrId) {
+  return MOCK.catalog.find((p) => p.slug === slugOrId || p.id === slugOrId);
+}
+
+function isProjectInstalled(instanceId, project) {
+  return (state.mods[instanceId] || []).some((m) => m.projectId === project.id);
+}
+
+function modFileName(project, inst) {
+  if (inst.loader === "fabric") return `${project.slug}-fabric-${project.version}+mc${inst.mc}.jar`;
+  if (inst.loader === "neoforge") return `${project.slug}-neoforge-${project.version}.jar`;
+  return `${project.slug}-${project.version}.jar`;
+}
+
+/** Cài 1 project vào instance; trả về true nếu thêm mới. */
+function addInstalledMod(project, inst) {
+  const mods = (state.mods[inst.id] ||= []);
+  if (mods.some((m) => m.projectId === project.id)) return false;
+
+  mods.push({
+    projectId: project.id,
+    file: modFileName(project, inst),
+    version: project.version,
+    enabled: true,
+    update: null,
+  });
+  return true;
+}
+
+function compareVersions(a, b) {
+  const pa = String(a).split(/[.+-]/).map((n) => parseInt(n, 10) || 0);
+  const pb = String(b).split(/[.+-]/).map((n) => parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0);
+    if (d) return d;
+  }
+  return 0;
+}
+
+/** Project phụ thuộc cần cài kèm (giống resolveDependencies trong Core). */
+function resolveDependencies(project, inst) {
+  if (inst.loader !== "fabric") return [];
+  return (DEPENDENCIES[project.slug] || [])
+    .map(catalogProject)
+    .filter((dep) => dep && !isProjectInstalled(inst.id, dep));
+}
 
 /* ------------------------------------------------------------
    ROUTING
@@ -223,7 +348,11 @@ async function launchInstance(id, { fromDetail = false } = {}) {
 
   const pid = rand(10000, 65000);
   inst.launching = false;
+  inst.pid = pid;
   setCardStatus(id, `Đang chạy (PID ${pid})`);
+  // latest.log được truncate mỗi lần chạy game.
+  state.logs[id] = [];
+  saveState();
 
   if (fromDetail) {
     $("#detailLaunchBtn").disabled = false;
@@ -255,28 +384,28 @@ function setTab(tab) {
 /* ------------------------------------------------------------
    DETAIL — mods
    ------------------------------------------------------------ */
-function currentMods() {
-  return state.mods[state.activeInstanceId] || [];
-}
-
 function renderMods() {
   const mods = currentMods();
   const list = $("#modList");
   const empty = $("#modsEmpty");
 
-  list.innerHTML = mods.map((mod, i) => `
-    <div class="list-row mod-row">
+  list.innerHTML = mods.map((mod, i) => {
+    const project = mod.projectId ? MOCK.catalog.find((p) => p.id === mod.projectId) : null;
+    const label = project ? project.name : mod.file;
+    return `
+    <div class="list-row mod-row${mod.enabled ? "" : " is-disabled"}">
       <span class="glyph">&#xE74C;</span>
-      <div>
-        <div class="mod-file">${esc(mod.file)}</div>
-        <div class="mod-version">${esc(mod.version)}</div>
+      <div class="mod-main">
+        <div class="mod-file" title="${esc(mod.file)}">${esc(mod.file)}</div>
+        <div class="mod-version">${esc(label)} · v${esc(mod.version)}</div>
       </div>
-      <span class="badge">${mod.update ? "Cập nhật " + esc(mod.update) : ""}</span>
+      ${mod.update ? `<span class="badge">Cập nhật ${esc(mod.update)}</span>` : ""}
       <label class="switch">
         <input type="checkbox" data-mod-toggle="${i}" ${mod.enabled ? "checked" : ""} />
         <span class="track"></span>
       </label>
-    </div>`).join("");
+    </div>`;
+  }).join("");
 
   empty.hidden = mods.length > 0;
   const updates = mods.filter((m) => m.update).length;
@@ -286,58 +415,104 @@ function renderMods() {
 
 async function checkUpdates() {
   const mods = currentMods();
-  $("#detailStatus").textContent = "Đang kiểm tra cập nhật...";
+  if (mods.length === 0) {
+    setDetailStatus("Chưa có mod nào để kiểm tra.");
+    return;
+  }
+
+  setDetailStatus("Đang kiểm tra cập nhật...");
   await sleep(900);
-  if (mods[1]) mods[1].update = "0.15.0";
+
+  let count = 0;
+  mods.forEach((mod) => {
+    const project = mod.projectId ? MOCK.catalog.find((p) => p.id === mod.projectId) : null;
+    if (!project) return;
+    // Modrinth chỉ trả version tương thích loader/MC — mock dùng version mới nhất trong catalog.
+    const newer = compareVersions(project.version, mod.version) > 0;
+    mod.update = newer ? project.version : null;
+    if (newer) count++;
+  });
+
   renderMods();
-  $("#detailStatus").textContent = mods.some((m) => m.update)
-    ? "Có bản cập nhật mới."
-    : "Tất cả mod đã là bản mới nhất.";
+  saveState();
+  setDetailStatus(count > 0
+    ? `Có ${count} mod có bản cập nhật mới.`
+    : "Tất cả mod đã là bản mới nhất.");
 }
 
 async function updateAll() {
   const mods = currentMods();
-  if (!mods.some((m) => m.update)) {
-    $("#detailStatus").textContent = "Không có mod nào cần cập nhật.";
+  const pending = mods.filter((m) => m.update);
+  if (pending.length === 0) {
+    setDetailStatus("Không có mod nào cần cập nhật.");
     return;
   }
+
+  const inst = currentInstance();
   $("#detailProgress").hidden = false;
-  for (let p = 0; p <= 100; p += 10) {
-    setDetailProgress(p);
-    $("#detailStatus").textContent = `Đang cập nhật mod... ${p}%`;
-    await sleep(80);
+  let done = 0;
+
+  for (const mod of pending) {
+    const project = mod.projectId ? MOCK.catalog.find((p) => p.id === mod.projectId) : null;
+    const label = project ? project.name : mod.file;
+    const from = mod.version;
+    const to = mod.update;
+
+    for (let p = 0; p <= 100; p += 10) {
+      setDetailProgress(p);
+      setDetailStatus(`Đang cập nhật ${label} ${from} → ${to}... ${p}%`);
+      await sleep(70);
+    }
+
+    mod.version = to;
+    mod.file = project
+      ? modFileName(project, inst)
+      : mod.file.replace(from, to);
+    mod.update = null;
+    done++;
+    renderMods();
   }
-  mods.forEach((m) => { m.update = null; });
-  renderMods();
+
   $("#detailProgress").hidden = true;
   setDetailProgress(0);
-  $("#detailStatus").textContent = "Đã cập nhật xong.";
+  renderMods();
+  saveState();
+  setDetailStatus(`Đã cập nhật xong ${done} mod.`);
 }
 
 /* ------------------------------------------------------------
    DETAIL — logs
    ------------------------------------------------------------ */
 function logLines(inst) {
-  return [
-    `[${now()}] [main/INFO]: Loading Minecraft ${inst.mc} with ${inst.loader} ${inst.loaderVersion || ""}`.trim(),
-    `[${now()}] [main/INFO]: Loading ${34 + rand(0, 6)} mods:`,
-    `\t- fabric-api 0.115.0+1.21.1`,
-    `\t- lithium 0.15.0`,
-    `\t- sodium 0.6.13+mc1.21.1`,
+  const enabledMods = (state.mods[inst.id] || []).filter((m) => m.enabled);
+  const loaderLabel = inst.loaderVersion ? `${inst.loader} ${inst.loaderVersion}` : inst.loader;
+  const lines = [
+    `[${now()}] [main/INFO]: Loading Minecraft ${inst.mc} with ${loaderLabel}`,
+  ];
+
+  if (enabledMods.length > 0) {
+    lines.push(`[${now()}] [main/INFO]: Loading ${enabledMods.length} mods:`);
+    enabledMods.slice(0, 8).forEach((m) => lines.push(`\t- ${m.file.replace(/\.jar$/, "")}`));
+    if (enabledMods.length > 8) lines.push(`\t- ... và ${enabledMods.length - 8} mod khác`);
+  }
+
+  lines.push(
     `[${now()}] [main/INFO]: SpongePowered MIXIN is active.`,
-    `[${now()}] [Render thread/INFO]: Setting user: Steve`,
+    `[${now()}] [Render thread/INFO]: Setting user: ${activeAccountName()}`,
     `[${now()}] [Render thread/INFO]: Backend library: LWJGL version 3.3.3+5`,
     `[${now()}] [Render thread/INFO]: OpenGL debug context created`,
     `[${now()}] [Render thread/INFO]: Narrator library for x64 successfully loaded`,
-    `[${now()}] [Render thread/INFO]: Reloading ResourceManager: vanilla, fabric`,
-    `[${now()}] [Worker-Main-1/INFO]: Found 12 mods with data generators`,
+    `[${now()}] [Render thread/INFO]: Reloading ResourceManager: vanilla${inst.loader !== "vanilla" ? ", " + inst.loader : ""}`,
+    `[${now()}] [Worker-Main-1/INFO]: Found ${Math.max(4, enabledMods.length - 2)} mods with data generators`,
     `[${now()}] [Render thread/INFO]: Sound engine started`,
     `[${now()}] [Render thread/INFO]: Created: 1024x512x4 minecraft:textures/atlas/blocks.png`,
     `[${now()}] [Render thread/INFO]: Loaded 1287 recipes`,
     `[${now()}] [Render thread/INFO]: Connecting to localhost:25565`,
     `[${now()}] [Netty Client IO #0/INFO]: Connected to a modded server.`,
     `[${now()}] [Render thread/INFO]: Sodium: Using GL_ARB_buffer_storage`,
-  ];
+  );
+
+  return lines;
 }
 
 function streamLogs(id) {
@@ -411,6 +586,7 @@ function accountStatus(text) {
 
 function setActiveAccount(id) {
   state.accounts.forEach((a) => { a.active = a.id === id; });
+  saveState();
   renderAccounts();
   accountStatus(`Đã đặt "${getAccount(id).name}" làm tài khoản active.`);
 }
@@ -582,7 +758,9 @@ function openNewInstanceDialog() {
         lastPlayed: null,
       });
       state.mods[id] = [];
+      saveState();
       renderInstances();
+      showToastStatus(`Đã tạo instance "${name}".`);
       return true;
     },
   });
@@ -598,10 +776,20 @@ function openNewInstanceDialog() {
    MOD BROWSER DIALOG
    ------------------------------------------------------------ */
 function openModBrowser() {
-  const inst = getInstance(state.activeInstanceId);
-  state.modBrowser.limit = 10;
-  state.modBrowser.installed = {};
-  currentMods().forEach((m) => { state.modBrowser.installed[m.version] = true; });
+  const inst = currentInstance();
+  if (!inst) {
+    showToastStatus("Chưa chọn instance để cài mod.");
+    return;
+  }
+
+  // Mỗi lần mở dialog: reset bộ lọc như ModBrowserViewModel mới.
+  state.modBrowser.query = "";
+  state.modBrowser.loader = "Auto";
+  state.modBrowser.version = "Auto";
+  state.modBrowser.sort = "Relevance";
+  state.modBrowser.limit = MB_PAGE_SIZE;
+  state.modBrowser.busy = false;
+  state.modBrowser.installingSlug = null;
 
   const dialog = showDialog({
     title: "Download Mods",
@@ -610,7 +798,7 @@ function openModBrowser() {
     body: `
       <div class="searchbox">
         <span class="glyph">&#xE721;</span>
-        <input id="mbSearch" placeholder="Tìm mod trên Modrinth..." autocomplete="off" />
+        <input id="mbSearch" placeholder="Tìm mod trên Modrinth (ví dụ: sodium, iris, lithium)..." autocomplete="off" />
         <button class="btn icon-only" id="mbClear" hidden style="min-height:26px;width:26px;border:0;background:transparent">
           <span class="glyph">&#xE711;</span>
         </button>
@@ -619,24 +807,17 @@ function openModBrowser() {
       <div class="filters">
         <label class="field"><span>Loader</span>
           <select class="select" id="mbLoader">
-            <option value="any">Any</option>
-            <option value="fabric">Fabric</option>
-            <option value="neoforge">NeoForge</option>
+            ${["Auto", "All", "fabric", "neoforge"].map((v) => `<option value="${v}">${v}</option>`).join("")}
           </select>
         </label>
         <label class="field"><span>MC version</span>
           <select class="select" id="mbVersion">
-            <option value="any">Any</option>
-            <option>1.21.1</option>
-            <option>1.20.1</option>
-            <option>1.19.2</option>
+            ${VERSION_OPTIONS.map((v) => `<option value="${v}">${v}</option>`).join("")}
           </select>
         </label>
         <label class="field"><span>Sort</span>
           <select class="select" id="mbSort">
-            <option value="relevance">Relevance</option>
-            <option value="downloads">Downloads</option>
-            <option value="name">Name</option>
+            ${SORT_OPTIONS.map((v) => `<option value="${v}">${v}</option>`).join("")}
           </select>
         </label>
       </div>
@@ -652,18 +833,20 @@ function openModBrowser() {
   });
 
   const search = $("#mbSearch", dialog.host);
+  const status = () => $("#mbStatus", dialog.host);
   let timer = null;
 
-  const update = () => {
+  const update = ({ searching = false } = {}) => {
     state.modBrowser.query = search.value;
     $("#mbClear", dialog.host).hidden = search.value.length === 0;
+    if (searching) status().textContent = "Đang tìm...";
     renderModResults(dialog);
   };
 
   search.addEventListener("input", () => {
     clearTimeout(timer);
-    $("#mbStatus", dialog.host).textContent = "Đang tìm...";
-    timer = setTimeout(update, 300);
+    status().textContent = "Đang tìm...";
+    timer = setTimeout(() => update(), 300);
   });
 
   search.addEventListener("keydown", (e) => {
@@ -679,12 +862,21 @@ function openModBrowser() {
     search.focus();
   };
 
-  $("#mbLoader", dialog.host).onchange = (e) => { state.modBrowser.loader = e.target.value; update(); };
-  $("#mbVersion", dialog.host).onchange = (e) => { state.modBrowser.version = e.target.value; update(); };
-  $("#mbSort", dialog.host).onchange = (e) => { state.modBrowser.sort = e.target.value; update(); };
+  $("#mbLoader", dialog.host).onchange = (e) => {
+    state.modBrowser.loader = e.target.value;
+    update();
+  };
+  $("#mbVersion", dialog.host).onchange = (e) => {
+    state.modBrowser.version = e.target.value;
+    update();
+  };
+  $("#mbSort", dialog.host).onchange = (e) => {
+    state.modBrowser.sort = e.target.value;
+    update();
+  };
 
   $("#mbLoadMore", dialog.host).onclick = () => {
-    state.modBrowser.limit += 8;
+    state.modBrowser.limit += MB_PAGE_SIZE;
     renderModResults(dialog);
   };
 
@@ -697,19 +889,50 @@ function openModBrowser() {
   setTimeout(() => search.focus(), 50);
 }
 
+const stableHash = (s) =>
+  Math.abs([...String(s)].reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0));
+
+/** Auto = theo instance đang mở (giống ResolveLoaders/ResolveGameVersions trong ViewModel). */
+function resolvedFilters() {
+  const inst = currentInstance();
+  const loader = state.modBrowser.loader === "Auto"
+    ? (inst && inst.loader !== "vanilla" ? inst.loader : null)
+    : state.modBrowser.loader === "All" ? null : state.modBrowser.loader;
+  const version = state.modBrowser.version === "Auto"
+    ? (inst ? inst.mc : null)
+    : state.modBrowser.version === "All" ? null : state.modBrowser.version;
+  return { loader, version };
+}
+
 function filteredCatalog() {
-  const { query, loader, version, sort } = state.modBrowser;
+  const { query, sort } = state.modBrowser;
+  const { loader, version } = resolvedFilters();
   const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
 
   let items = MOCK.catalog.filter((p) => {
-    if (loader !== "any" && !p.loaders.includes(loader)) return false;
-    if (version !== "any" && !p.versions.includes(version)) return false;
+    if (loader && !p.loaders.includes(loader)) return false;
+    if (version && !p.versions.includes(version)) return false;
+    if (tokens.length === 0) return true;
     const hay = `${p.name} ${p.slug} ${p.desc} ${p.author}`.toLowerCase();
     return tokens.every((t) => hay.includes(t));
   });
 
-  if (sort === "downloads") items = [...items].sort((a, b) => b.downloads - a.downloads);
-  if (sort === "name") items = [...items].sort((a, b) => a.name.localeCompare(b.name));
+  const score = (p) => {
+    const q = query.trim().toLowerCase();
+    if (!q) return 0;
+    const name = p.name.toLowerCase();
+    if (name === q) return 1000;
+    if (name.startsWith(q)) return 800;
+    if (name.includes(q)) return 600;
+    if (p.slug.includes(q)) return 500;
+    return 100;
+  };
+
+  if (sort === "Downloads") items.sort((a, b) => b.downloads - a.downloads);
+  else if (sort === "Updated") items.sort((a, b) => stableHash(b.id) - stableHash(a.id));
+  else if (sort === "Newest") items.sort((a, b) => stableHash(a.id) - stableHash(b.id));
+  // Relevance: ưu tiên khớp tên, sau đó tới lượt tải (Modrinth fuzzy search).
+  else items.sort((a, b) => score(b) - score(a) || b.downloads - a.downloads);
 
   return items;
 }
@@ -720,16 +943,19 @@ function fmtDownloads(n) {
   return String(n);
 }
 
-function renderModResults(dialog) {
+function renderModResults(dialog, { preserveStatus = false } = {}) {
+  const inst = currentInstance();
   const items = filteredCatalog();
   const shown = items.slice(0, state.modBrowser.limit);
   const list = $("#mbResults", dialog.host);
   const status = $("#mbStatus", dialog.host);
 
   list.innerHTML = shown.map((p) => {
-    const installed = state.modBrowser.installed[p.version] === true;
+    const installed = inst ? isProjectInstalled(inst.id, p) : false;
+    const installing = state.modBrowser.installingSlug === p.slug;
+    const disabled = installed || state.modBrowser.busy;
     return `
-      <div class="mod-result">
+      <div class="mod-result${installing ? " is-installing" : ""}">
         <img class="mod-icon" src="https://cdn.modrinth.com/data/${p.id}/icon.png" alt="" data-fallback="${esc(p.name[0])}" />
         <div>
           <div class="mod-title">${esc(p.name)}</div>
@@ -738,19 +964,23 @@ function renderModResults(dialog) {
         </div>
         <div class="mod-side">
           <span class="mod-downloads">${fmtDownloads(p.downloads)}</span>
-          <button class="btn" data-install="${esc(p.slug)}" ${installed || state.modBrowser.busy ? "disabled" : ""}>
-            ${installed ? "Đã cài" : "Cài"}
+          <button class="btn" data-install="${esc(p.slug)}" ${disabled ? "disabled" : ""}>
+            ${installing ? `<span class="spinner"></span> Đang cài` : installed ? "Đã cài" : "Cài"}
           </button>
         </div>
       </div>`;
   }).join("");
 
   $("#mbCount", dialog.host).textContent = `${shown.length} / ${TOTAL_RESULTS.toLocaleString("en-US")} results`;
-  status.textContent = "";
+
   if (items.length === 0) {
     list.innerHTML = `<div class="empty-state small"><span class="glyph empty-icon">&#xE721;</span><p class="text-2">Không tìm thấy mod nào phù hợp.</p></div>`;
+    if (!preserveStatus) status.textContent = "No results";
+  } else if (!preserveStatus) {
+    status.textContent = "";
   }
-  $("#mbLoadMore", dialog.host).hidden = shown.length >= items.length;
+
+  $("#mbLoadMore", dialog.host).hidden = shown.length >= items.length || items.length === 0;
 
   $$("img.mod-icon", list).forEach((img) => {
     img.addEventListener("error", () => {
@@ -766,42 +996,55 @@ function renderModResults(dialog) {
 }
 
 async function installMod(dialog, slug) {
-  const project = MOCK.catalog.find((p) => p.slug === slug);
-  if (!project || state.modBrowser.busy) return;
+  const inst = currentInstance();
+  const project = catalogProject(slug);
+  if (!inst || !project || state.modBrowser.busy) return;
+  if (isProjectInstalled(inst.id, project)) return;
+
+  const deps = resolveDependencies(project, inst);
+  const queue = [project, ...deps];
 
   state.modBrowser.busy = true;
+  state.modBrowser.installingSlug = project.slug;
+
   const progress = $("#mbProgress", dialog.host);
   const status = $("#mbStatus", dialog.host);
   progress.hidden = false;
+  progress.firstElementChild.style.width = "0%";
   status.textContent = `Đang tải ${project.name}... 0%`;
-  renderModResults(dialog);
-  $("#mbStatus", dialog.host).textContent = `Đang tải ${project.name}... 0%`;
-  $("#mbProgress", dialog.host).hidden = false;
+  renderModResults(dialog, { preserveStatus: true });
 
-  for (let p = 0; p <= 100; p += rand(7, 13)) {
-    const pct = Math.min(p, 100);
-    $("#mbProgress", dialog.host).firstElementChild.style.width = pct + "%";
-    $("#mbStatus", dialog.host).textContent = `Đang tải ${project.name}... ${pct}%`;
-    await sleep(120);
-  }
+  let added = 0;
 
-  state.modBrowser.installed[project.version] = true;
-  state.modBrowser.busy = false;
-  $("#mbProgress", dialog.host).hidden = true;
-  $("#mbStatus", dialog.host).textContent = `Đã cài ${project.name}`;
-  renderModResults(dialog);
-  $("#mbStatus", dialog.host).textContent = `Đã cài ${project.name}`;
+  for (const item of queue) {
+    const isDependency = item !== project;
 
-  const mods = state.mods[state.activeInstanceId] ||= [];
-  if (!mods.some((m) => m.file.startsWith(project.slug))) {
-    mods.push({
-      file: `${project.slug}-${project.version}.jar`,
-      version: project.version,
-      enabled: true,
-      update: null,
-    });
+    for (let p = 0; p <= 100; p += rand(8, 14)) {
+      const pct = Math.min(p, 100);
+      progress.firstElementChild.style.width = pct + "%";
+      status.textContent = isDependency
+        ? `Đang cài dependency ${item.name}... ${pct}%`
+        : `Đang tải ${item.name}... ${pct}%`;
+      await sleep(90);
+    }
+
+    if (addInstalledMod(item, inst)) added++;
     if (state.screen === "detail") renderMods();
   }
+
+  state.modBrowser.busy = false;
+  state.modBrowser.installingSlug = null;
+  progress.hidden = true;
+  progress.firstElementChild.style.width = "0%";
+  renderModResults(dialog, { preserveStatus: true });
+
+  const depCount = Math.max(0, added - 1);
+  status.textContent = depCount > 0
+    ? `Đã cài ${project.name} (+${depCount} dependency)`
+    : `Đã cài ${project.name}`;
+
+  saveState();
+  if (state.screen === "detail") renderMods();
 }
 
 /* ------------------------------------------------------------
@@ -830,6 +1073,7 @@ function openAddOfflineDialog() {
         return false;
       }
       state.accounts.push({ id: "acc-" + Date.now(), name, kind: "Offline", active: false });
+      saveState();
       renderAccounts();
       accountStatus(`Đã thêm tài khoản offline "${name}".`);
       return true;
@@ -841,10 +1085,130 @@ function openAddOfflineDialog() {
 async function addMicrosoftAccount() {
   accountStatus("Đang mở trình duyệt để đăng nhập Microsoft...");
   await sleep(1600);
-  const name = "MCPlayer";
+
+  // Demo: mỗi lần đăng nhập trả về một tên khác nhau để không trùng.
+  const base = "MCPlayer";
+  let name = base;
+  let n = 2;
+  while (state.accounts.some((a) => a.name.toLowerCase() === name.toLowerCase())) {
+    name = base + n++;
+  }
+
   state.accounts.push({ id: "acc-" + Date.now(), name, kind: "Microsoft", active: false });
+  saveState();
   renderAccounts();
   accountStatus(`Đã thêm tài khoản Microsoft "${name}" (demo).`);
+}
+
+/* ------------------------------------------------------------
+   MODPACK / OPTIFINE (mô phỏng installer)
+   ------------------------------------------------------------ */
+const MRPACK_DEMO = {
+  name: "Fabulously Optimized 6.5.0.mrpack",
+  projects: ["AANobbMI", "gvQqBUqZ", "YL57xq9U", "mOgUt4GM", "uXXizFIs"],
+};
+
+function installMrpack() {
+  const inst = currentInstance();
+  if (!inst) return;
+
+  const dialog = showDialog({
+    title: "Install .mrpack",
+    primary: "Cài",
+    closeText: "Hủy",
+    body: `
+      <label class="field"><span>File modpack</span>
+        <input class="textbox" id="mrpackPath" value="C:\\Users\\TOSHIBA\\Downloads\\${MRPACK_DEMO.name}" readonly />
+      </label>
+      <div class="infobar info"><span class="glyph">&#xE946;</span><div>Demo: file được chọn sẵn. App thật mở hộp thoại chọn file .mrpack.</div></div>
+      <div class="result-status" id="mrpackStatus" hidden>
+        <span class="spinner" style="color:var(--accent)"></span><span id="mrpackStatusText"></span>
+      </div>
+      <div class="progress thin" id="mrpackProgress" hidden><div></div></div>`,
+    onPrimary: async () => {
+      const btn = $("[data-dialog-primary]", dialog.host);
+      btn.disabled = true;
+      $("#mrpackStatus").hidden = false;
+      $("#mrpackProgress").hidden = false;
+
+      const phases = [
+        "Đang tải modpack... 20%",
+        "Đang giải nén overrides... 45%",
+        "Đang resolve 5 mod... 70%",
+        "Đang cài mod... 90%",
+      ];
+
+      for (let i = 0; i < phases.length; i++) {
+        $("#mrpackStatusText").textContent = phases[i];
+        $("#mrpackProgress").firstElementChild.style.width = `${(i + 1) * 22}%`;
+        await sleep(600);
+      }
+
+      let added = 0;
+      MRPACK_DEMO.projects.forEach((id) => {
+        const project = catalogProject(id);
+        if (project && addInstalledMod(project, inst)) added++;
+      });
+
+      $("#mrpackProgress").firstElementChild.style.width = "100%";
+      $("#mrpackStatusText").textContent = `Đã cài ${MRPACK_DEMO.name} (${added} mod)`;
+      renderMods();
+      saveState();
+      setDetailStatus(`Đã cài modpack "${MRPACK_DEMO.name}" (${added} mod).`);
+      await sleep(500);
+      return true;
+    },
+  });
+
+  return dialog;
+}
+
+function installOptiFine() {
+  const inst = currentInstance();
+  if (!inst) return;
+
+  const dialog = showDialog({
+    title: "Install OptiFine",
+    primary: "Cài",
+    closeText: "Hủy",
+    body: `
+      <label class="field"><span>Phiên bản OptiFine</span>
+        <select class="select" id="ofVersion">
+          <option>1.21.1</option><option>1.21</option><option>1.20.1</option><option>1.19.2</option>
+        </select>
+      </label>
+      <div class="infobar info"><span class="glyph">&#xE946;</span><div>Demo: tải installer và patch vào instance (không chạy file thật).</div></div>
+      <div class="progress thin" id="ofProgress" hidden><div></div></div>
+      <div class="caption text-2" id="ofStatus"></div>`,
+    onPrimary: async () => {
+      const btn = $("[data-dialog-primary]", dialog.host);
+      btn.disabled = true;
+      const version = $("#ofVersion").value;
+      const progress = $("#ofProgress");
+      const status = $("#ofStatus");
+      progress.hidden = false;
+
+      for (let p = 0; p <= 100; p += 10) {
+        progress.firstElementChild.style.width = p + "%";
+        status.textContent = `Đang cài OptiFine ${version}... ${p}%`;
+        await sleep(100);
+      }
+
+      const mods = (state.mods[inst.id] ||= []);
+      const file = `OptiFine_${version}_HD_U_I6.jar`;
+      if (!mods.some((m) => m.file === file)) {
+        mods.push({ file, version, enabled: true, update: null });
+      }
+
+      renderMods();
+      saveState();
+      setDetailStatus(`Đã cài OptiFine ${version}.`);
+      await sleep(400);
+      return true;
+    },
+  });
+
+  return dialog;
 }
 
 /* ------------------------------------------------------------
@@ -905,6 +1269,8 @@ function wireEvents() {
         if (await confirmDialog(`Xóa "${inst.name}"?`, "Toàn bộ thư mục instance sẽ bị xóa khỏi disk. Không thể hoàn tác.")) {
           state.instances = state.instances.filter((i) => i.id !== id);
           delete state.mods[id];
+          ensureActiveInstance();
+          saveState();
           renderInstances();
         }
         break;
@@ -923,16 +1289,20 @@ function wireEvents() {
   $("#checkUpdatesBtn").addEventListener("click", checkUpdates);
   $("#updateAllBtn").addEventListener("click", updateAll);
   $("#openModBrowserBtn").addEventListener("click", openModBrowser);
-  $("#openModsFolderBtn").addEventListener("click", () => setDetailStatus("Đã mở thư mục mods (demo)."));
-  $("#mrpackBtn").addEventListener("click", () => setDetailStatus("Chọn file .mrpack để cài (demo)."));
-  $("#optifineBtn").addEventListener("click", () => setDetailStatus("Đang mở OptiFine installer (demo)."));
+  $("#openModsFolderBtn").addEventListener("click", () => showToastStatus("Đã mở thư mục mods (demo)."));
+  $("#mrpackBtn").addEventListener("click", installMrpack);
+  $("#optifineBtn").addEventListener("click", installOptiFine);
 
   // Mod list toggle (delegated)
   $("#modList").addEventListener("change", (e) => {
     const input = e.target.closest("[data-mod-toggle]");
     if (!input) return;
     const mod = currentMods()[Number(input.dataset.modToggle)];
-    if (mod) mod.enabled = input.checked;
+    if (mod) {
+      mod.enabled = input.checked;
+      saveState();
+      setDetailStatus(`${input.checked ? "Đã bật" : "Đã tắt"} ${mod.file}.`);
+    }
   });
 
   // Logs toolbar
@@ -963,6 +1333,8 @@ function wireEvents() {
     if (await confirmDialog(`Xóa "${inst.name}"?`, "Toàn bộ thư mục instance sẽ bị xóa khỏi disk. Không thể hoàn tác.")) {
       state.instances = state.instances.filter((i) => i.id !== inst.id);
       delete state.mods[inst.id];
+      ensureActiveInstance();
+      saveState();
       showScreen("instances");
     }
   });
@@ -994,6 +1366,7 @@ function wireEvents() {
       }
       if (await confirmDialog(`Xóa tài khoản "${acc.name}"?`, "Tài khoản sẽ bị xóa khỏi danh sách lưu trên máy.")) {
         state.accounts = state.accounts.filter((a) => a.id !== id);
+        saveState();
         renderAccounts();
         accountStatus(`Đã xóa tài khoản "${acc.name}".`);
       }
@@ -1006,8 +1379,12 @@ function wireEvents() {
     const next = html.dataset.theme === "dark" ? "light" : "dark";
     html.dataset.theme = next;
     $("#themeToggle").textContent = next === "dark" ? "Dark" : "Light";
+    saveState();
   });
-  $("#resetDemo").addEventListener("click", () => location.reload());
+  $("#resetDemo").addEventListener("click", () => {
+    try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+    location.reload();
+  });
 
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") $("#contextMenu").hidden = true;
@@ -1029,6 +1406,12 @@ function showToastStatus(text) {
 /* ------------------------------------------------------------
    INIT
    ------------------------------------------------------------ */
+loadState();
+if (!state.instances.some((i) => i.id === state.activeInstanceId) && state.instances[0]) {
+  state.activeInstanceId = state.instances[0].id;
+}
+$("#themeToggle").textContent = document.documentElement.dataset.theme === "light" ? "Light" : "Dark";
+
 wireEvents();
 renderInstances();
 renderAccounts();

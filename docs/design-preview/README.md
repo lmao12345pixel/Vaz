@@ -1,7 +1,8 @@
 # Vazer Launcher — UI prototype (web)
 
 Bản demo giao diện chạy trên browser để **chỉnh sửa bố cục/spacing/màu nhanh** trước khi port sang WinUI.
-Đây là **prototype**, không phải production: dữ liệu là mock, mọi thao tác chỉ mô phỏng trong bộ nhớ.
+Đây là **prototype**, không phải production: dữ liệu là mock, mọi thao tác được mô phỏng 1:1 với app (không mở game thật).
+Trạng thái mock (instance/mod/account) được lưu trong `localStorage` để reload vẫn còn; nút **Reset** xóa sạch.
 
 ## Chạy
 
@@ -29,7 +30,8 @@ Không cần `npm install`, không cần build.
 | **Logs** | Live log giả lập theo kiểu `latest.log`, Clear Log, Copy to Clipboard, Auto-scroll |
 | **Settings** | InfoBar RAM/JVM (đúng trạng thái hiện tại), đường dẫn instance, Delete instance |
 | **Accounts** | Card tài khoản + avatar Minotar 48×48, Set active, Xóa, Add Offline, Add Microsoft |
-| **Mod Browser** | Dialog rộng, search debounce 300 ms, filter Loader/MC/Sort, kết quả dạng list, Install có progress % |
+| **Mod Browser** | Dialog rộng, search debounce 300 ms (Enter để tìm ngay), filter Loader/MC/Sort, kết quả dạng list, cài mod có progress % và tự cài dependency (Fabric API) |
+| **Install flows** | Cài mod → xuất hiện ngay trong tab Mods + reload vẫn còn; Check updates/Update all đổi version thật; Install .mrpack và OptiFine thêm mod vào instance |
 
 ## Chỉnh sửa
 
@@ -53,5 +55,6 @@ Khi một bố cục đã ổn trên web, port sang XAML theo đúng thứ tự:
 ## Giới hạn
 
 - Không gọi Modrinth/Mojang/Microsoft thật; chỉ tải avatar + icon qua CDN công khai.
-- Không lưu trạng thái khi reload (bấm **Reset** trên thanh demo).
+- Không mở game thật — Launch chỉ mô phỏng tiến trình/PID và stream log.
+- Trạng thái mock lưu trong `localStorage`; bấm **Reset** trên thanh demo để quay lại dữ liệu gốc.
 - Không có dark/light theo hệ thống — dùng nút **Dark/Light** ở thanh demo dưới cùng bên phải.
