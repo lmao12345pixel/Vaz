@@ -59,3 +59,10 @@ to your host executable and bind the `Minecraft` section to override.
 
 > Microsoft sign-in requires your own Azure AD application client id
 > (`MsalClientId`). Leave `OfflineDemoMode` on for local development.
+
+## UI prototype (web)
+
+Bản demo giao diện chạy trên browser để chỉnh spacing/bố cục trước khi port sang
+WinUI: `docs/design-preview/` (mở `index.html`, không cần build).
+Chi tiết: [docs/design-preview/README.md](docs/design-preview/README.md).
+

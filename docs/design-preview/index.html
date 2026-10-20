@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="vi" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vazer Launcher — UI Prototype</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="window">
+  <header class="titlebar">
+    <span class="titlebar-icon glyph">&#xE7F8;</span>
+    <span class="titlebar-text">Vazer Launcher</span>
+    <span class="titlebar-tag">PROTOTYPE</span>
+  </header>
+
+  <div class="shell">
+    <!-- ============ NavigationView pane ============ -->
+    <aside class="nav">
+      <button class="nav-hamburger" aria-label="Open Navigation"><span class="glyph">&#xE700;</span></button>
+      <nav class="nav-menu">
+        <button class="nav-item is-selected" data-screen="instances">
+          <span class="nav-icon glyph">&#xE7F8;</span><span>Instances</span>
+        </button>
+        <button class="nav-item" data-screen="accounts">
+          <span class="nav-icon glyph">&#xE77B;</span><span>Accounts</span>
+        </button>
+      </nav>
+    </aside>
+
+    <main class="content" id="content">
+
+      <!-- ============ Instances page ============ -->
+      <section class="page" id="page-instances">
+        <div class="page-header">
+          <h1 class="page-title">Instances</h1>
+          <button class="btn" id="newInstanceBtn">
+            <span class="glyph">&#xE710;</span><span>New</span>
+          </button>
+        </div>
+
+        <div class="card-grid" id="instanceGrid"></div>
+
+        <div class="empty-state" id="instancesEmpty" hidden>
+          <span class="glyph empty-icon">&#xE7F8;</span>
+          <p>Chưa có instance nào.</p>
+          <p class="text-3">Bấm + để tạo instance mới.</p>
+        </div>
+      </section>
+
+      <!-- ============ Instance Detail page ============ -->
+      <section class="page" id="page-detail" hidden>
+        <div class="page-header">
+          <div class="header-stack">
+            <h1 class="page-title" id="detailName">—</h1>
+            <div class="meta-row">
+              <span id="detailVersion"></span>
+              <span class="text-2" id="detailLoader"></span>
+            </div>
+            <div class="caption accent" id="detailLaunchStatus"></div>
+          </div>
+          <button class="btn" id="detailLaunchBtn">Launch</button>
+        </div>
+
+        <div class="infobar error" id="detailError" hidden>
+          <span class="glyph">&#xE7BA;</span>
+          <div><strong>Lỗi</strong><p id="detailErrorText"></p></div>
+        </div>
+
+        <div class="caption text-2" id="detailStatus"></div>
+        <div class="progress thin" id="detailProgress" hidden><div></div></div>
+
+        <div class="tabview">
+          <div class="tabstrip" role="tablist">
+            <button class="tab is-selected" data-tab="mods" role="tab">Mods</button>
+            <button class="tab" data-tab="logs" role="tab">Logs</button>
+            <button class="tab" data-tab="settings" role="tab">Settings</button>
+          </div>
+
+          <!-- Mods -->
+          <div class="tab-panel" id="tab-mods">
+            <div class="toolbar">
+              <div class="toolbar-group">
+                <button class="btn" id="checkUpdatesBtn"><span class="glyph">&#xE895;</span><span>Check updates</span></button>
+                <button class="btn" id="updateAllBtn"><span class="glyph">&#xE896;</span><span>Update all</span></button>
+                <button class="btn" id="openModBrowserBtn"><span class="glyph">&#xE710;</span><span>Download Mods</span></button>
+              </div>
+              <div class="divider"></div>
+              <div class="toolbar-group">
+                <button class="btn" id="mrpackBtn"><span class="glyph">&#xE8B5;</span><span>Install .mrpack</span></button>
+                <button class="btn" id="optifineBtn"><span class="glyph">&#xE713;</span><span>Install OptiFine</span></button>
+              </div>
+              <div class="divider"></div>
+              <button class="btn" id="openModsFolderBtn"><span class="glyph">&#xE838;</span><span>Open mods folder</span></button>
+              <div class="infobar info inline" id="updatesBar" hidden>
+                <span class="glyph">&#xE946;</span><span id="updatesBarText"></span>
+              </div>
+            </div>
+
+            <div class="list" id="modList"></div>
+            <div class="empty-state small" id="modsEmpty" hidden>
+              <span class="glyph empty-icon">&#xE7B8;</span>
+              <p class="text-2">Chưa có mod nào.</p>
+            </div>
+          </div>
+
+          <!-- Logs -->
+          <div class="tab-panel" id="tab-logs" hidden>
+            <div class="toolbar">
+              <button class="btn" id="clearLogBtn"><span class="glyph">&#xE894;</span><span>Clear Log</span></button>
+              <button class="btn" id="copyLogBtn"><span class="glyph">&#xE8C8;</span><span>Copy to Clipboard</span></button>
+              <label class="checkbox"><input type="checkbox" id="autoScrollChk" checked /><span class="box"></span>Auto-scroll</label>
+            </div>
+
+            <div class="log-shell">
+              <div class="empty-state small" id="logsEmpty">
+                <span class="glyph empty-icon">&#xE9F9;</span>
+                <p class="text-2">Chưa có log nào. Bấm Launch để bắt đầu.</p>
+              </div>
+              <pre class="log-view" id="logView" hidden></pre>
+            </div>
+          </div>
+
+          <!-- Settings -->
+          <div class="tab-panel" id="tab-settings" hidden>
+            <div class="settings-stack">
+              <div class="infobar warning">
+                <span class="glyph">&#xE7BA;</span>
+                <div><strong>RAM / JVM args</strong><p>RAM / JVM args chưa có trong Core. Follow-up.</p></div>
+              </div>
+              <label class="field-label">Thư mục instance:</label>
+              <input class="textbox" id="settingsFolder" readonly />
+              <button class="btn left" id="deleteInstanceBtn">Delete instance</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ Accounts page ============ -->
+      <section class="page" id="page-accounts" hidden>
+        <div class="page-header">
+          <div class="header-stack">
+            <h1 class="page-title">Tài khoản</h1>
+            <p class="caption text-2">Cần ít nhất 1 tài khoản active để Launch instance.</p>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <button class="btn" id="addOfflineBtn">Add Offline</button>
+          <button class="btn" id="addMicrosoftBtn">Add Microsoft</button>
+          <button class="btn" id="refreshActiveBtn">Refresh (active)</button>
+          <button class="btn" id="reloadAccountsBtn">Tải lại danh sách</button>
+        </div>
+
+        <div class="list" id="accountList"></div>
+
+        <div class="status-area">
+          <div class="caption" id="accountStatus"></div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- Dialog host -->
+<div class="dialog-host" id="dialogHost" hidden></div>
+
+<!-- Context menu -->
+<div class="context-menu" id="contextMenu" hidden></div>
+
+<!-- Prototype-only floating bar -->
+<div class="demo-bar">
+  <span class="demo-dot"></span>
+  <span>Prototype</span>
+  <button class="demo-btn" id="themeToggle">Dark</button>
+  <button class="demo-btn" id="resetDemo">Reset</button>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
