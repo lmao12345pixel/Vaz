@@ -25,10 +25,10 @@ Không cần `npm install`, không cần build.
 
 | Màn hình | Nội dung |
 | --- | --- |
-| **Instances** | Grid card 240×152, search + sort (Chơi gần nhất / Tên A-Z / Mới tạo), New Instance dialog, Play/Stop có trạng thái + chip "Đang chạy", context menu chuột phải (Play/Stop / Edit / Rename / Open folder / Delete) |
+| **Instances** | Grid card 240×152, search + sort (Chơi gần nhất / Tên A-Z / Mới tạo), New Instance dialog, Play/Stop có trạng thái + chip "Đang chạy", context menu chuột phải (Play/Stop / Edit / Rename / Duplicate / Open folder / Delete), thời gian chơi cộng dồn trên card |
 | **Instance Detail** | Header + Launch/Stop, 4 tab **Mods / Worlds / Logs / Settings**, toolbar phân nhóm có divider, mod list có toggle + badge update + menu `⋯` |
 | **Mods** | Check updates / Update all, menu từng mod: cập nhật riêng, chọn phiên bản (dialog radio), gỡ mod có xác nhận |
-| **Worlds** | Danh sách world (size, lần chơi cuối, số backup), Backup từng world + Backup all có progress, Open worlds folder |
+| **Worlds** | Danh sách world (size, lần chơi cuối, số backup), Backup từng world + Backup all có progress, khôi phục từ backup cũ, Open worlds folder |
 | **Logs** | Live log giả lập theo kiểu `latest.log` (có dòng JVM args/RAM/resolution), Clear Log, Copy to Clipboard, Auto-scroll |
 | **Settings** | Form thật: RAM slider + số (1024–16384 MB), JVM args, Java path, độ phân giải, Lưu/Mặc định; đường dẫn instance, Delete instance |
 | **Accounts** | Card tài khoản + avatar Minotar 52×52 bo góc, Set active, Xóa, Add Offline, Add Microsoft |
@@ -72,6 +72,19 @@ Không cần `npm install`, không cần build.
 - **Log intelligence**: ô tìm trong log, chip ALL/INFO/WARN/ERROR, nút **Lỗi đầu tiên** (scroll + flash), nút Copy chỉ copy các dòng đang lọc.
 - **Multi-select mods**: nút **Select** bật checkbox; click thường chọn từng mod, Shift-click chọn khoảng; thanh bulk Enable / Disable / Uninstall / Bỏ chọn.
 - Tất cả hiệu ứng tôn trọng `prefers-reduced-motion` (morph/ripple/tab slide tự tắt).
+
+## Motion v6 — "Wave 2"
+
+- **Launch choreography**: progress chạy mượt qua 4 bước **Java → Metadata → Assets → Process** (dot pulse/check, status theo từng bước); xong tự chuyển sang tab Logs. Reduced motion rút ngắn từng bước và bỏ lerp.
+- **Live count-up**: pill số instance (kể cả `1 / 3` khi search) và số kết quả Mod Browser đếm lên thay vì nhảy số.
+- **Update queue**: panel hàng đợi khi Update all — từng mod `Chờ → % → Xong`, progress riêng + thanh tổng; hoàn tất thì fade rồi biến mất.
+- **Backup fill + restore**: row world có thanh tiến trình inline + % khi nén; nút restore mở dialog chọn bản backup (mới nhất trước), khôi phục có progress và cập nhật "Chơi lần cuối".
+- **Account switch**: card mới pop nhẹ, avatar nảy, mark ✓ Active trượt vào; crossfade trạng thái active.
+- **Dialog origin**: dialog scale/blur từ đúng vị trí con trỏ (transform-origin theo pointer).
+- **Aurora reactive**: lớp aurora dịch nhẹ theo con trỏ bằng CSS `translate` (throttle bằng rAF), tắt hoàn toàn khi reduced motion.
+- **Clone instance**: context menu **Duplicate** copy settings, mods và worlds sang instance mới `(copy)`.
+- **Playtime**: mỗi phiên Launch → Stop/crash cộng dồn phút chơi, hiển thị cạnh "Chơi lần cuối".
+- Code chính: `countUp`, `animateProgressTo`/`setLaunchStep`, `showUpdateQueue`/`setQueueItem`, `openRestoreDialog`, `duplicateInstance`, `initAmbient`; block `v6` cuối `styles.css`.
 
 ## Chỉnh sửa
 

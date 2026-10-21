@@ -1102,6 +1102,8 @@ p { margin: 0; }
     radial-gradient(28% 24% at 2% 96%, rgba(94, 234, 212, 0.12), transparent 65%);
   filter: blur(44px);
   animation: aurora-drift 38s var(--ease-in-out) infinite alternate;
+  translate: calc(var(--ax, 0) * 18px) calc(var(--ay, 0) * 14px);
+  transition: translate 520ms var(--ease-out);
 }
 
 .window::after {
@@ -2238,4 +2240,328 @@ html[data-theme="light"] .palette { background: linear-gradient(180deg, #ffffff,
   .tab-panel.tab-out-right, .tab-panel.tab-out-left,
   .mod-result .pipeline, .dep-chip, .log-line.is-new,
   .page-header.is-morphing, .bulk-bar, .is-morph-target { animation: none !important; }
+}
+
+/* ============================================================
+   v6 — Wave 2: launch choreography, queues, live counts
+   ============================================================ */
+.header-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.count-pill {
+  min-width: 26px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Launch choreography */
+.launch-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 2px 0 4px;
+  padding: 0;
+  list-style: none;
+}
+
+.launch-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--text-3);
+  transition: color var(--dur-2) var(--ease-out);
+}
+
+.launch-step .step-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1.5px solid var(--stroke-strong);
+  display: grid;
+  place-items: center;
+  font-size: 8px;
+  line-height: 1;
+  color: var(--grad-text);
+  transition: background var(--dur-2) var(--ease-out), border-color var(--dur-2) var(--ease-out), transform var(--dur-2) var(--ease-spring);
+}
+
+.launch-step.is-active {
+  color: var(--text);
+}
+
+.launch-step.is-active .step-dot {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  transform: scale(1.15);
+  animation: step-pulse 1.1s var(--ease-in-out) infinite;
+}
+
+.launch-step.is-done {
+  color: var(--text-2);
+}
+
+.launch-step.is-done .step-dot {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.launch-step.is-done .step-dot::after {
+  content: "✓";
+  font-weight: 700;
+}
+
+.instance-card.is-launching {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  animation: card-launch 1.4s var(--ease-in-out) infinite;
+}
+
+/* Update queue */
+.update-queue {
+  margin: 10px 0 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--stroke);
+  background: var(--layer);
+  transition: opacity var(--dur-3) var(--ease-out), transform var(--dur-3) var(--ease-out);
+}
+
+.update-queue.is-done {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+.queue-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.queue-head .glyph {
+  color: var(--accent);
+}
+
+.queue-progress {
+  margin-bottom: 10px;
+}
+
+.queue-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.queue-item {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) 90px 42px;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 6px;
+  border-radius: 7px;
+  font-size: 12px;
+  color: var(--text-2);
+  transition: background var(--dur-2) var(--ease-out);
+}
+
+.queue-item.is-active {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.queue-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--stroke-strong);
+  transition: background var(--dur-2) var(--ease-out), transform var(--dur-2) var(--ease-spring);
+}
+
+.queue-item.is-active .queue-dot {
+  background: var(--accent);
+  transform: scale(1.25);
+}
+
+.queue-item.is-done .queue-dot {
+  background: var(--success);
+}
+
+.queue-main {
+  min-width: 0;
+}
+
+.queue-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.queue-sub {
+  font-size: 11px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.queue-track {
+  height: 3px;
+  border-radius: 3px;
+  background: var(--stroke);
+  overflow: hidden;
+}
+
+.queue-fill {
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: var(--grad-accent);
+  transition: width 90ms linear;
+}
+
+.queue-pct {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-3);
+}
+
+/* Worlds */
+.world-row {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.world-bar {
+  height: 3px;
+  margin-top: 6px;
+  border-radius: 3px;
+  background: var(--stroke);
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity var(--dur-2) var(--ease-out);
+}
+
+.world-row.is-busy .world-bar,
+.world-row.is-done .world-bar {
+  opacity: 1;
+}
+
+.world-bar div {
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: var(--grad-accent);
+  transition: width 90ms linear;
+}
+
+.world-row.is-done .world-bar div {
+  background: var(--success);
+}
+
+.backup-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.backup-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--stroke);
+  background: var(--control);
+  cursor: pointer;
+  transition: border-color var(--dur-2) var(--ease-out), background var(--dur-2) var(--ease-out);
+}
+
+.backup-row:hover {
+  border-color: var(--stroke-strong);
+  background: var(--card-hover);
+}
+
+.backup-row:has(input:checked) {
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  background: var(--accent-soft);
+}
+
+.backup-file {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+/* Account switch */
+.account-card.just-active {
+  animation: account-pop 520ms var(--ease-spring);
+}
+
+.account-card.just-active .avatar {
+  animation: avatar-pop 640ms var(--ease-spring);
+}
+
+.account-card.just-active .active-mark {
+  animation: mark-in 420ms var(--ease-spring);
+}
+
+/* Dialog origin (set inline from pointer) */
+.dialog {
+  transform-origin: var(--ox, 50%) var(--oy, 50%);
+}
+
+@keyframes step-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--accent-soft); }
+  50% { box-shadow: 0 0 0 4px var(--accent-soft); }
+}
+
+@keyframes card-launch {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(94, 234, 212, 0); }
+  50% { box-shadow: 0 0 0 3px rgba(94, 234, 212, 0.12); }
+}
+
+@keyframes account-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.012); }
+  100% { transform: scale(1); }
+}
+
+@keyframes avatar-pop {
+  0% { transform: scale(0.92); }
+  55% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+@keyframes mark-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .window::before { translate: none; transition: none; }
+  .launch-step.is-active .step-dot,
+  .instance-card.is-launching { animation: none; }
+  .update-queue,
+  .queue-item,
+  .queue-fill,
+  .world-bar,
+  .world-bar div { transition: none; }
+  .account-card.just-active,
+  .account-card.just-active .avatar,
+  .account-card.just-active .active-mark { animation: none; }
 }

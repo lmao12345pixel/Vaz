@@ -36,7 +36,10 @@
       <section class="page" id="page-instances">
         <div class="page-header">
           <div class="header-stack">
-            <h1 class="page-title">Instances</h1>
+            <div class="header-title-row">
+              <h1 class="page-title">Instances</h1>
+              <span class="count-pill" id="instancesCount">0</span>
+            </div>
             <p class="caption text-2">Chọn một instance để chơi, hoặc tạo instance mới.</p>
           </div>
           <div class="header-actions">
@@ -92,6 +95,12 @@
 
         <div class="caption text-2" id="detailStatus"></div>
         <div class="progress thin" id="detailProgress" hidden><div></div></div>
+        <ol class="launch-steps" id="launchSteps" hidden>
+          <li class="launch-step" data-step="java"><span class="step-dot"></span><span>Java runtime</span></li>
+          <li class="launch-step" data-step="meta"><span class="step-dot"></span><span>Metadata phiên bản</span></li>
+          <li class="launch-step" data-step="assets"><span class="step-dot"></span><span>Assets &amp; libraries</span></li>
+          <li class="launch-step" data-step="process"><span class="step-dot"></span><span>Khởi tạo tiến trình</span></li>
+        </ol>
 
         <div class="tabview">
           <div class="tabstrip" role="tablist">
@@ -129,6 +138,16 @@
               <button class="btn" data-bulk="disable"><span class="glyph">&#xE738;</span><span>Disable</span></button>
               <button class="btn danger" data-bulk="uninstall"><span class="glyph">&#xE74D;</span><span>Uninstall</span></button>
               <button class="btn" data-bulk="clear"><span class="glyph">&#xE711;</span><span>Bỏ chọn</span></button>
+            </div>
+
+            <div class="update-queue" id="updateQueue" hidden>
+              <div class="queue-head">
+                <span class="glyph">&#xE896;</span>
+                <span>Hàng đợi cập nhật</span>
+                <span class="caption text-2" id="queueSummary"></span>
+              </div>
+              <div class="progress thin queue-progress"><div id="queueBar"></div></div>
+              <div class="queue-items" id="queueItems"></div>
             </div>
 
             <div class="list" id="modList"></div>

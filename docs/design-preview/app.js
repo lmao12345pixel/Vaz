@@ -136,6 +136,33 @@ const dateStamp = () => {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}`;
 };
 
+/** "12h 30m" / "45m" — hiển thị thời gian chơi. */
+function formatPlaytime(minutes) {
+  const m = Math.max(0, Math.round(minutes || 0));
+  if (m < 60) return `${m}m`;
+  return `${Math.floor(m / 60)}h ${m % 60}m`;
+}
+
+/** Đếm số lên mượt (instance count, kết quả search). */
+function countUp(el, to, { duration = 360, suffix = "" } = {}) {
+  if (!el) return;
+  const from = Number(el.dataset.value || 0);
+  el.dataset.value = String(to);
+  if (from === to || prefersReducedMotion()) {
+    el.textContent = to.toLocaleString("en-US") + suffix;
+    return;
+  }
+  const start = performance.now();
+  cancelAnimationFrame(el._countRaf || 0);
+  const tick = (now) => {
+    const t = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - t, 3);
+    el.textContent = Math.round(from + (to - from) * eased).toLocaleString("en-US") + suffix;
+    if (t < 1) el._countRaf = requestAnimationFrame(tick);
+  };
+  el._countRaf = requestAnimationFrame(tick);
+}
+
 const VERSION_OPTIONS = ["Auto", "All", "1.21.1", "1.21", "1.20.1", "1.20", "1.19.4", "1.19.2", "1.18.2", "1.16.5"];
 const SORT_OPTIONS = ["Relevance", "Downloads", "Updated", "Newest"];
 
@@ -185,6 +212,7 @@ const state = {
   logRenderKey: null,
   modSelection: { active: false, files: new Set(), lastIndex: null },
   palette: { open: false, index: 0, items: [] },
+  accountHighlight: null,
 };
 
 /* ------------------------------------------------------------
@@ -193,7 +221,7 @@ const state = {
 function saveState() {
   try {
     const instances = state.instances.map((inst) => {
-      const { launching, running, status, pid, ...rest } = inst;
+      const { launching, running, status, pid, sessionStart, ...rest } = inst;
       return rest;
     });
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -235,6 +263,7 @@ function normalizeState() {
     inst.settings = { ...DEFAULT_SETTINGS, ...(inst.settings || {}) };
     if (typeof inst.lastPlayedTs !== "number") inst.lastPlayedTs = 0;
     if (typeof inst.createdTs !== "number") inst.createdTs = 0;
+    if (typeof inst.playtimeMin !== "number") inst.playtimeMin = 0;
     if (!state.worlds[inst.id]) state.worlds[inst.id] = structuredClone(MOCK.worlds[inst.id] || []);
   });
   Object.keys(state.worlds).forEach((id) => {
@@ -451,13 +480,14 @@ function renderInstances() {
       : "";
     const runningChip = inst.running ? `<span class="chip running">Đang chạy</span>` : "";
     const lastPlayed = inst.lastPlayed ? `Chơi lần cuối: ${esc(inst.lastPlayed)}` : "Chưa chơi lần nào";
+    const playtime = inst.playtimeMin ? ` · ${formatPlaytime(inst.playtimeMin)}` : "";
 
     return `
-      <div class="instance-card${inst.running ? " is-running" : ""}" data-id="${esc(inst.id)}" tabindex="0" style="--i:${i}">
+      <div class="instance-card${inst.running ? " is-running" : ""}${inst.launching ? " is-launching" : ""}" data-id="${esc(inst.id)}" tabindex="0" style="--i:${i}">
         <div class="name">${esc(inst.name)}</div>
         <div class="meta">
           <span>${esc(inst.mc)} · ${esc(inst.loader)}</span>
-          <span class="text-3">${lastPlayed}</span>
+          <span class="text-3">${lastPlayed}${playtime}</span>
         </div>
         ${runningChip}
         ${status}
@@ -469,6 +499,9 @@ function renderInstances() {
   }).join("");
 
   empty.hidden = list.length > 0;
+  countUp($("#instancesCount"), list.length, {
+    suffix: state.instanceQuery.trim() ? ` / ${state.instances.length}` : "",
+  });
   $("#instancesEmptyTitle").textContent = state.instances.length === 0
     ? "Chưa có instance nào."
     : "Không tìm thấy instance nào.";
@@ -477,13 +510,13 @@ function renderInstances() {
     : "Thử từ khoá khác hoặc xoá bộ lọc.";
 }
 
-function setCardStatus(id, text) {
+function setCardStatus(id, text, headerText = null) {
   const inst = getInstance(id);
   if (!inst) return;
   inst.status = text;
   if (state.screen === "instances") renderInstances();
   if (state.screen === "detail" && state.activeInstanceId === id) {
-    $("#detailLaunchStatus").textContent = text;
+    $("#detailLaunchStatus").textContent = headerText ?? text;
   }
 }
 
@@ -493,6 +526,34 @@ function updateDetailLaunchButton() {
   $("#detailLaunchLabel").textContent = running ? "Stop" : "Launch";
   $("#detailLaunchBtn .glyph").innerHTML = running ? "&#xE71A;" : "&#xE768;";
   $("#detailLaunchBtn").disabled = !!inst?.launching;
+}
+
+function setLaunchStep(name, stateName) {
+  const el = $(`.launch-step[data-step="${name}"]`);
+  if (!el) return;
+  el.classList.toggle("is-active", stateName === "active");
+  el.classList.toggle("is-done", stateName === "done");
+}
+
+function resetLaunchSteps() {
+  $$(".launch-step").forEach((el) => el.classList.remove("is-active", "is-done"));
+  $("#launchSteps").hidden = false;
+}
+
+/** Chạy thanh tiến trình từ % hiện tại tới % đích trong ms. */
+async function animateProgressTo(to, ms) {
+  const bar = $("#detailProgress").firstElementChild;
+  const from = parseFloat(bar.style.width) || 0;
+  if (prefersReducedMotion()) {
+    setDetailProgress(to);
+    await sleep(60);
+    return;
+  }
+  const steps = 12;
+  for (let i = 1; i <= steps; i++) {
+    setDetailProgress(from + ((to - from) * i) / steps);
+    await sleep(ms / steps);
+  }
 }
 
 async function launchInstance(id, { fromDetail = false } = {}) {
@@ -512,23 +573,41 @@ async function launchInstance(id, { fromDetail = false } = {}) {
   inst.launching = true;
   setCardStatus(id, "Đang khởi chạy...");
   updateDetailLaunchButton();
+
+  const phases = [
+    { step: "java", pct: 22, ms: 700, card: "Đang chuẩn bị Java runtime...", detail: "Đang chuẩn bị Java runtime..." },
+    { step: "meta", pct: 52, ms: 700, card: "Đang tải metadata phiên bản...", detail: "Đang tải metadata phiên bản..." },
+    { step: "assets", pct: 82, ms: 600, card: "Đang kiểm tra assets & libraries...", detail: "Đang kiểm tra assets & libraries..." },
+    { step: "process", pct: 100, ms: 500, card: "Đang tạo tiến trình game...", detail: "Đang tạo tiến trình game..." },
+  ];
+
   if (fromDetail) {
     $("#detailProgress").hidden = false;
-    setDetailProgress(10);
-    $("#detailStatus").textContent = "Đang chuẩn bị Java runtime...";
+    barReset();
+    resetLaunchSteps();
   }
 
-  await sleep(700);
-  if (fromDetail) { setDetailProgress(45); $("#detailStatus").textContent = "Đang tải metadata phiên bản..."; }
-  await sleep(700);
-  if (fromDetail) { setDetailProgress(80); $("#detailStatus").textContent = "Đang tạo tiến trình game..."; }
-  await sleep(500);
+  for (let i = 0; i < phases.length; i++) {
+    const phase = phases[i];
+    const phaseMs = prefersReducedMotion() ? 220 : phase.ms;
+    setLaunchStep(phase.step, "active");
+    setCardStatus(id, phase.card, fromDetail ? "Đang khởi chạy..." : null);
+    if (fromDetail) {
+      $("#detailStatus").textContent = phase.detail;
+      await animateProgressTo(phase.pct, phaseMs);
+      setLaunchStep(phase.step, "done");
+    } else {
+      await sleep(phaseMs);
+    }
+    if (i > 0) setLaunchStep(phases[i - 1].step, "done");
+  }
 
   const pid = rand(10000, 65000);
   const settings = { ...DEFAULT_SETTINGS, ...(inst.settings || {}) };
   inst.launching = false;
   inst.running = true;
   inst.pid = pid;
+  inst.sessionStart = Date.now();
   inst.lastPlayed = "Vừa xong";
   inst.lastPlayedTs = Date.now();
   setCardStatus(id, `Đang chạy (PID ${pid})`);
@@ -542,13 +621,21 @@ async function launchInstance(id, { fromDetail = false } = {}) {
   saveState();
 
   if (fromDetail) {
-    $("#detailProgress").hidden = true;
-    setDetailProgress(0);
-    $("#detailStatus").textContent = "";
+    setLaunchStep("process", "done");
+    setTimeout(() => {
+      $("#launchSteps").hidden = true;
+      $("#detailProgress").hidden = true;
+      barReset();
+    }, 420);
+    $("#detailStatus").textContent = "Game đã khởi chạy.";
     state.tab = "logs";
     setTab("logs");
     streamLogs(id);
   }
+}
+
+function barReset() {
+  setDetailProgress(0);
 }
 
 function stopInstance(id) {
@@ -559,16 +646,22 @@ function stopInstance(id) {
     clearInterval(state.logTimers[id]);
     delete state.logTimers[id];
   }
+  const minutes = inst.sessionStart
+    ? Math.max(1, Math.round((Date.now() - inst.sessionStart) / 60000))
+    : 1;
+  inst.playtimeMin = (inst.playtimeMin || 0) + minutes;
+  delete inst.sessionStart;
   inst.running = false;
   inst.pid = null;
   pushLog(id, "[Launcher/INFO]: Game stopped by user.");
-  setCardStatus(id, "Đã dừng.");
+  setCardStatus(id, `Đã dừng. Phiên chơi: ${minutes}m`);
   if (state.screen === "detail" && state.activeInstanceId === id) {
     updateDetailLaunchButton();
-    setDetailStatus("Đã dừng instance.");
+    setDetailStatus(`Đã dừng instance · phiên chơi ${minutes}m.`);
     renderLogs();
   }
   saveState();
+  if (state.screen === "instances") renderInstances();
 }
 
 function setDetailProgress(pct) {
@@ -779,7 +872,28 @@ function prefersReducedMotion() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
+/** Aurora trôi nhẹ theo con trỏ (tắt khi reduced motion). */
+function initAmbient() {
+  if (prefersReducedMotion()) return;
+  let raf = 0;
+  window.addEventListener("pointermove", (e) => {
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      raf = 0;
+      const ax = (e.clientX / window.innerWidth) * 2 - 1;
+      const ay = (e.clientY / window.innerHeight) * 2 - 1;
+      const root = document.documentElement;
+      root.style.setProperty("--ax", ax.toFixed(3));
+      root.style.setProperty("--ay", ay.toFixed(3));
+    });
+  }, { passive: true });
+}
+
+const lastPointer = { x: 0, y: 0 };
+
 function attachRipple(e) {
+  lastPointer.x = e.clientX;
+  lastPointer.y = e.clientY;
   if (prefersReducedMotion() || e.button !== 0) return;
   const target = e.target.closest(".btn, .demo-btn");
   if (!target || target.disabled) return;
@@ -890,6 +1004,44 @@ async function checkUpdates() {
   bumpUpdatesBar();
 }
 
+function showUpdateQueue(pending) {
+  const queue = $("#updateQueue");
+  clearTimeout(queue._hideTimer);
+  queue.hidden = false;
+  queue.classList.remove("is-done");
+  $("#queueSummary").textContent = `0 / ${pending.length} xong`;
+  $("#queueBar").style.width = "0%";
+  $("#queueItems").innerHTML = pending.map((mod, i) => {
+    const project = mod.projectId ? catalogProject(mod.projectId) : null;
+    const name = project ? project.name : mod.file;
+    return `
+      <div class="queue-item" data-queue="${i}">
+        <span class="queue-dot"></span>
+        <div class="queue-main">
+          <div class="queue-name">${esc(name)}</div>
+          <div class="queue-sub">${esc(mod.version)} → ${esc(mod.update)}</div>
+        </div>
+        <div class="queue-track"><div class="queue-fill"></div></div>
+        <span class="queue-pct">Chờ</span>
+      </div>`;
+  }).join("");
+}
+
+function setQueueItem(index, stateName, pct = 0) {
+  const item = $(`.queue-item[data-queue="${index}"]`);
+  if (!item) return;
+  item.classList.toggle("is-active", stateName === "active");
+  item.classList.toggle("is-done", stateName === "done");
+  item.querySelector(".queue-fill").style.width = pct + "%";
+  item.querySelector(".queue-pct").textContent = stateName === "done" ? "Xong" : pct + "%";
+}
+
+function setQueueAggregate(done, total, pct) {
+  const overall = total ? Math.round(((done + pct / 100) / total) * 100) : 0;
+  $("#queueBar").style.width = overall + "%";
+  $("#queueSummary").textContent = `${done} / ${total} xong`;
+}
+
 async function updateAll() {
   const mods = currentMods();
   const pending = mods.filter((m) => m.update);
@@ -902,9 +1054,11 @@ async function updateAll() {
   const btn = $("#updateAllBtn");
   setButtonBusy(btn, true, "Đang cập nhật...");
   $("#detailProgress").hidden = false;
+  showUpdateQueue(pending);
   let done = 0;
 
-  for (const mod of pending) {
+  for (let qi = 0; qi < pending.length; qi++) {
+    const mod = pending[qi];
     const index = mods.indexOf(mod);
     const project = mod.projectId ? MOCK.catalog.find((p) => p.id === mod.projectId) : null;
     const label = project ? project.name : mod.file;
@@ -912,9 +1066,12 @@ async function updateAll() {
     const to = mod.update;
 
     setRowUpdating(index, true);
+    setQueueItem(qi, "active", 0);
 
     for (let p = 0; p <= 100; p += 10) {
       setDetailProgress(p);
+      setQueueItem(qi, "active", p);
+      setQueueAggregate(done, pending.length, p);
       setDetailStatus(`Đang cập nhật ${label} ${from} → ${to}... ${p}%`);
       await sleep(70);
     }
@@ -928,6 +1085,8 @@ async function updateAll() {
     commitRowUpdate(index, mod, project, to);
     syncUpdatesBar();
     bumpUpdatesBar();
+    setQueueItem(qi, "done", 100);
+    setQueueAggregate(done, pending.length, 0);
     await sleep(120);
   }
 
@@ -939,6 +1098,13 @@ async function updateAll() {
   setButtonBusy(btn, false);
   setDetailStatus(`Đã cập nhật xong ${done} mod.`);
   pulseStatus();
+  const queue = $("#updateQueue");
+  queue.classList.add("is-done");
+  clearTimeout(queue._hideTimer);
+  queue._hideTimer = setTimeout(() => {
+    queue.hidden = true;
+    queue.classList.remove("is-done");
+  }, 1400);
 }
 
 /** Giảm segment số cuối: 0.6.13 -> 0.6.12 */
@@ -1240,40 +1406,53 @@ function renderWorlds() {
     `${worlds.length} world · ${totalMb.toFixed(1)} MB · ${totalBackups} backup`;
 
   $("#worldList").innerHTML = worlds.map((w, i) => `
-    <div class="list-row world-row">
+    <div class="list-row world-row" data-world-row="${i}">
       <span class="glyph">&#xE81E;</span>
       <div class="world-main">
         <div class="world-name">${esc(w.name)}</div>
         <div class="caption text-2">
           ${w.sizeMb.toFixed(1)} MB · Chơi lần cuối: ${esc(w.lastPlayed)} · ${w.backups || 0} backup
         </div>
+        <div class="world-bar"><div></div></div>
       </div>
       <button class="btn" data-world-backup="${i}">
         <span class="glyph">&#xE896;</span><span>Backup</span>
+      </button>
+      <button class="btn icon-only" data-world-restore="${i}" title="Khôi phục backup" ${w.backups ? "" : "disabled"}>
+        <span class="glyph">&#xE777;</span>
       </button>
     </div>`).join("");
 
   $("#worldsEmpty").hidden = worlds.length > 0;
 }
 
+let worldBackupBusy = false;
+
 async function backupWorld(index) {
   const inst = currentInstance();
-  if (!inst) return;
+  if (!inst || worldBackupBusy) return;
   const world = worldsFor(inst)[index];
   if (!world) return;
+  worldBackupBusy = true;
 
   const progress = $("#worldsProgress");
   const status = $("#worldsStatus");
+  const row = $(`.world-row[data-world-row="${index}"]`);
+  const rowFill = row?.querySelector(".world-bar div");
+  row?.classList.add("is-busy");
   progress.hidden = false;
 
   for (let p = 0; p <= 100; p += 10) {
     progress.firstElementChild.style.width = p + "%";
+    if (rowFill) rowFill.style.width = p + "%";
     status.textContent = `Đang nén "${world.name}"... ${p}%`;
     await sleep(45);
   }
 
   world.backups = (world.backups || 0) + 1;
+  worldBackupBusy = false;
   saveState();
+  row?.classList.add("is-done");
   renderWorlds();
 
   progress.hidden = true;
@@ -1283,9 +1462,64 @@ async function backupWorld(index) {
   showToastStatus(`Đã backup "${world.name}".`);
 }
 
-async function backupAllWorlds() {
+/** Danh sách backup giả lập, mới nhất trước. */
+function worldBackups(world) {
+  return Array.from({ length: world.backups || 0 }, (_, i) => {
+    const d = new Date(Date.now() - i * 36e5);
+    const stamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}_${String(d.getHours()).padStart(2, "0")}-${String(d.getMinutes()).padStart(2, "0")}`;
+    return `backups/${world.name.replace(/\s+/g, "_")}-${stamp}.zip`;
+  });
+}
+
+function openRestoreDialog(index) {
   const inst = currentInstance();
   if (!inst) return;
+  const world = worldsFor(inst)[index];
+  if (!world || !world.backups) return;
+
+  const backups = worldBackups(world);
+  const body = `
+    <p class="text-2">Chọn bản backup để khôi phục cho <strong>${esc(world.name)}</strong>.</p>
+    <div class="backup-list">
+      ${backups.map((file, i) => `
+        <label class="backup-row">
+          <input type="radio" name="backupPick" value="${esc(file)}" ${i === 0 ? "checked" : ""} />
+          <span class="backup-file">${esc(file.split("/").pop())}</span>
+          <span class="caption text-3">${(world.sizeMb * (0.92 + i * 0.01)).toFixed(1)} MB</span>
+        </label>`).join("")}
+    </div>`;
+
+  showDialog({
+    title: `Khôi phục "${world.name}"`,
+    body,
+    primary: "Khôi phục",
+    wide: true,
+    onPrimary: async () => {
+      const picked = document.querySelector('input[name="backupPick"]:checked')?.value;
+      if (!picked) return false;
+      const progress = $("#worldsProgress");
+      const status = $("#worldsStatus");
+      progress.hidden = false;
+      for (let p = 0; p <= 100; p += 10) {
+        progress.firstElementChild.style.width = p + "%";
+        status.textContent = `Đang khôi phục "${world.name}"... ${p}%`;
+        await sleep(50);
+      }
+      progress.hidden = true;
+      progress.firstElementChild.style.width = "0%";
+      world.lastPlayed = "Vừa xong";
+      saveState();
+      renderWorlds();
+      $("#worldsStatus").textContent = `Đã khôi phục "${world.name}" từ ${picked.split("/").pop()}.`;
+      showToastStatus(`Đã khôi phục "${world.name}".`);
+      return true;
+    },
+  });
+}
+
+async function backupAllWorlds() {
+  const inst = currentInstance();
+  if (!inst || worldBackupBusy) return;
   const worlds = [...worldsFor(inst)];
   if (worlds.length === 0) {
     showToastStatus("Không có world nào để backup.");
@@ -1400,6 +1634,11 @@ function simulateCrash() {
     clearInterval(state.logTimers[inst.id]);
     delete state.logTimers[inst.id];
   }
+  if (inst.sessionStart) {
+    const minutes = Math.max(1, Math.round((Date.now() - inst.sessionStart) / 60000));
+    inst.playtimeMin = (inst.playtimeMin || 0) + minutes;
+    delete inst.sessionStart;
+  }
   inst.running = false;
   inst.launching = false;
   inst.pid = null;
@@ -1449,7 +1688,7 @@ function renderAccounts() {
   const list = $("#accountList");
 
   list.innerHTML = state.accounts.map((acc) => `
-    <div class="account-card" data-account="${esc(acc.id)}">
+    <div class="account-card${state.accountHighlight === acc.id ? " just-active" : ""}" data-account="${esc(acc.id)}">
       <div class="avatar"><img src="${avatarUrl(acc.name)}" alt="${esc(acc.name)}" /></div>
       <div>
         <div class="account-name">${esc(acc.name)}</div>
@@ -1471,9 +1710,13 @@ function accountStatus(text) {
 
 function setActiveAccount(id) {
   state.accounts.forEach((a) => { a.active = a.id === id; });
+  state.accountHighlight = id;
   saveState();
   renderAccounts();
   accountStatus(`Đã đặt "${getAccount(id).name}" làm tài khoản active.`);
+  setTimeout(() => {
+    state.accountHighlight = null;
+  }, 700);
 }
 
 function getAccount(id) {
@@ -1483,6 +1726,34 @@ function getAccount(id) {
 /* ------------------------------------------------------------
    CONTEXT MENU
    ------------------------------------------------------------ */
+/** Nhân bản instance (mock): copy settings, mods và worlds. */
+function duplicateInstance(id) {
+  const src = getInstance(id);
+  if (!src) return;
+
+  const n = state.instances.filter((i) => i.id.startsWith(`${src.id}-copy`)).length + 1;
+  const copy = structuredClone(src);
+  copy.id = `${src.id}-copy-${n}`;
+  copy.name = `${src.name} (copy${n > 1 ? ` ${n}` : ""})`;
+  copy.path = `${src.path}-copy${n > 1 ? `-${n}` : ""}`;
+  copy.createdTs = Date.now();
+  copy.lastPlayedTs = 0;
+  copy.lastPlayed = null;
+  copy.playtimeMin = 0;
+  delete copy.status;
+  delete copy.sessionStart;
+  copy.running = false;
+  copy.launching = false;
+  copy.pid = null;
+
+  state.instances.push(copy);
+  state.mods[copy.id] = structuredClone(state.mods[src.id] || []);
+  state.worlds[copy.id] = structuredClone(state.worlds[src.id] || []);
+  saveState();
+  renderInstances();
+  showToastStatus(`Đã nhân bản "${src.name}".`);
+}
+
 function openContextMenu(x, y, id) {
   const menu = $("#contextMenu");
   const inst = getInstance(id);
@@ -1491,6 +1762,7 @@ function openContextMenu(x, y, id) {
     <button data-ctx="${inst?.running ? "stop" : "play"}"><span class="glyph">${inst?.running ? "&#xE71A;" : "&#xE768;"}</span>${inst?.running ? "Stop" : "Play"}</button>
     <button data-ctx="edit"><span class="glyph">&#xE713;</span>Edit</button>
     <button data-ctx="rename"><span class="glyph">&#xE8AC;</span>Rename</button>
+    <button data-ctx="duplicate"><span class="glyph">&#xE8C8;</span>Duplicate</button>
     <button data-ctx="folder"><span class="glyph">&#xE838;</span>Open folder</button>
     <hr />
     <button data-ctx="delete" class="danger"><span class="glyph">&#xE74D;</span>Delete</button>`;
@@ -1532,6 +1804,13 @@ function showDialog({ title, body = "", primary = null, closeText = "Đóng", wi
         <button class="btn" data-dialog-close>${esc(closeText)}</button>
       </div>
     </div>`;
+
+  const panel = $(".dialog", host);
+  const panelRect = panel.getBoundingClientRect();
+  if (lastPointer.x || lastPointer.y) {
+    panel.style.transformOrigin =
+      `${clamp(lastPointer.x - panelRect.left, 0, panelRect.width)}px ${clamp(lastPointer.y - panelRect.top, 0, panelRect.height)}px`;
+  }
 
   let closing = false;
   const close = () => {
@@ -1886,7 +2165,9 @@ function renderModResults(dialog, { preserveStatus = false } = {}) {
       </div>`;
   }).join("");
 
-  $("#mbCount", dialog.host).textContent = `${shown.length} / ${TOTAL_RESULTS.toLocaleString("en-US")} results`;
+  countUp($("#mbCount", dialog.host), shown.length, {
+    suffix: ` / ${TOTAL_RESULTS.toLocaleString("en-US")} results`,
+  });
 
   if (items.length === 0) {
     list.innerHTML = `<div class="empty-state small"><span class="glyph empty-icon">&#xE721;</span><p class="text-2">Không tìm thấy mod nào phù hợp.</p></div>`;
@@ -2383,6 +2664,7 @@ function wireEvents() {
       case "stop": stopInstance(id); break;
       case "edit": openDetail(id); break;
       case "rename": openRenameDialog(id); break;
+      case "duplicate": duplicateInstance(id); break;
       case "folder": showToastStatus("Đã mở thư mục instance (demo)."); break;
       case "delete":
         if (await confirmDialog(`Xóa "${inst.name}"?`, "Toàn bộ thư mục instance sẽ bị xóa khỏi disk. Không thể hoàn tác.")) {
@@ -2466,9 +2748,15 @@ function wireEvents() {
 
   // Worlds
   $("#worldList").addEventListener("click", async (e) => {
-    const btn = e.target.closest("[data-world-backup]");
-    if (!btn) return;
-    await backupWorld(Number(btn.dataset.worldBackup));
+    const backupBtn = e.target.closest("[data-world-backup]");
+    if (backupBtn) {
+      await backupWorld(Number(backupBtn.dataset.worldBackup));
+      return;
+    }
+    const restoreBtn = e.target.closest("[data-world-restore]");
+    if (restoreBtn && !restoreBtn.disabled) {
+      openRestoreDialog(Number(restoreBtn.dataset.worldRestore));
+    }
   });
   $("#backupAllWorldsBtn").addEventListener("click", backupAllWorlds);
   $("#openWorldsFolderBtn").addEventListener("click", () => showToastStatus("Đã mở thư mục saves (demo)."));
@@ -2653,6 +2941,7 @@ $("#themeToggle").textContent = document.documentElement.dataset.theme === "ligh
 $("#instanceSort").value = state.instanceSort;
 
 wireEvents();
+initAmbient();
 renderInstances();
 renderAccounts();
 requestAnimationFrame(moveNavGlider);
