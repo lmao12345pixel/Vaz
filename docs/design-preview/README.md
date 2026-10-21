@@ -1,5 +1,7 @@
 # Vazer Launcher — UI prototype (web)
 
+**Bản hiện tại: Wave 2 · v6** (pill version ở góc dưới phải demo bar, tab title có chữ “Wave 2”).
+
 Bản demo giao diện chạy trên browser để **chỉnh sửa bố cục/spacing/màu nhanh** trước khi port sang WinUI.
 Đây là **prototype**, không phải production: dữ liệu là mock, mọi thao tác được mô phỏng 1:1 với app (không mở game thật).
 Trạng thái mock (instance/mod/account) được lưu trong `localStorage` để reload vẫn còn; nút **Reset** xóa sạch.

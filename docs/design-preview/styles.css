@@ -941,6 +941,17 @@ p { margin: 0; }
 
 .demo-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
 
+.demo-version {
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
 .demo-btn {
   padding: 3px 8px;
   border: 1px solid var(--stroke);
