@@ -213,6 +213,9 @@ const state = {
   modSelection: { active: false, files: new Set(), lastIndex: null },
   palette: { open: false, index: 0, items: [] },
   accountHighlight: null,
+  tasks: [],
+  taskFilter: "all",
+  taskSeq: 0,
 };
 
 /* ------------------------------------------------------------
@@ -231,6 +234,7 @@ function saveState() {
       accounts: state.accounts,
       activeInstanceId: state.activeInstanceId,
       theme: document.documentElement.dataset.theme,
+      tasks: state.tasks.filter((t) => t.status !== "running").slice(0, 20),
     }));
   } catch {
     // private mode / storage đầy — bỏ qua, demo vẫn chạy in-memory
@@ -246,6 +250,7 @@ function loadState() {
     if (data.mods && typeof data.mods === "object") state.mods = data.mods;
     if (data.worlds && typeof data.worlds === "object") state.worlds = data.worlds;
     if (Array.isArray(data.accounts)) state.accounts = data.accounts;
+    if (Array.isArray(data.tasks)) state.tasks = data.tasks;
     if (data.activeInstanceId && state.instances.some((i) => i.id === data.activeInstanceId)) {
       state.activeInstanceId = data.activeInstanceId;
     }
@@ -269,6 +274,15 @@ function normalizeState() {
   Object.keys(state.worlds).forEach((id) => {
     if (!getInstance(id)) delete state.worlds[id];
   });
+  state.tasks = state.tasks
+    .filter((t) => t && t.status !== "running")
+    .slice(0, 20)
+    .map((t) => ({
+      detail: "",
+      progress: t.status === "done" ? 100 : 0,
+      ...t,
+      endedTs: t.endedTs || t.startedTs || Date.now(),
+    }));
 }
 
 const getInstance = (id) => state.instances.find((i) => i.id === id);
@@ -281,6 +295,210 @@ function ensureActiveInstance() {
     state.activeInstanceId = state.instances[0]?.id || null;
   }
 }
+
+/* ------------------------------------------------------------
+   ACTIVITY / TASK CENTER
+   ------------------------------------------------------------ */
+const TASK_KINDS = {
+  launch: { icon: "E768", label: "Khởi chạy" },
+  install: { icon: "E896", label: "Cài mod" },
+  update: { icon: "E895", label: "Cập nhật" },
+  backup: { icon: "E8B7", label: "Backup" },
+  restore: { icon: "E777", label: "Khôi phục" },
+  create: { icon: "E710", label: "Tạo instance" },
+  crash: { icon: "E7BA", label: "Lỗi" },
+};
+
+function tasksPanelOpen() {
+  return !$("#tasksHost").hidden;
+}
+
+function createTask(kind, title, detail = "") {
+  const task = {
+    id: `task-${Date.now()}-${++state.taskSeq}`,
+    kind,
+    title,
+    detail,
+    status: "running",
+    progress: 0,
+    startedTs: Date.now(),
+    endedTs: null,
+  };
+  state.tasks.unshift(task);
+  if (tasksPanelOpen()) renderTasks();
+  updateTasksBadge();
+  return task;
+}
+
+function updateTask(task, patch = {}) {
+  if (!task) return;
+  Object.assign(task, patch);
+  if (typeof task.progress === "number") task.progress = clamp(task.progress, 0, 100);
+  if (tasksPanelOpen()) updateTaskDom(task);
+}
+
+function finishTask(task, status = "done", detail = null) {
+  if (!task) return;
+  task.status = status;
+  if (status === "done") task.progress = 100;
+  if (detail) task.detail = detail;
+  task.endedTs = Date.now();
+
+  if (tasksPanelOpen()) {
+    renderTasks();
+    updateTasksBadge();
+  } else if (status === "error") {
+    flashTasksBadge("!", "is-error");
+  } else {
+    flashTasksBadge("✓", "is-done");
+  }
+  saveState();
+}
+
+function flashTasksBadge(text, cls = "") {
+  const badge = $("#tasksBadge");
+  if (!badge) return;
+  clearTimeout(state.taskFlashTimer);
+  state.taskFlash = { text, cls };
+  state.taskFlashTimer = setTimeout(() => {
+    state.taskFlash = null;
+    updateTasksBadge();
+  }, 3600);
+  updateTasksBadge();
+}
+
+function updateTasksBadge() {
+  const badge = $("#tasksBadge");
+  if (!badge) return;
+  const running = state.tasks.filter((t) => t.status === "running").length;
+
+  if (state.taskFlash) {
+    badge.hidden = false;
+    badge.textContent = state.taskFlash.text;
+    badge.className = `tasks-badge is-flash ${state.taskFlash.cls}`.trim();
+    return;
+  }
+  badge.hidden = running === 0;
+  badge.textContent = running > 0 ? String(running) : "";
+  badge.className = "tasks-badge" + (running > 0 ? " is-running" : "");
+}
+
+function taskTimeAgo(ts) {
+  const sec = Math.max(0, Math.round((Date.now() - ts) / 1000));
+  if (sec < 45) return "vừa xong";
+  const min = Math.round(sec / 60);
+  if (min < 60) return `${min} phút trước`;
+  const hr = Math.round(min / 60);
+  if (hr < 24) return `${hr} giờ trước`;
+  return `${Math.round(hr / 24)} ngày trước`;
+}
+
+function taskStatusText(status) {
+  if (status === "running") return "Đang chạy";
+  if (status === "error") return "Lỗi";
+  if (status === "cancelled") return "Đã hủy";
+  return "Hoàn tất";
+}
+
+function renderTasks() {
+  const list = $("#taskList");
+  if (!list) return;
+
+  const running = state.tasks.filter((t) => t.status === "running").length;
+  const finished = state.tasks.filter((t) => t.status !== "running").length;
+  $("#tasksSummary").textContent = `${running} đang chạy · ${finished} đã kết thúc`;
+
+  const filtered = state.tasks.filter((t) => {
+    if (state.taskFilter === "running") return t.status === "running";
+    if (state.taskFilter === "done") return t.status !== "running";
+    return true;
+  });
+
+  list.innerHTML = filtered.map((task) => {
+    const meta = TASK_KINDS[task.kind] || { icon: "E823", label: "Tác vụ" };
+    const pct = clamp(task.progress || 0, 0, 100);
+    const isRunning = task.status === "running";
+    const isError = task.status === "error";
+    return `
+      <article class="task-item${isRunning ? " is-running" : ""}${isError ? " is-error" : ""}" data-task-id="${esc(task.id)}">
+        <div class="task-icon glyph">&#x${meta.icon};</div>
+        <div class="task-main">
+          <div class="task-title-row">
+            <span class="task-title">${esc(task.title)}</span>
+            <span class="task-state">${taskStatusText(task.status)}</span>
+          </div>
+          <div class="task-detail">${esc(task.detail || "")}</div>
+          <div class="task-track"><div class="task-fill" style="width:${pct}%"></div></div>
+          <div class="task-meta">
+            <span>${esc(meta.label)} · ${taskTimeAgo(task.startedTs)}</span>
+            <span class="task-pct">${isRunning ? pct + "%" : taskStatusText(task.status)}</span>
+          </div>
+        </div>
+      </article>`;
+  }).join("");
+
+  const empty = $("#tasksEmpty");
+  empty.hidden = filtered.length > 0;
+  if (!filtered.length) {
+    empty.querySelector("p").textContent =
+      state.taskFilter === "running" ? "Không có tác vụ đang chạy." :
+      state.taskFilter === "done" ? "Chưa có lịch sử hoạt động." :
+      "Chưa có hoạt động nào.";
+  }
+
+  $$("#tasksFilters [data-task-filter]").forEach((btn) => {
+    btn.classList.toggle("is-selected", btn.dataset.taskFilter === state.taskFilter);
+  });
+}
+
+function updateTaskDom(task) {
+  const item = $(`.task-item[data-task-id="${task.id}"]`);
+  if (!item) {
+    renderTasks();
+    return;
+  }
+  item.querySelector(".task-detail").textContent = task.detail || "";
+  const pct = clamp(task.progress || 0, 0, 100);
+  item.querySelector(".task-fill").style.width = pct + "%";
+  item.querySelector(".task-pct").textContent = pct + "%";
+}
+
+function openTasks() {
+  const host = $("#tasksHost");
+  if (!host || !host.hidden && host.classList.contains("is-open")) return;
+  clearTimeout(state.taskFlashTimer);
+  state.taskFlash = null;
+  host.hidden = false;
+  void host.offsetWidth;
+  host.classList.add("is-open");
+  $("#tasksBtn").setAttribute("aria-expanded", "true");
+  renderTasks();
+  updateTasksBadge();
+}
+
+function closeTasks() {
+  const host = $("#tasksHost");
+  if (!host) return;
+  host.classList.remove("is-open");
+  $("#tasksBtn").setAttribute("aria-expanded", "false");
+  setTimeout(() => {
+    if (!host.classList.contains("is-open")) host.hidden = true;
+  }, 180);
+}
+
+function clearTaskHistory() {
+  const before = state.tasks.length;
+  state.tasks = state.tasks.filter((t) => t.status === "running");
+  if (state.tasks.length === before) {
+    showToastStatus("Không có lịch sử để xóa.");
+    return;
+  }
+  saveState();
+  renderTasks();
+  updateTasksBadge();
+  showToastStatus("Đã xóa lịch sử hoạt động.");
+}
+
 
 function catalogProject(slugOrId) {
   return MOCK.catalog.find((p) => p.slug === slugOrId || p.id === slugOrId);
@@ -571,6 +789,7 @@ async function launchInstance(id, { fromDetail = false } = {}) {
   }
 
   inst.launching = true;
+  const launchTask = createTask("launch", `Khởi chạy ${inst.name}`, "Đang chuẩn bị Java runtime...");
   setCardStatus(id, "Đang khởi chạy...");
   updateDetailLaunchButton();
 
@@ -591,6 +810,7 @@ async function launchInstance(id, { fromDetail = false } = {}) {
     const phase = phases[i];
     const phaseMs = prefersReducedMotion() ? 220 : phase.ms;
     setLaunchStep(phase.step, "active");
+    updateTask(launchTask, { progress: phase.pct, detail: phase.detail });
     setCardStatus(id, phase.card, fromDetail ? "Đang khởi chạy..." : null);
     if (fromDetail) {
       $("#detailStatus").textContent = phase.detail;
@@ -612,6 +832,7 @@ async function launchInstance(id, { fromDetail = false } = {}) {
   inst.lastPlayedTs = Date.now();
   setCardStatus(id, `Đang chạy (PID ${pid})`);
   updateDetailLaunchButton();
+  finishTask(launchTask, "done", `Đang chạy · PID ${pid}`);
 
   // latest.log được truncate mỗi lần chạy game + in cấu hình đang dùng.
   state.logs[id] = [];
@@ -1055,6 +1276,7 @@ async function updateAll() {
   setButtonBusy(btn, true, "Đang cập nhật...");
   $("#detailProgress").hidden = false;
   showUpdateQueue(pending);
+  const task = createTask("update", `Cập nhật ${pending.length} mod`, "Đang chuẩn bị...");
   let done = 0;
 
   for (let qi = 0; qi < pending.length; qi++) {
@@ -1073,6 +1295,10 @@ async function updateAll() {
       setQueueItem(qi, "active", p);
       setQueueAggregate(done, pending.length, p);
       setDetailStatus(`Đang cập nhật ${label} ${from} → ${to}... ${p}%`);
+      updateTask(task, {
+        progress: Math.round(((qi + p / 100) / pending.length) * 100),
+        detail: `${label} ${p}%`,
+      });
       await sleep(70);
     }
 
@@ -1097,6 +1323,7 @@ async function updateAll() {
   saveState();
   setButtonBusy(btn, false);
   setDetailStatus(`Đã cập nhật xong ${done} mod.`);
+  finishTask(task, "done", `${done} mod đã cập nhật`);
   pulseStatus();
   const queue = $("#updateQueue");
   queue.classList.add("is-done");
@@ -1125,12 +1352,14 @@ async function updateSingleMod(index) {
   const label = project ? project.name : mod.file;
   const from = mod.version;
   const to = mod.update;
+  const task = createTask("update", `Cập nhật ${label}`, `${from} → ${to}`);
 
   $("#detailProgress").hidden = false;
   setRowUpdating(index, true);
   for (let p = 0; p <= 100; p += 10) {
     setDetailProgress(p);
     setDetailStatus(`Đang cập nhật ${label} ${from} → ${to}... ${p}%`);
+    updateTask(task, { progress: p, detail: `${label} ${p}%` });
     await sleep(70);
   }
 
@@ -1146,6 +1375,7 @@ async function updateSingleMod(index) {
   setDetailProgress(0);
   saveState();
   setDetailStatus(`Đã cập nhật ${label} lên ${to}.`);
+  finishTask(task, "done", `Đã lên ${to}`);
   pulseStatus();
 }
 
@@ -1434,6 +1664,7 @@ async function backupWorld(index) {
   const world = worldsFor(inst)[index];
   if (!world) return;
   worldBackupBusy = true;
+  const task = createTask("backup", `Backup ${world.name}`, `${world.sizeMb.toFixed(1)} MB`);
 
   const progress = $("#worldsProgress");
   const status = $("#worldsStatus");
@@ -1446,6 +1677,7 @@ async function backupWorld(index) {
     progress.firstElementChild.style.width = p + "%";
     if (rowFill) rowFill.style.width = p + "%";
     status.textContent = `Đang nén "${world.name}"... ${p}%`;
+    updateTask(task, { progress: p, detail: `Đang nén... ${p}%` });
     await sleep(45);
   }
 
@@ -1455,10 +1687,12 @@ async function backupWorld(index) {
   row?.classList.add("is-done");
   renderWorlds();
 
+  const file = `backups/${world.name.replace(/\s+/g, "_")}-${dateStamp()}.zip`;
   progress.hidden = true;
   progress.firstElementChild.style.width = "0%";
   status.textContent =
-    `Đã backup "${world.name}" → backups/${world.name.replace(/\s+/g, "_")}-${dateStamp()}.zip (${world.sizeMb.toFixed(1)} MB).`;
+    `Đã backup "${world.name}" → ${file} (${world.sizeMb.toFixed(1)} MB).`;
+  finishTask(task, "done", `${file} · ${world.sizeMb.toFixed(1)} MB`);
   showToastStatus(`Đã backup "${world.name}".`);
 }
 
@@ -1497,12 +1731,15 @@ function openRestoreDialog(index) {
     onPrimary: async () => {
       const picked = document.querySelector('input[name="backupPick"]:checked')?.value;
       if (!picked) return false;
+      const filename = picked.split("/").pop();
+      const task = createTask("restore", `Khôi phục ${world.name}`, filename);
       const progress = $("#worldsProgress");
       const status = $("#worldsStatus");
       progress.hidden = false;
       for (let p = 0; p <= 100; p += 10) {
         progress.firstElementChild.style.width = p + "%";
         status.textContent = `Đang khôi phục "${world.name}"... ${p}%`;
+        updateTask(task, { progress: p, detail: `${filename} · ${p}%` });
         await sleep(50);
       }
       progress.hidden = true;
@@ -1510,7 +1747,8 @@ function openRestoreDialog(index) {
       world.lastPlayed = "Vừa xong";
       saveState();
       renderWorlds();
-      $("#worldsStatus").textContent = `Đã khôi phục "${world.name}" từ ${picked.split("/").pop()}.`;
+      $("#worldsStatus").textContent = `Đã khôi phục "${world.name}" từ ${filename}.`;
+      finishTask(task, "done", filename);
       showToastStatus(`Đã khôi phục "${world.name}".`);
       return true;
     },
@@ -1645,6 +1883,8 @@ function simulateCrash() {
   inst.status = "Đã crash (exit code 1)";
 
   const report = `crash-${dateStamp()}-client.txt`;
+  const crashTask = createTask("crash", `Crash: ${inst.name}`, `Exit code 1 · ${now()}`);
+  finishTask(crashTask, "error", `crash-reports/${report}`);
   pushLog(inst.id, "[Render thread/ERROR]: java.lang.OutOfMemoryError: Java heap space");
   pushLog(inst.id, "[Render thread/ERROR]: \tat net.minecraft.client.Minecraft.run(Minecraft.java:1015)");
   pushLog(inst.id, `[Launcher/ERROR]: Game crashed with exit code 1. Report: crash-reports/${report}`);
@@ -1789,7 +2029,7 @@ function openContextMenu(x, y, id) {
 /* ------------------------------------------------------------
    DIALOGS
    ------------------------------------------------------------ */
-function showDialog({ title, body = "", primary = null, closeText = "Đóng", wide = false, onPrimary = null }) {
+function showDialog({ title, body = "", primary = null, closeText = "Đóng", wide = false, onPrimary = null, footer = null }) {
   const host = $("#dialogHost");
   const dialogId = `${Date.now()}-${Math.random()}`;
   host.dataset.dialogId = dialogId;
@@ -1800,8 +2040,10 @@ function showDialog({ title, body = "", primary = null, closeText = "Đóng", wi
       <h2 class="dialog-title">${esc(title)}</h2>
       <div class="dialog-body">${body}</div>
       <div class="dialog-footer">
-        ${primary ? `<button class="btn accent" data-dialog-primary>${esc(primary)}</button>` : ""}
-        <button class="btn" data-dialog-close>${esc(closeText)}</button>
+        ${footer ?? `
+          ${primary ? `<button class="btn accent" data-dialog-primary>${esc(primary)}</button>` : ""}
+          <button class="btn" data-dialog-close>${esc(closeText)}</button>
+        `}
       </div>
     </div>`;
 
@@ -1825,7 +2067,7 @@ function showDialog({ title, body = "", primary = null, closeText = "Đóng", wi
       closing = false;
     }, 180);
   };
-  $("[data-dialog-close]", host).onclick = close;
+  $$("[data-dialog-close]", host).forEach((btn) => { btn.onclick = close; });
   const primaryBtn = $("[data-dialog-primary]", host);
   if (primaryBtn) {
     primaryBtn.onclick = async () => {
@@ -1875,87 +2117,277 @@ function confirmDialog(title, message, confirmText = "Xóa") {
 /* ------------------------------------------------------------
    NEW INSTANCE DIALOG
    ------------------------------------------------------------ */
+const INSTANCE_LOADERS = [
+  { id: "vanilla", name: "Vanilla", sub: "Không mod", mark: "V" },
+  { id: "fabric", name: "Fabric", sub: "Mod nhẹ, phổ biến", mark: "F" },
+  { id: "neoforge", name: "NeoForge", sub: "Modpack lớn", mark: "N" },
+];
+
+const INSTANCE_VERSIONS = ["1.21.1", "1.21", "1.20.1", "1.20", "1.19.2"];
+
+/** Chuẩn hóa tên/id thành slug thư mục. */
+function slugifyInstance(value) {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+/** Slug id không trùng instance đã có (so cả id lẫn tên đã chuẩn hóa). */
+function uniqueInstanceId(name) {
+  const base = slugifyInstance(name) || "instance";
+  const taken = new Set();
+  state.instances.forEach((inst) => {
+    taken.add(inst.id);
+    taken.add(slugifyInstance(inst.id));
+    taken.add(slugifyInstance(inst.name));
+  });
+  let id = base;
+  let n = 2;
+  while (taken.has(id)) id = `${base}-${n++}`;
+  return id;
+}
+
 function openNewInstanceDialog() {
-  const dialog = showDialog({
-    title: "Tạo instance mới",
-    primary: "Tạo",
-    closeText: "Hủy",
-    body: `
-      <label class="field"><span>Tên instance</span>
-        <input class="textbox" id="niName" placeholder="New Instance" />
-      </label>
-      <label class="field"><span>Loader</span>
-        <select class="select" id="niLoader">
-          <option value="vanilla">Vanilla</option>
-          <option value="fabric" selected>Fabric</option>
-          <option value="neoforge">NeoForge</option>
-        </select>
-      </label>
-      <label class="field"><span>Minecraft version</span>
-        <select class="select" id="niVersion">
-          <option>1.21.1</option>
-          <option>1.21</option>
-          <option>1.20.1</option>
-          <option>1.20</option>
-          <option>1.19.2</option>
-        </select>
-      </label>
-      <label class="field"><span>Loader version (để trống = latest)</span>
-        <input class="textbox" id="niLoaderVersion" placeholder="latest" />
-      </label>
+  let step = 1;
+  let creating = false;
+  const form = {
+    name: "",
+    loader: "fabric",
+    version: "1.21.1",
+    loaderVersion: "",
+  };
+
+  const wizardShell = `
+    <div class="wizard">
+      <ol class="wiz-steps" id="niSteps"></ol>
+      <div class="wiz-body" id="niStepBody"></div>
       <div class="result-status" id="niBusy" hidden>
         <span class="spinner" style="color:var(--accent)"></span>
         <span id="niBusyText">Đang tạo instance...</span>
       </div>
-      <div class="infobar error" id="niError" hidden><span class="glyph">&#xE7BA;</span><div id="niErrorText"></div></div>`,
-    onPrimary: async () => {
-      const name = $("#niName").value.trim();
-      if (!name) {
-        $("#niError").hidden = false;
-        $("#niErrorText").textContent = "Tên instance không được để trống.";
-        return false;
-      }
+      <div class="infobar error" id="niError" hidden><span class="glyph">&#xE7BA;</span><div id="niErrorText"></div></div>
+    </div>`;
 
-      const loader = $("#niLoader").value;
-      const version = $("#niVersion").value;
-      const loaderVersion = $("#niLoaderVersion").value.trim() || null;
+  const footer = `
+    <div class="wiz-footer">
+      <span class="wiz-counter" id="niStepCounter">Bước 1 / 3</span>
+      <button class="btn" id="niBackBtn" disabled>Quay lại</button>
+      <button class="btn" id="niCancelBtn" data-dialog-close>Hủy</button>
+      <button class="btn accent" id="niNextBtn">Tiếp tục</button>
+    </div>`;
 
-      $("#niBusy").hidden = false;
-      $("[data-dialog-primary]", dialog.host).disabled = true;
-      $("#niBusyText").textContent = "Đang resolve version manifest...";
-      await sleep(700);
-      $("#niBusyText").textContent = "Đang cài đặt loader...";
-      await sleep(700);
-      $("#niBusyText").textContent = "Đang tạo thư mục instance...";
-      await sleep(500);
-
-      const id = name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-      state.instances.unshift({
-        id,
-        name,
-        mc: version,
-        loader,
-        loaderVersion,
-        path: `C:\\Users\\TOSHIBA\\AppData\\Roaming\\Vazer\\Minecraft\\instances\\${id}`,
-        lastPlayed: null,
-        lastPlayedTs: 0,
-        createdTs: Date.now(),
-        settings: { ...DEFAULT_SETTINGS },
-      });
-      state.mods[id] = [];
-      state.worlds[id] = [];
-      saveState();
-      renderInstances();
-      showToastStatus(`Đã tạo instance "${name}".`);
-      return true;
-    },
+  const dialog = showDialog({
+    title: "Tạo instance mới",
+    body: wizardShell,
+    footer,
+    wide: true,
   });
 
-  const closeBtn = $("[data-dialog-close]", dialog.host);
-  closeBtn.onclick = () => {
-    if (!$("#niBusy").hidden) return; // đang tạo thì không cho hủy
+  const loaderInfo = () => INSTANCE_LOADERS.find((l) => l.id === form.loader) || INSTANCE_LOADERS[1];
+  const instancePath = (id) =>
+    `C:\\Users\\TOSHIBA\\AppData\\Roaming\\Vazer\\Minecraft\\instances\\${id}`;
+
+  function stepBodyHtml() {
+    if (step === 1) {
+      return `
+        <label class="field"><span>Tên instance</span>
+          <input class="textbox" id="niName" maxlength="48" autocomplete="off"
+            placeholder="VD: SkyBlock Fabric" value="${esc(form.name)}" />
+        </label>
+        <div class="field"><span>Mod loader</span>
+          <div class="loader-grid" id="niLoaderGrid">
+            ${INSTANCE_LOADERS.map((l) => `
+              <button type="button" class="loader-card${form.loader === l.id ? " is-selected" : ""}"
+                data-loader="${l.id}" aria-pressed="${form.loader === l.id}">
+                <span class="loader-mark" data-mark="${l.id}">${l.mark}</span>
+                <span class="loader-name">${l.name}</span>
+                <span class="loader-sub">${l.sub}</span>
+              </button>`).join("")}
+          </div>
+        </div>
+        <p class="wiz-note">Bạn có thể đổi loader và phiên bản sau khi tạo.</p>`;
+    }
+
+    if (step === 2) {
+      const loader = loaderInfo();
+      return `
+        <div class="field"><span>Phiên bản Minecraft</span>
+          <div class="version-grid" id="niVersionGrid">
+            ${INSTANCE_VERSIONS.map((v) => `
+              <button type="button" class="version-card${form.version === v ? " is-selected" : ""}"
+                data-version="${v}" aria-pressed="${form.version === v}">
+                <span class="version-num">${v}</span>
+                <span class="version-tag">Release</span>
+              </button>`).join("")}
+          </div>
+        </div>
+        ${form.loader === "vanilla" ? `
+          <div class="wiz-note">Vanilla dùng jar gốc — không cần phiên bản loader.</div>` : `
+          <label class="field"><span>Phiên bản ${loader.name} <em>(để trống = mới nhất)</em></span>
+            <input class="textbox" id="niLoaderVersion" placeholder="latest" value="${esc(form.loaderVersion)}" />
+          </label>`}
+        <p class="wiz-note">Launcher sẽ tải manifest và assets tương ứng khi bạn bấm Tạo.</p>`;
+    }
+
+    const loader = loaderInfo();
+    const id = uniqueInstanceId(form.name);
+    return `
+      <div class="review-card">
+        <div class="review-row"><span class="review-key">Tên</span><span class="review-val">${esc(form.name)}</span></div>
+        <div class="review-row"><span class="review-key">Loader</span><span class="review-val">${loader.name}</span></div>
+        <div class="review-row"><span class="review-key">Minecraft</span><span class="review-val">${esc(form.version)}</span></div>
+        ${form.loader === "vanilla" ? "" : `
+          <div class="review-row"><span class="review-key">Loader version</span><span class="review-val">${esc(form.loaderVersion || "Mới nhất")}</span></div>`}
+        <div class="review-row"><span class="review-key">Instance ID</span><span class="review-val mono">${esc(id)}</span></div>
+      </div>
+      <p class="wiz-note">Thư mục: <code>${esc(instancePath(id))}</code></p>`;
+  }
+
+  function renderWizard() {
+    $("#niSteps").innerHTML = ["Thông tin", "Phiên bản", "Xem lại"].map((label, i) => {
+      const num = i + 1;
+      const cls = step === num ? "is-active" : step > num ? "is-done" : "";
+      return `
+        <li class="wiz-step ${cls}" data-wiz-step="${num}">
+          <span class="wiz-dot">${step > num ? "✓" : num}</span>
+          <span>${label}</span>
+        </li>`;
+    }).join("");
+
+    $("#niStepBody").innerHTML = stepBodyHtml();
+    $("#niStepCounter").textContent = `Bước ${step} / 3`;
+    $("#niBackBtn").disabled = step === 1 || creating;
+    const next = $("#niNextBtn");
+    next.textContent = step === 3 ? "Tạo instance" : "Tiếp tục";
+    next.disabled = creating;
+    $("#niError").hidden = true;
+
+    if (step === 1) {
+      requestAnimationFrame(() => $("#niName")?.focus());
+    }
+  }
+
+  // Giữ lựa chọn khi bấm card (không re-render để không mất focus ô tên).
+  $("#niStepBody").addEventListener("click", (e) => {
+    const loaderBtn = e.target.closest("[data-loader]");
+    if (loaderBtn) {
+      form.loader = loaderBtn.dataset.loader;
+      $$("#niLoaderGrid .loader-card").forEach((btn) => {
+        const on = btn === loaderBtn;
+        btn.classList.toggle("is-selected", on);
+        btn.setAttribute("aria-pressed", String(on));
+      });
+      return;
+    }
+
+    const versionBtn = e.target.closest("[data-version]");
+    if (versionBtn) {
+      form.version = versionBtn.dataset.version;
+      $$("#niVersionGrid .version-card").forEach((btn) => {
+        const on = btn === versionBtn;
+        btn.classList.toggle("is-selected", on);
+        btn.setAttribute("aria-pressed", String(on));
+      });
+    }
+  });
+
+  $("#niStepBody").addEventListener("input", (e) => {
+    if (e.target.id === "niName") {
+      form.name = e.target.value;
+      $("#niError").hidden = true;
+    }
+  });
+
+  async function createInstance() {
+    if (creating) return;
+    creating = true;
+    $("#niBackBtn").disabled = true;
+    $("#niNextBtn").disabled = true;
+    $("#niCancelBtn").disabled = true;
+    $("#niBusy").hidden = false;
+
+    const id = uniqueInstanceId(form.name);
+    const loader = loaderInfo();
+    const task = createTask(
+      "create",
+      `Tạo ${form.name}`,
+      `${loader.name} · MC ${form.version}`,
+    );
+
+    const stages = [
+      { text: "Đang resolve version manifest...", progress: 28 },
+      { text: "Đang cài đặt loader...", progress: 68 },
+      { text: "Đang tạo thư mục instance...", progress: 92 },
+    ];
+    for (const stage of stages) {
+      $("#niBusyText").textContent = stage.text;
+      updateTask(task, { progress: stage.progress, detail: stage.text });
+      await sleep(700);
+    }
+
+    state.instances.unshift({
+      id,
+      name: form.name,
+      mc: form.version,
+      loader: form.loader,
+      loaderVersion: form.loaderVersion.trim() || null,
+      path: instancePath(id),
+      lastPlayed: null,
+      lastPlayedTs: 0,
+      createdTs: Date.now(),
+      settings: { ...DEFAULT_SETTINGS },
+    });
+    state.mods[id] = [];
+    state.worlds[id] = [];
+    saveState();
+    renderInstances();
+    finishTask(task, "done", `Instance ID: ${id}`);
+    showToastStatus(`Đã tạo instance "${form.name}".`);
     dialog.close();
+  }
+
+  $("#niNextBtn").addEventListener("click", async () => {
+    if (creating) return;
+
+    if (step === 1) {
+      const input = $("#niName");
+      form.name = input.value.trim();
+      if (!form.name) {
+        $("#niError").hidden = false;
+        $("#niErrorText").textContent = "Tên instance không được để trống.";
+        input.focus();
+        return;
+      }
+      step = 2;
+      renderWizard();
+      return;
+    }
+
+    if (step === 2) {
+      form.loaderVersion = $("#niLoaderVersion")?.value.trim() || "";
+      step = 3;
+      renderWizard();
+      return;
+    }
+
+    await createInstance();
+  });
+
+  $("#niBackBtn").addEventListener("click", () => {
+    if (step === 1 || creating) return;
+    step -= 1;
+    renderWizard();
+  });
+
+  $("#niCancelBtn").onclick = () => {
+    if (!creating) dialog.close();
   };
+
+  renderWizard();
 }
 
 /* ------------------------------------------------------------
@@ -2220,6 +2652,11 @@ async function installMod(dialog, slug) {
 
   state.modBrowser.busy = true;
   state.modBrowser.installingSlug = project.slug;
+  const task = createTask(
+    "install",
+    `Cài ${project.name}`,
+    deps.length ? `Kèm ${deps.length} dependency` : "Từ Modrinth",
+  );
 
   const progress = $("#mbProgress", dialog.host);
   const status = $("#mbStatus", dialog.host);
@@ -2260,6 +2697,7 @@ async function installMod(dialog, slug) {
         : pct < 55
           ? `Đang tải ${item.name}... ${overall}%`
           : `Đang cài ${item.name}... ${overall}%`;
+      updateTask(task, { progress: overall, detail: status.textContent });
       updateStages(pct);
       await sleep(80);
     }
@@ -2280,6 +2718,7 @@ async function installMod(dialog, slug) {
   status.textContent = depCount > 0
     ? `Đã cài ${project.name} (+${depCount} dependency)`
     : `Đã cài ${project.name}`;
+  finishTask(task, "done", status.textContent);
 
   saveState();
   if (state.screen === "detail") renderMods();
@@ -2484,6 +2923,7 @@ function paletteActions() {
 
   items.push(
     { icon: "E77B", title: "Accounts", sub: "Mở trang tài khoản", keywords: "account tài khoản", run: () => showScreen("accounts") },
+    { icon: "E823", title: "Hoạt động", sub: "Tác vụ đang chạy & lịch sử", keywords: "activity task hoạt động tác vụ", run: openTasks },
     { icon: "E710", title: "Tạo instance mới", sub: "Mở dialog New Instance", keywords: "new tạo instance", run: openNewInstanceDialog },
     {
       icon: "E793",
@@ -2585,6 +3025,20 @@ function wireEvents() {
       else showScreen(target);
     });
   });
+
+  // Activity center
+  $("#tasksBtn").addEventListener("click", () => {
+    if ($("#tasksHost").classList.contains("is-open")) closeTasks();
+    else openTasks();
+  });
+  $$("[data-tasks-close]").forEach((el) => el.addEventListener("click", closeTasks));
+  $("#tasksFilters").addEventListener("click", (e) => {
+    const chip = e.target.closest("[data-task-filter]");
+    if (!chip) return;
+    state.taskFilter = chip.dataset.taskFilter;
+    renderTasks();
+  });
+  $("#clearTasksBtn").addEventListener("click", clearTaskHistory);
 
   // Instances
   $("#newInstanceBtn").addEventListener("click", openNewInstanceDialog);
@@ -2901,6 +3355,12 @@ function wireEvents() {
   });
 
   document.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "t") {
+      e.preventDefault();
+      if ($("#tasksHost").classList.contains("is-open")) closeTasks();
+      else openTasks();
+      return;
+    }
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
       e.preventDefault();
       if (state.palette.open) closePalette();
@@ -2910,6 +3370,7 @@ function wireEvents() {
     if (e.key === "Escape") {
       $("#contextMenu").hidden = true;
       if (state.palette.open) closePalette();
+      if ($("#tasksHost").classList.contains("is-open")) closeTasks();
     }
   });
 }

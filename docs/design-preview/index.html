@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Vazer Launcher — UI Prototype (Wave 2)</title>
+  <title>Vazer Launcher — UI Prototype (Wave 3)</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2360cdff'/%3E%3Ctext x='16' y='23' font-size='18' font-family='Segoe UI' font-weight='700' text-anchor='middle' fill='%23000'%3EV%3C/text%3E%3C/svg%3E" />
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -13,6 +13,10 @@
     <span class="titlebar-icon glyph">&#xE7F8;</span>
     <span class="titlebar-text">Vazer Launcher</span>
     <span class="titlebar-tag">PROTOTYPE</span>
+  <button class="titlebar-btn" id="tasksBtn" aria-expanded="false" title="Hoạt động (Ctrl+Shift+T)">
+    <span class="glyph">&#xE823;</span>
+    <span class="tasks-badge" id="tasksBadge" hidden>0</span>
+  </button>
   </header>
 
   <div class="shell">
@@ -298,6 +302,36 @@
   </div>
 </div>
 
+<!-- Activity / task center -->
+<div class="tasks-host" id="tasksHost" hidden>
+  <div class="tasks-scrim" data-tasks-close></div>
+  <aside class="tasks-panel" role="dialog" aria-modal="true" aria-label="Hoạt động">
+    <header class="tasks-head">
+      <div>
+        <h2 class="tasks-title">Hoạt động</h2>
+        <p class="caption text-2" id="tasksSummary"></p>
+      </div>
+      <button class="btn icon-only" data-tasks-close title="Đóng" aria-label="Đóng">
+        <span class="glyph">&#xE711;</span>
+      </button>
+    </header>
+    <div class="tasks-filters">
+      <div class="tasks-filter-group" id="tasksFilters">
+        <button class="chip is-selected" data-task-filter="all">Tất cả</button>
+        <button class="chip" data-task-filter="running">Đang chạy</button>
+        <button class="chip" data-task-filter="done">Lịch sử</button>
+      </div>
+      <button class="btn ghost small" id="clearTasksBtn">Xóa lịch sử</button>
+    </div>
+    <div class="tasks-list" id="taskList"></div>
+    <div class="tasks-empty" id="tasksEmpty" hidden>
+      <span class="glyph">&#xE823;</span>
+      <p>Chưa có hoạt động nào.</p>
+      <span class="caption text-3">Launch, cài mod, backup... sẽ hiện ở đây.</span>
+    </div>
+  </aside>
+</div>
+
 <!-- Dialog host -->
 <div class="dialog-host" id="dialogHost" hidden></div>
 
@@ -308,7 +342,7 @@
 <div class="demo-bar">
   <span class="demo-dot"></span>
   <span>Prototype · mô phỏng</span>
-  <span class="demo-version">Wave 2 · v6</span>
+  <span class="demo-version">Wave 3 · v7</span>
   <button class="demo-btn" id="simulateCrashBtn" title="Giả lập game crash ở instance đang chạy">Simulate crash</button>
   <button class="demo-btn" id="themeToggle">Dark</button>
   <button class="demo-btn" id="resetDemo">Reset</button>

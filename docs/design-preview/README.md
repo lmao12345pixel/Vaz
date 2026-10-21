@@ -1,6 +1,6 @@
 # Vazer Launcher — UI prototype (web)
 
-**Bản hiện tại: Wave 2 · v6** (pill version ở góc dưới phải demo bar, tab title có chữ “Wave 2”).
+**Bản hiện tại: Wave 3 · v7** (pill version ở góc dưới phải demo bar, tab title có chữ “Wave 3”).
 
 Bản demo giao diện chạy trên browser để **chỉnh sửa bố cục/spacing/màu nhanh** trước khi port sang WinUI.
 Đây là **prototype**, không phải production: dữ liệu là mock, mọi thao tác được mô phỏng 1:1 với app (không mở game thật).
@@ -27,7 +27,7 @@ Không cần `npm install`, không cần build.
 
 | Màn hình | Nội dung |
 | --- | --- |
-| **Instances** | Grid card 240×152, search + sort (Chơi gần nhất / Tên A-Z / Mới tạo), New Instance dialog, Play/Stop có trạng thái + chip "Đang chạy", context menu chuột phải (Play/Stop / Edit / Rename / Duplicate / Open folder / Delete), thời gian chơi cộng dồn trên card |
+| **Instances** | Grid card 240×152, search + sort (Chơi gần nhất / Tên A-Z / Mới tạo), New Instance wizard 3 bước, Play/Stop có trạng thái + chip "Đang chạy", context menu chuột phải (Play/Stop / Edit / Rename / Duplicate / Open folder / Delete), thời gian chơi cộng dồn trên card |
 | **Instance Detail** | Header + Launch/Stop, 4 tab **Mods / Worlds / Logs / Settings**, toolbar phân nhóm có divider, mod list có toggle + badge update + menu `⋯` |
 | **Mods** | Check updates / Update all, menu từng mod: cập nhật riêng, chọn phiên bản (dialog radio), gỡ mod có xác nhận |
 | **Worlds** | Danh sách world (size, lần chơi cuối, số backup), Backup từng world + Backup all có progress, khôi phục từ backup cũ, Open worlds folder |
@@ -37,6 +37,7 @@ Không cần `npm install`, không cần build.
 | **Mod Browser** | Dialog rộng, search debounce 300 ms (Enter để tìm ngay), filter Loader/MC/Sort, kết quả dạng list, cài mod có progress % và tự cài dependency (Fabric API) |
 | **Install flows** | Cài mod → xuất hiện ngay trong tab Mods + reload vẫn còn; Check updates/Update all đổi version thật; Install .mrpack và OptiFine thêm mod vào instance |
 | **Crash demo** | Nút **Simulate crash** trên thanh demo: dừng instance đang chạy, ghi log stack trace, mở dialog crash (exit code, đường dẫn crash report, nút mở report) |
+| **Activity Center** | Nút hoạt động trên titlebar + badge; drawer theo dõi task đang chạy/lịch sử (launch, cài mod, update, backup, restore, tạo instance, crash), filter Tất cả / Đang chạy / Lịch sử, xóa lịch sử; mở bằng Ctrl+Shift+T, đóng bằng Esc |
 
 ## Tính năng mới (v2)
 
@@ -88,6 +89,22 @@ Không cần `npm install`, không cần build.
 - **Playtime**: mỗi phiên Launch → Stop/crash cộng dồn phút chơi, hiển thị cạnh "Chơi lần cuối".
 - Code chính: `countUp`, `animateProgressTo`/`setLaunchStep`, `showUpdateQueue`/`setQueueItem`, `openRestoreDialog`, `duplicateInstance`, `initAmbient`; block `v6` cuối `styles.css`.
 
+## Wave 3 — "Activity Center & Create wizard"
+
+- **Activity Center**: nút trên titlebar (kèm badge số task đang chạy, flash ✓/! khi xong) mở drawer bên phải. Task có tiến trình, trạng thái, thời gian tương đối; filter **Tất cả / Đang chạy / Lịch sử**, clear history. `Ctrl+Shift+T` mở/đóng, `Esc` đóng.
+- **Task hooks**: launch (4 phase), cài mod (kể cả dependency), Update all / update từng mod, backup world, restore, tạo instance và crash đều tạo task thật trong Activity Center. Task lỗi (crash) có màu danger và giữ report path.
+- **Persistence**: chỉ task đã kết thúc được lưu vào `localStorage` (tối đa 20); task đang chạy reset khi reload.
+- **Create Instance wizard**: 3 bước **Thông tin → Phiên bản → Xem lại**; chọn loader bằng card (Vanilla/Fabric/NeoForge), chọn MC version, nhập loader version, xem lại ID/đường dẫn trước khi tạo; ID tự dedupe (`-2`, `-3`) kể cả khi tên trùng.
+- **Tạo instance có task**: dialog hiển thị tiến trình resolve manifest → cài loader → tạo thư mục; xong task `Tạo ...` xuất hiện trong Activity Center.
+- Code chính: `createTask`/`updateTask`/`finishTask`, `renderTasks`, `openTasks`, `openNewInstanceDialog` (wizard), `uniqueInstanceId`; block `v7` cuối `styles.css`.
+- Tất cả hiệu ứng tôn trọng `prefers-reduced-motion`; console không có lỗi.
+
+### Ảnh chụp
+
+- [Activity Center — đang chạy](screenshots/wave3-tasks-running.png)
+- [Activity Center — lịch sử](screenshots/wave3-tasks-history.png)
+- [Create Instance wizard](screenshots/wave3-create-wizard.png)
+
 ## Chỉnh sửa
 
 - **Mock data** — đầu file `app.js`, object `MOCK`: instances, mods, worlds, accounts, catalog Modrinth.
@@ -113,5 +130,6 @@ Khi một bố cục đã ổn trên web, port sang XAML theo đúng thứ tự:
 - Không mở game thật — Launch chỉ mô phỏng tiến trình/PID và stream log.
 - Backup world / crash report chỉ là mô phỏng UI; không tạo file thật.
 - Thay đổi tên chỉ đổi tên hiển thị (app thật sẽ đổi tên thư mục).
+- Task Center chỉ lưu lịch sử task đã kết thúc trong `localStorage` (tối đa 20); task đang chạy sẽ mất khi reload.
 - Trạng thái mock lưu trong `localStorage`; bấm **Reset** trên thanh demo để quay lại dữ liệu gốc.
 - Không có dark/light theo hệ thống — dùng nút **Dark/Light** ở thanh demo dưới cùng bên phải.
