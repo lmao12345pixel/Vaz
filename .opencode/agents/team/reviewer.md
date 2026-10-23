@@ -1,6 +1,7 @@
 ---
 description: Review diff, chất lượng code, kiến trúc, bảo mật cơ bản, accessibility, hiệu năng, regression. Read-only — không sửa file, không chạy lệnh.
-mode: all
+mode: subagent
+temperature: 0.1
 color: "#f472b6"
 permissions:
   - action: edit

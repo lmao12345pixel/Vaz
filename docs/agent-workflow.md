@@ -39,7 +39,7 @@ User → Product Owner → Planner → Developer → Tester → Reviewer → QA 
 
 **Input**: Kế hoạch từ Planner + acceptance criteria.
 **Output**: Code thay đổi, test mới/cập nhật, kết quả build/test.
-**Quy tắc**: Được edit/shell. Phải chạy `dotnet build Vaz.sln` và `dotnet test Vaz.sln`. Không tự nghiệm thu.
+**Quy tắc**: Được edit/shell. Phải chạy `npm run check` (hoặc `.\scripts\check.ps1`). Không tự nghiệm thu.
 
 ### Bước 4: Tester
 
@@ -93,6 +93,7 @@ Khi chuyển việc giữa các agent, dùng template sau:
 2. [Tiêu chí 2]
 
 ### Lệnh kiểm tra
+- npm run check (gộp build + test + validate agent)
 - dotnet build Vaz.sln
 - dotnet test Vaz.sln
 ```

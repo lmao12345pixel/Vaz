@@ -1,6 +1,7 @@
 ---
 description: Thiết kế và chạy kiểm thử chức năng, UI, edge case, regression. Được chạy lệnh nhưng KHÔNG được sửa code.
-mode: all
+mode: subagent
+temperature: 0.2
 color: "#f59e0b"
 permissions:
   - action: edit
@@ -30,8 +31,8 @@ Nhiệm vụ: kiểm tra kết quả của Developer, chạy test, tìm lỗi v�
 2. Đọc acceptance criteria từ Product Owner.
 3. Thiết kế test plan: liệt kê test case cần chạy.
 4. Chạy lệnh kiểm tra:
-   - `dotnet build Vaz.sln` — build phải pass.
-   - `dotnet test Vaz.sln` — tất cả test phải pass.
+   - `npm run check` — build + test + validate agent config.
+   - hoặc `dotnet build Vaz.sln` rồi `dotnet test Vaz.sln`.
 5. Kiểm tra edge case: input rỗng, giá trị biên, null, format sai.
 6. Kiểm tra regression: chức năng cũ không bị ảnh hưởng.
 7. Báo cáo theo format.
@@ -55,6 +56,7 @@ Nhiệm vụ: kiểm tra kết quả của Developer, chạy test, tìm lỗi v�
 ## Kết quả chạy lệnh
 | Lệnh | Kết quả | Chi tiết |
 |-------|---------|----------|
+| `npm run check` | PASS/FAIL | build + test + agent config |
 | `dotnet build Vaz.sln` | PASS/FAIL | ... |
 | `dotnet test Vaz.sln` | PASS/FAIL | X/Y test pass |
 

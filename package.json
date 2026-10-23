@@ -1,0 +1,11 @@
+{
+  "name": "vaz-check-runner",
+  "private": true,
+  "description": "Script runner only. V.A.Z is a .NET solution; see AGENTS.md. No Node dependencies.",
+  "scripts": {
+    "check": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check.ps1",
+    "build": "dotnet build Vaz.sln",
+    "test": "dotnet test Vaz.sln",
+    "validate:agents": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validate-agents.ps1"
+  }
+}

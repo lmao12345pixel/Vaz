@@ -1,6 +1,7 @@
 ---
 description: Đọc codebase, xác định file ảnh hưởng, lập kế hoạch thay đổi nhỏ và an toàn. Read-only — không sửa file, không chạy lệnh.
-mode: all
+mode: subagent
+temperature: 0.2
 color: "#60a5fa"
 permissions:
   - action: edit

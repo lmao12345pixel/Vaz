@@ -1,6 +1,7 @@
 ---
 description: Chuyển yêu cầu thô thành user story, phạm vi, acceptance criteria và Definition of Done. Read-only — không sửa file, không chạy lệnh.
-mode: all
+mode: subagent
+temperature: 0.3
 color: "#a78bfa"
 permissions:
   - action: edit

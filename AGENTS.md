@@ -7,7 +7,7 @@ Hiện tại gồm:
 - **Vazer.Core** (.NET 8, C#): domain logic — instances, mods, auth, Java resolver, loaders.
 - **Vaz.WinUI** (WinUI 3): GUI desktop app.
 - **Web prototype** (HTML/CSS/JS): demo UI tại `docs/design-preview/`.
-- **Test suite** (xUnit): 119+ tests tại `tests/Vazer.Core.Tests/`.
+- **Test suite** (xUnit): 176 tests tại `tests/Vazer.Core.Tests/` (đã chạy và xác nhận).
 
 ## Stack thực tế
 
@@ -25,6 +25,12 @@ Hiện tại gồm:
 ## Lệnh kiểm tra thực tế
 
 ```bash
+# Kiểm tra bắt buộc: build + test + validate agent config
+npm run check
+# hoặc không cần npm:
+.\scripts\check.ps1
+.\check.cmd
+
 # Build toàn bộ solution
 dotnet build Vaz.sln
 
@@ -36,21 +42,26 @@ dotnet build src/Vazer.Core/Vazer.Core.csproj
 
 # Test chỉ Core
 dotnet test tests/Vazer.Core.Tests/Vazer.Core.Tests.csproj
+
+# Kiểm tra frontmatter/quyền của 6 agent
+.\scripts\validate-agents.ps1
 ```
 
 > **Không có lệnh lint/typecheck riêng** — C# compiler đã kiểm tra type. Build pass = typecheck pass.
+> `package.json` chỉ là script runner tiện dụng, **không phải Node app** và không có dependency.
 
 ## Định nghĩa DONE bắt buộc
 
 Một task chỉ được coi là DONE khi:
 
-1. ✅ `dotnet build Vaz.sln` — pass, 0 error.
-2. ✅ `dotnet test Vaz.sln` — tất cả test pass, không skip không giải thích.
-3. ✅ Không regression: chức năng cũ vẫn hoạt động.
-4. ✅ Acceptance criteria từ Product Owner — tất cả đạt.
-5. ✅ Reviewer APPROVE — không còn Critical/Major issue.
-6. ✅ QA Lead verdict PASS.
-7. ✅ Code đã commit (nếu user yêu cầu).
+1. ✅ `npm run check` (hoặc `.\scripts\check.ps1`) — pass toàn bộ.
+2. ✅ `dotnet build Vaz.sln` — pass, 0 error.
+3. ✅ `dotnet test Vaz.sln` — tất cả test pass, không skip không giải thích.
+4. ✅ Không regression: chức năng cũ vẫn hoạt động.
+5. ✅ Acceptance criteria từ Product Owner — tất cả đạt.
+6. ✅ Reviewer APPROVE — không còn Critical/Major issue.
+7. ✅ QA Lead verdict PASS.
+8. ✅ Code đã commit (nếu user yêu cầu).
 
 ## Hệ thống Agent
 
@@ -64,6 +75,11 @@ Một task chỉ được coi là DONE khi:
 | Tester | `.opencode/agents/team/tester.md` | Chạy test, tìm lỗi, edge case | Shell only (no edit) |
 | Reviewer | `.opencode/agents/team/reviewer.md` | Review diff, kiến trúc, bảo mật, hiệu năng | Read-only |
 | QA Lead | `.opencode/agents/team/qa-lead.md` | Tổng hợp, verdict cuối, feedback loop | Read-only |
+
+Tất cả 6 agent dùng `mode: subagent` (không chạy như primary agent), có `temperature`
+riêng (0.1–0.3) và khai báo quyền bằng `permissions` array của OpenCode V2.
+Agent ID đầy đủ gồm thư mục: `team/product-owner`, `team/planner`, `team/developer`,
+`team/tester`, `team/reviewer`, `team/qa-lead`.
 
 ### Quy tắc phân quyền
 
@@ -120,31 +136,33 @@ User yêu cầu
 
 ## Cách gọi từng agent
 
-Dùng subagent trong Antigravity/OpenCode:
+Dùng subagent trong OpenCode. Agent ID đầy đủ là `team/<tên>` vì file nằm trong
+thư mục con `.opencode/agents/team/`. Main agent gọi lần lượt từng subagent và
+truyền output của bước trước sang bước sau.
 
 ```
 # Product Owner — phân tích yêu cầu
-@product-owner Phân tích yêu cầu: [mô tả ngắn]. Trả về user story, scope, acceptance criteria.
+@team/product-owner Phân tích yêu cầu: [mô tả ngắn]. Trả về user story, scope, acceptance criteria.
 
 # Planner — lập kế hoạch
-@planner Dựa trên user story sau, lập kế hoạch triển khai:
+@team/planner Dựa trên user story sau, lập kế hoạch triển khai:
 [Dán user story + acceptance criteria từ Product Owner]
 
 # Developer — triển khai
-@developer Triển khai theo kế hoạch sau:
+@team/developer Triển khai theo kế hoạch sau:
 [Dán kế hoạch từ Planner + acceptance criteria]
 
 # Tester — kiểm thử
-@tester Kiểm tra thay đổi sau:
+@team/tester Kiểm tra thay đổi sau:
 [Dán danh sách file thay đổi + acceptance criteria]
-Chạy: dotnet build Vaz.sln && dotnet test Vaz.sln
+Chạy: npm run check
 
 # Reviewer — review code
-@reviewer Review diff sau:
+@team/reviewer Review diff sau:
 [Dán danh sách file thay đổi + acceptance criteria]
 
 # QA Lead — verdict
-@qa-lead Tổng hợp kết quả:
+@team/qa-lead Tổng hợp kết quả:
 Tester: [Dán báo cáo Tester]
 Reviewer: [Dán báo cáo Reviewer]
 Acceptance criteria: [Dán từ Product Owner]
@@ -154,6 +172,7 @@ Acceptance criteria: [Dán từ Product Owner]
 
 Trước khi báo hoàn thành, Developer phải tự kiểm:
 
+- [ ] Đã chạy `npm run check` (hoặc `.\scripts\check.ps1`) — pass?
 - [ ] Đã chạy `dotnet build Vaz.sln` — pass?
 - [ ] Đã chạy `dotnet test Vaz.sln` — tất cả pass?
 - [ ] Code theo đúng pattern hiện có?

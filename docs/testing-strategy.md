@@ -4,6 +4,17 @@
 
 Chiến lược test 4 tầng cho V.A.Z, từ nhanh/rẻ đến chậm/đắt.
 
+## Cách chạy kiểm tra bắt buộc
+
+```bash
+npm run check
+# hoặc không cần npm:
+.\scripts\check.ps1
+```
+
+`npm run check` chạy tuần tự: `dotnet build Vaz.sln` → `dotnet test Vaz.sln`
+→ validate frontmatter/quyền của 6 agent. Dừng ngay khi có bước fail.
+
 ## Tầng 1: Static Check (Build)
 
 **Công cụ**: `dotnet build`
@@ -29,7 +40,7 @@ dotnet test Vaz.sln
 dotnet test tests/Vazer.Core.Tests/Vazer.Core.Tests.csproj
 ```
 
-### Test hiện có (19 file, 119+ test)
+### Test hiện có (17 file test + 2 helper, 176 test)
 
 | File | Khu vực |
 |------|---------|
@@ -67,6 +78,12 @@ dotnet test tests/Vazer.Core.Tests/Vazer.Core.Tests.csproj
 | 8 | FileDownloader xử lý 404/timeout | Http | Unit | Resilience |
 | 9 | NeoForge installer parse version đúng | Loaders | Unit | Loader support |
 | 10 | Mrpack import file hợp lệ/corrupt | Modpacks | Unit | Import tính năng |
+
+**Trạng thái hiện tại**: 8/10 case đã có test tự động. Case #1 mới có test cho
+`CreateNeoForgeAsync` (Create Fabric/Vanilla cần network nên chưa test). Case #7
+chưa có logic validate RAM range trong Core — `LaunchParameters.MaxRamMb` chỉ có
+giá trị mặc định 4096 và Settings RAM chưa implement. Đây là gap đã biết, không
+được coi là đã kiểm thử.
 
 ### Convention viết test mới
 

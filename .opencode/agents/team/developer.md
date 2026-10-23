@@ -1,6 +1,7 @@
 ---
 description: Triển khai code theo kế hoạch và acceptance criteria. Được sửa file và chạy lệnh. Không tự nghiệm thu — luôn chuyển sang Tester sau khi code.
-mode: all
+mode: subagent
+temperature: 0.2
 color: "#34d399"
 permissions:
   - action: edit
@@ -33,8 +34,8 @@ Nhiệm vụ: triển khai code theo kế hoạch từ Planner, đảm bảo đ�
 3. Implement theo đúng kế hoạch, không tự mở rộng scope.
 4. Viết hoặc cập nhật test cho phần thay đổi.
 5. Chạy kiểm tra bắt buộc:
-   - `dotnet build Vaz.sln`
-   - `dotnet test Vaz.sln`
+   - `npm run check` (gộp build + test + validate agent), hoặc
+   - `dotnet build Vaz.sln` rồi `dotnet test Vaz.sln`
 6. Nếu có lỗi, tự sửa. Nếu không sửa được, báo BLOCKED.
 7. Báo cáo kết quả theo format.
 
@@ -60,8 +61,9 @@ Tóm tắt ngắn gọn.
 ## Kiểm tra đã chạy
 | Lệnh | Kết quả | Ghi chú |
 |-------|---------|---------|
+| `npm run check` | PASS/FAIL | build + test + agent config |
 | `dotnet build Vaz.sln` | PASS/FAIL | ... |
-| `dotnet test Vaz.sln` | PASS/FAIL | ... |
+| `dotnet test Vaz.sln` | PASS/FAIL | X/Y test pass |
 
 ## Còn lại
 Gaps, risks, hoặc "Không có".

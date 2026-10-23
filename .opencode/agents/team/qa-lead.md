@@ -1,6 +1,7 @@
 ---
 description: Tổng hợp kết quả Tester + Reviewer, ra verdict cuối cùng và tạo feedback cho Developer nếu cần sửa. Read-only — không sửa file, không chạy lệnh.
-mode: all
+mode: subagent
+temperature: 0.1
 color: "#ef4444"
 permissions:
   - action: edit
