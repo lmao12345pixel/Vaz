@@ -7,7 +7,7 @@ Hiện tại gồm:
 - **Vazer.Core** (.NET 8, C#): domain logic — instances, mods, auth, Java resolver, loaders.
 - **Vaz.WinUI** (WinUI 3): GUI desktop app.
 - **Web prototype** (HTML/CSS/JS): demo UI tại `docs/design-preview/`.
-- **Test suite** (xUnit): 176 tests tại `tests/Vazer.Core.Tests/` (đã chạy và xác nhận).
+- **Test suite** (xUnit): 181 tests tại `tests/Vazer.Core.Tests/` (đã chạy và xác nhận).
 
 ## Stack thực tế
 

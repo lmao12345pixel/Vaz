@@ -147,7 +147,8 @@ public sealed class InstanceManager : IInstanceManager
         }
 
         // Install Fabric
-        var versionName = await fabricInstaller.Install(minecraftVersion, targetLoader.Version, new MinecraftPath(instancePath));
+        var loaderVersion = RequireLoaderVersion(targetLoader.Version, minecraftVersion);
+        var versionName = await fabricInstaller.Install(minecraftVersion, loaderVersion, new MinecraftPath(instancePath));
 
         var instance = new MinecraftInstance
         {
@@ -155,7 +156,7 @@ public sealed class InstanceManager : IInstanceManager
             Name = name,
             MinecraftVersion = minecraftVersion,
             LoaderType = "fabric",
-            LoaderVersion = targetLoader.Version,
+            LoaderVersion = loaderVersion,
             Path = instancePath,
             IconPath = null,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -252,6 +253,16 @@ public sealed class InstanceManager : IInstanceManager
         var invalid = Path.GetInvalidFileNameChars();
         var id = string.Join("", name.Select(c => invalid.Contains(c) ? '_' : c));
         return id.ToLowerInvariant();
+    }
+
+    internal static string RequireLoaderVersion(string? loaderVersion, string minecraftVersion)
+    {
+        if (string.IsNullOrWhiteSpace(loaderVersion))
+        {
+            throw new InvalidOperationException($"Fabric loader for Minecraft {minecraftVersion} has no version");
+        }
+
+        return loaderVersion;
     }
 }
 

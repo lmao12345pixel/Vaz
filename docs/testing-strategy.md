@@ -40,7 +40,7 @@ dotnet test Vaz.sln
 dotnet test tests/Vazer.Core.Tests/Vazer.Core.Tests.csproj
 ```
 
-### Test hiện có (17 file test + 2 helper, 176 test)
+### Test hiện có (17 file test + 2 helper, 181 test)
 
 | File | Khu vực |
 |------|---------|

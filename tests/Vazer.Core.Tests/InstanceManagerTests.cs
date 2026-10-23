@@ -102,6 +102,30 @@ public sealed class InstanceManagerTests : IDisposable
     }
 
     [Fact]
+    public void RequireLoaderVersion_Null_Throws_With_Minecraft_Version()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => InstanceManager.RequireLoaderVersion(null, "1.21.1"));
+
+        ex.Message.Should().Contain("1.21.1");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void RequireLoaderVersion_Blank_Throws(string loaderVersion)
+    {
+        Assert.Throws<InvalidOperationException>(
+            () => InstanceManager.RequireLoaderVersion(loaderVersion, "1.21.1"));
+    }
+
+    [Fact]
+    public void RequireLoaderVersion_Valid_Returns_Value()
+    {
+        InstanceManager.RequireLoaderVersion("0.15.11", "1.21.1").Should().Be("0.15.11");
+    }
+
+    [Fact]
     public async Task CreateNeoForgeAsync_Uses_Service_And_Writes_Metadata()
     {
         var fake = new FakeNeoForgeService { Version = "21.1.169" };
