@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Vazer.Core.Abstractions;
 using Vazer.Core.Http;
+using Vazer.Core.Json;
 using Vazer.Core.Modrinth;
 
 namespace Vazer.Core.Mods;
@@ -15,13 +16,6 @@ public class ModInstallService : IModInstallService
     private readonly IFileDownloader _fileDownloader;
     private readonly IOptions<MinecraftOptions> _options;
     private readonly ILogger<ModInstallService> _logger;
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true
-    };
 
     public ModInstallService(
         IInstanceManager instanceManager,
@@ -536,7 +530,7 @@ public class ModInstallService : IModInstallService
         try
         {
             var json = await File.ReadAllTextAsync(manifestPath, ct);
-            return JsonSerializer.Deserialize<ModsManifest>(json, JsonOptions) ?? new ModsManifest();
+            return JsonSerializer.Deserialize(json, VazJsonContext.CamelCase.ModsManifest) ?? new ModsManifest();
         }
         catch (Exception ex)
         {
@@ -550,7 +544,7 @@ public class ModInstallService : IModInstallService
         Directory.CreateDirectory(instancePath);
         var manifestPath = Path.Combine(instancePath, "mods.json");
         var tmpPath = Path.Combine(instancePath, "mods.json.tmp");
-        var json = JsonSerializer.Serialize(manifest, JsonOptions);
+        var json = JsonSerializer.Serialize(manifest, VazJsonContext.CamelCase.ModsManifest);
         await File.WriteAllTextAsync(tmpPath, json, ct);
         File.Move(tmpPath, manifestPath, overwrite: true);
     }

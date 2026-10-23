@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Vazer.Core.Abstractions;
 using Vazer.Core.Http;
+using Vazer.Core.Json;
 using Vazer.Core.Modrinth;
 using Vazer.Core.Mods;
 
@@ -21,13 +22,6 @@ public class OptifineInstallerService : IOptifineInstallerService
 
     private readonly ConcurrentDictionary<string, (DateTimeOffset CachedAt, OptifineCatalog Catalog)> _cache =
         new(StringComparer.OrdinalIgnoreCase);
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true
-    };
 
     public OptifineInstallerService(
         IHttpClientFactory httpClientFactory,
@@ -476,7 +470,7 @@ public class OptifineInstallerService : IOptifineInstallerService
             try
             {
                 var json = await File.ReadAllTextAsync(manifestPath, ct);
-                manifest = JsonSerializer.Deserialize<ModsManifest>(json, JsonOptions) ?? new ModsManifest();
+                manifest = JsonSerializer.Deserialize(json, VazJsonContext.CamelCase.ModsManifest) ?? new ModsManifest();
             }
             catch (Exception ex)
             {
@@ -506,7 +500,7 @@ public class OptifineInstallerService : IOptifineInstallerService
 
         Directory.CreateDirectory(instancePath);
         var tmpPath = Path.Combine(instancePath, "mods.json.tmp");
-        var serialized = JsonSerializer.Serialize(manifest, JsonOptions);
+        var serialized = JsonSerializer.Serialize(manifest, VazJsonContext.CamelCase.ModsManifest);
         await File.WriteAllTextAsync(tmpPath, serialized, ct);
         File.Move(tmpPath, manifestPath, overwrite: true);
     }

@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
@@ -10,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Vazer.Core.Abstractions;
+using Vazer.Core.Json;
 
 namespace Vazer.Core.Instances;
 
@@ -59,7 +59,7 @@ public sealed class InstanceManager : IInstanceManager
                 try
                 {
                     var json = await File.ReadAllTextAsync(metaPath, ct);
-                    var instance = JsonSerializer.Deserialize<MinecraftInstance>(json, JsonOptions);
+                    var instance = JsonSerializer.Deserialize(json, VazJsonContext.CamelCase.MinecraftInstance);
                     if (instance != null)
                     {
                         results.Add(instance);
@@ -84,7 +84,7 @@ public sealed class InstanceManager : IInstanceManager
         try
         {
             var json = await File.ReadAllTextAsync(metaPath, ct);
-            return JsonSerializer.Deserialize<MinecraftInstance>(json, JsonOptions);
+            return JsonSerializer.Deserialize(json, VazJsonContext.CamelCase.MinecraftInstance);
         }
         catch (Exception ex)
         {
@@ -233,18 +233,10 @@ public sealed class InstanceManager : IInstanceManager
         await SaveMetaAsync(updated, ct);
     }
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true
-    };
-
-    [RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Serialize<TValue>(TValue, JsonSerializerOptions)")]
     private async Task SaveMetaAsync(MinecraftInstance instance, CancellationToken ct)
     {
         var metaPath = Path.Combine(_options.RootPath, "instances", instance.Id, "instance.json");
-        var json = JsonSerializer.Serialize(instance, JsonOptions);
+        var json = JsonSerializer.Serialize(instance, VazJsonContext.CamelCase.MinecraftInstance);
         await File.WriteAllTextAsync(metaPath, json, ct);
     }
 

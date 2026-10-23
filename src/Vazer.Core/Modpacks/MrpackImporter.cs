@@ -4,6 +4,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Vazer.Core.Abstractions;
 using Vazer.Core.Http;
+using Vazer.Core.Json;
 using Vazer.Core.Mods;
 
 namespace Vazer.Core.Modpacks;
@@ -11,12 +12,6 @@ namespace Vazer.Core.Modpacks;
 public sealed class MrpackImporter : IMrpackImporter
 {
     private const string DownloadClientName = "modrinth-download";
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        WriteIndented = true
-    };
 
     private readonly IInstanceManager _instanceManager;
     private readonly IHttpClientFactory _httpClientFactory;
@@ -201,7 +196,7 @@ public sealed class MrpackImporter : IMrpackImporter
         }
 
         await using var stream = indexEntry.Open();
-        var index = await JsonSerializer.DeserializeAsync<MrpackIndex>(stream, JsonOptions, ct)
+        var index = await JsonSerializer.DeserializeAsync(stream, VazJsonContext.Plain.MrpackIndex, ct)
             ?? throw new InvalidDataException("modrinth.index.json could not be deserialized.");
 
         if (index.FormatVersion != 1)
@@ -292,7 +287,7 @@ public sealed class MrpackImporter : IMrpackImporter
             try
             {
                 var existingJson = await File.ReadAllTextAsync(manifestPath, ct);
-                manifest = JsonSerializer.Deserialize<ModsManifest>(existingJson, JsonOptions) ?? new ModsManifest();
+                manifest = JsonSerializer.Deserialize(existingJson, VazJsonContext.Plain.ModsManifest) ?? new ModsManifest();
             }
             catch
             {
@@ -341,7 +336,7 @@ public sealed class MrpackImporter : IMrpackImporter
         if (manifest.Mods.Count > 0 || Directory.Exists(modsDir) || File.Exists(manifestPath))
         {
             Directory.CreateDirectory(instancePath);
-            var json = JsonSerializer.Serialize(manifest, JsonOptions);
+            var json = JsonSerializer.Serialize(manifest, VazJsonContext.Plain.ModsManifest);
             await File.WriteAllTextAsync(manifestPath, json, ct);
         }
     }

@@ -1,8 +1,10 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Vazer.Core.Json;
 
 namespace Vazer.Core.Modrinth;
 
@@ -38,13 +40,13 @@ public sealed class ModrinthClient : IModrinthClient
                   (query.SortIndex != null ? $"&index={query.SortIndex}" : "") +
                   $"&facets={Uri.EscapeDataString(facets)}";
 
-        return await GetCachedAsync<SearchResult>(url, ct);
+        return await GetCachedAsync(url, VazJsonContext.Plain.SearchResult, ct);
     }
 
     public async Task<ModrinthProject> GetProjectAsync(string slugOrId, CancellationToken ct = default)
     {
         var url = $"{BaseUrl}/project/{Uri.EscapeDataString(slugOrId)}";
-        return await GetCachedAsync<ModrinthProject>(url, ct);
+        return await GetCachedAsync(url, VazJsonContext.Plain.ModrinthProject, ct);
     }
 
     public async Task<IReadOnlyList<ProjectVersion>> GetVersionsAsync(
@@ -56,13 +58,13 @@ public sealed class ModrinthClient : IModrinthClient
         if (gameVersion != null) queryParts.Add($"game_versions=[%22{Uri.EscapeDataString(gameVersion)}%22]");
         if (queryParts.Count > 0) url += "?" + string.Join("&", queryParts);
 
-        return await GetCachedAsync<ProjectVersion[]>(url, ct);
+        return await GetCachedAsync(url, VazJsonContext.Plain.ProjectVersionArray, ct);
     }
 
     public async Task<ProjectVersion?> GetVersionAsync(string versionId, CancellationToken ct = default)
     {
         var url = $"{BaseUrl}/version/{Uri.EscapeDataString(versionId)}";
-        return await GetCachedAsync<ProjectVersion>(url, ct);
+        return await GetCachedAsync(url, VazJsonContext.Plain.ProjectVersion, ct);
     }
 
     public async Task<Stream> DownloadAsync(string fileUrl, CancellationToken ct = default)
@@ -80,19 +82,19 @@ public sealed class ModrinthClient : IModrinthClient
         return buffered;
     }
 
-    private async Task<T> GetCachedAsync<T>(string url, CancellationToken ct)
+    private async Task<T> GetCachedAsync<T>(string url, JsonTypeInfo<T> typeInfo, CancellationToken ct)
     {
         if (_cache.TryGetValue(url, out var cached) && cached.expiry > DateTimeOffset.UtcNow)
         {
             return (T)cached.value;
         }
 
-        var result = await SendWithRetryAsync<T>(url, ct);
+        var result = await SendWithRetryAsync(url, typeInfo, ct);
         _cache[url] = (DateTimeOffset.UtcNow + CacheTtl, result!);
         return result;
     }
 
-    private async Task<T> SendWithRetryAsync<T>(string url, CancellationToken ct)
+    private async Task<T> SendWithRetryAsync<T>(string url, JsonTypeInfo<T> typeInfo, CancellationToken ct)
     {
         for (int attempt = 0; attempt < MaxRetries; attempt++)
         {
@@ -112,7 +114,7 @@ public sealed class ModrinthClient : IModrinthClient
             response.EnsureSuccessStatusCode();
 
             var json = await response.Content.ReadAsStringAsync(ct);
-            var result = JsonSerializer.Deserialize<T>(json);
+            var result = JsonSerializer.Deserialize(json, typeInfo);
 
             if (result is SearchHit or ModrinthProject or ProjectVersion)
             {
