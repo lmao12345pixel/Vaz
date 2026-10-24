@@ -5,8 +5,9 @@
   "scripts": {
     "check": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check.ps1",
     "check:static": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check.ps1",
+    "check:web": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-web.ps1",
     "check:runtime": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-runtime.ps1",
-    "check:all": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check.ps1 -Runtime",
+    "check:all": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check.ps1 -All",
     "build": "dotnet build Vaz.sln",
     "test": "dotnet test Vaz.sln",
     "validate:agents": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validate-agents.ps1"

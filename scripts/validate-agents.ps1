@@ -14,9 +14,13 @@ $agents = @(
     [pscustomobject]@{ Name = "developer";     Path = "team\developer.md";     Mode = "subagent"; Edit = "allow"; Shell = "allow"; Subagent = "deny";  Required = @("Developer Report", "AUTOMATED", "RUNTIME", "MANUAL_REQUIRED", "BLOCKED") },
     [pscustomobject]@{ Name = "tester";        Path = "team\tester.md";        Mode = "subagent"; Edit = "deny";  Shell = "allow"; Subagent = "deny";  Required = @() },
     [pscustomobject]@{ Name = "reviewer";      Path = "team\reviewer.md";      Mode = "subagent"; Edit = "deny";  Shell = "deny";  Subagent = "deny";  Required = @() },
-    [pscustomobject]@{ Name = "qa-lead";       Path = "team\qa-lead.md";       Mode = "subagent"; Edit = "deny";  Shell = "deny";  Subagent = "deny";  Required = @("Verification Contract", "RUNTIME", "MANUAL_REQUIRED", "BLOCKED", "PENDING") },
+    [pscustomobject]@{ Name = "qa-lead";       Path = "team\qa-lead.md";       Mode = "subagent"; Edit = "deny";  Shell = "deny";  Subagent = "deny";  Required = @("Verification Contract", "RUNTIME", "MANUAL_REQUIRED", "BLOCKED", "PENDING", "PARITY_VERIFIED") },
     [pscustomobject]@{ Name = "verifier";      Path = "verifier.md";           Mode = "subagent"; Edit = "deny";  Shell = "allow"; Subagent = "deny";  Required = @("No evidence, no PASS", "Verification Contract", "RUNTIME", "MANUAL_REQUIRED", "BLOCKED") },
-    [pscustomobject]@{ Name = "orchestrator";  Path = "orchestrator.md";       Mode = "primary";  Edit = "deny";  Shell = "allow"; Subagent = "allow"; Required = @("Verification Contract", "AUTOMATED", "RUNTIME", "MANUAL_REQUIRED", "BLOCKED", "PENDING", "Verifier") }
+    [pscustomobject]@{ Name = "web-developer"; Path = "web-developer.md";      Mode = "subagent"; Edit = "allow"; Shell = "allow"; Subagent = "deny";  Required = @("Developer Report", "WEB_SPEC", "WEB_VALIDATED", "tests/web-e2e", "docs/design/tokens.json") },
+    [pscustomobject]@{ Name = "web-verifier";  Path = "web-verifier.md";       Mode = "subagent"; Edit = "deny";  Shell = "allow"; Subagent = "deny";  Required = @("No evidence, no PASS", "Playwright", "RUNTIME", "BLOCKED", "WEB_VALIDATED") },
+    [pscustomobject]@{ Name = "app-developer"; Path = "app-developer.md";      Mode = "subagent"; Edit = "allow"; Shell = "allow"; Subagent = "deny";  Required = @("Developer Report", "WEB_VALIDATED", "PARITY", "docs/design/tokens.json") },
+    [pscustomobject]@{ Name = "app-verifier";  Path = "app-verifier.md";       Mode = "subagent"; Edit = "deny";  Shell = "allow"; Subagent = "deny";  Required = @("No evidence, no PASS", "RUNTIME", "MANUAL_REQUIRED", "BLOCKED", "APP_IMPLEMENTED", "PARITY_VERIFIED") },
+    [pscustomobject]@{ Name = "orchestrator";  Path = "orchestrator.md";       Mode = "primary";  Edit = "deny";  Shell = "allow"; Subagent = "allow"; Required = @("Verification Contract", "AUTOMATED", "RUNTIME", "MANUAL_REQUIRED", "BLOCKED", "PENDING", "WEB_SPEC", "WEB_VALIDATED", "APP_IMPLEMENTED", "PARITY_VERIFIED", "check:web", "Verifier") }
 )
 
 $errors = [System.Collections.Generic.List[string]]::new()

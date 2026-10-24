@@ -1,35 +1,87 @@
-# V.A.Z - Agent Workflow
+# V.A.Z — Agent Workflow (dual-target)
 
-## Tổng quan
+## Mô hình
 
-Workflow multi-agent của V.A.Z dùng **Verification Contract** làm trung tâm. Mọi task
-phải có contract trước khi Developer bắt đầu; Verifier chỉ nghiệm thu khi mọi
-acceptance criterion có bằng chứng đúng loại.
+**Web prototype là executable specification; WinUI app là bản implement theo contract.**
+Feature UI phải được chốt và kiểm chứng runtime trên web trước khi port sang WinUI.
 
-## Luồng chính
+```
+WEB_SPEC → WEB_VALIDATED → APP_IMPLEMENTED → PARITY_VERIFIED
+```
+
+| Trạng thái | Ý nghĩa | Agent được đặt |
+|------------|---------|----------------|
+| `WEB_SPEC` | Contract + feature doc + web implementation đã có, chưa runtime-verify | Orchestrator |
+| `WEB_VALIDATED` | Mọi AC web `RUNTIME` PASS bằng Playwright, khớp user-visible behavior | `web-verifier` |
+| `APP_IMPLEMENTED` | WinUI đã port, build + test pass, runtime smoke đã chạy | `app-verifier` |
+| `PARITY_VERIFIED` | App khớp contract + design tokens; parity checklist và runtime evidence PASS | `app-verifier` |
+
+### Cổng bắt buộc
+
+1. **Không gọi `app-developer` trước khi contract đạt `WEB_VALIDATED`.**
+2. Không đặt trạng thái nào nếu thiếu bằng chứng đúng loại.
+3. Web và app dùng chung `docs/contracts/<feature>.contract.md` và
+   `docs/design/tokens.json`.
+4. Web thay đổi sau `WEB_VALIDATED` → contract về `WEB_SPEC`, verify lại.
+5. App thay đổi sau `PARITY_VERIFIED` → contract về `APP_IMPLEMENTED`, parity lại.
+6. UI app chưa automation được → `MANUAL_REQUIRED` hoặc `BLOCKED`, không `PASS`.
+7. Developer không được tự đặt phase cuối; chỉ verifier tương ứng được đặt.
+8. Task core/backend không có UI dùng workflow generic, nhưng vẫn phải có
+   Verification Contract và evidence đúng loại.
+
+## Cấu trúc
+
+| Đường dẫn | Vai trò |
+|-----------|---------|
+| `docs/product/features/` | Feature doc, user story, phạm vi, non-goals |
+| `docs/contracts/` | Behavior contract dùng chung web + app |
+| `docs/design/tokens.json` | Design tokens dùng chung |
+| `.agent/tasks/` | Task ledger, phase hiện tại, evidence |
+| `.agent/parity/` | Parity checklist theo feature |
+| `tests/web-e2e/` | Playwright runtime tests cho web |
+
+## Luồng feature UI
 
 ```
 User
   │
   ▼
-Orchestrator tạo Verification Contract
+Orchestrator
+  ├─ tạo Verification Contract
+  ├─ tạo/cập nhật feature doc
+  └─ đặt status: WEB_SPEC
   │
   ▼
-Product Owner → Planner
+Web Developer
+  ├─ implement docs/design-preview/
+  ├─ thêm Playwright test trong tests/web-e2e/
+  └─ cập nhật Developer Report
   │
   ▼
-Developer (Developer Report)
+Web Verifier
+  ├─ chạy Playwright runtime
+  ├─ assert user-visible behavior
+  ├─ PASS hết web AC → WEB_VALIDATED
+  └─ NOT_CONFIGURED/FAIL → BLOCKED, dừng
   │
   ▼
-Tester → Reviewer
+App Developer (chỉ sau WEB_VALIDATED)
+  ├─ port WinUI theo contract + tokens
+  ├─ cập nhật .agent/parity/<feature>.parity.md
+  └─ cập nhật Developer Report
   │
   ▼
-Verifier (cập nhật contract, no evidence no PASS)
+App Verifier
+  ├─ build + test
+  ├─ runtime smoke
+  ├─ parity checklist
+  ├─ build/test pass → APP_IMPLEMENTED
+  └─ parity + runtime pass → PARITY_VERIFIED
   │
   ▼
-QA Lead
+Tester → Reviewer → QA Lead
   │
-  ├─ mọi AC PASS → DONE
+  ├─ mọi AC PASS + PARITY_VERIFIED → DONE
   └─ FAIL/BLOCKED/PENDING → feedback (tối đa 3 vòng) hoặc báo user
 ```
 
@@ -39,78 +91,116 @@ QA Lead
 |---|----------------------|---------------|---------------------|-------------------|--------|
 | 1 | ... | AUTOMATED / RUNTIME / MANUAL_REQUIRED / BLOCKED | ... | ... | PENDING / PASS / FAIL / BLOCKED |
 
+Metadata bắt buộc cho feature UI:
+
+```yaml
+id: <feature>
+status: WEB_SPEC | WEB_VALIDATED | APP_IMPLEMENTED | PARITY_VERIFIED
+owner: team/product-owner
+surfaces: [web, app]
+web_route: docs/design-preview/...
+app_route: src/Vaz.WinUI/...
+design_tokens: docs/design/tokens.json
+contract_version: 1
+last_updated: YYYY-MM-DD
+```
+
 ### Evidence type
 
 | Loại | Dùng cho | Bằng chứng hợp lệ |
 |------|----------|-------------------|
 | `AUTOMATED` | build, typecheck, unit/integration test, static analysis | command + exit code + output + tên test |
-| `RUNTIME` | UI, flow, navigation, play/stop, settings persistence, empty/error state, app launch | chạy app/browser + kết quả nhìn thấy, screenshot, log, URL |
+| `RUNTIME` | UI, flow, navigation, persistence, empty/error state, app launch | chạy app/browser + quan sát, screenshot, log, URL |
 | `MANUAL_REQUIRED` | không tự động hóa được | user xác nhận + bước làm + kết quả |
 | `BLOCKED` | chưa có runner/môi trường | lý do + runner/môi trường còn thiếu |
 
-### Quy tắc
-
-- Mỗi AC có đúng một evidence type.
-- AC UI/flow phải là `RUNTIME`.
+- AC UI/flow **phải** là `RUNTIME`.
 - Build pass, unit test pass, code review không phải bằng chứng `RUNTIME`.
-- AC `BLOCKED` không bao giờ PASS.
+- `MANUAL_REQUIRED` chưa có user xác nhận → `BLOCKED`.
+- AC `BLOCKED` không bao giờ `PASS`.
 - Không DONE khi còn `PENDING`/`UNTESTED`.
-- `check:runtime` trả `NOT_CONFIGURED` khi chưa cài runner → ghi `BLOCKED`.
 
 ## Chi tiết từng bước
 
-### Bước 0: Orchestrator
+### Bước 0 — Orchestrator
 
-Tạo Verification Contract từ acceptance criteria. Không gọi Developer khi chưa có
-contract. Sau Developer, gọi Verifier kèm contract + Developer Report + diff.
+1. Nhận yêu cầu, xác định feature UI hay task core/backend.
+2. Feature UI: tạo contract + feature doc, giao Product Owner và Planner.
+3. Tạo task ledger trong `.agent/tasks/` với phase hiện tại.
+4. Không gọi developer khi chưa có contract.
+5. Sau mỗi verifier, chỉ chuyển phase khi contract đã được cập nhật bằng bằng chứng.
 
-### Bước 1: Product Owner
+### Bước 1 — Product Owner
 
-User story, scope, non-goals, acceptance criteria, DoD. Hỏi lại user nếu mơ hồ.
+User story, scope, non-goals, acceptance criteria, DoD. Với feature UI, AC phải
+mô tả behavior người dùng thấy, không mô tả CSS/internal state.
 
-### Bước 2: Planner
+### Bước 2 — Planner
 
-File ảnh hưởng, kế hoạch từng bước, rủi ro. Ưu tiên thay đổi nhỏ, dễ rollback.
+File ảnh hưởng, kế hoạch web trước/app sau, rủi ro, thứ tự test. Không lập kế hoạch
+port WinUI khi contract chưa `WEB_VALIDATED`.
 
-### Bước 3: Developer
+### Bước 3 — Web Developer
 
-Implement theo contract; chạy `npm run check:static`; cập nhật Developer Report.
-Không tự đánh giá UI/runtime PASS; AC `RUNTIME` để `PENDING`/`BLOCKED` cho Verifier.
+Implement `docs/design-preview/` theo contract; dùng `docs/design/tokens.json`;
+thêm/cập nhật Playwright test trong `tests/web-e2e/`; chạy `npm run check:web` và
+`npm run check:runtime` nếu runner có. Cập nhật Developer Report; **không** tự đặt
+`WEB_VALIDATED`.
 
-### Bước 4: Tester
+### Bước 4 — Web Verifier
 
-Chạy test, tìm edge case/regression. Không sửa code.
+Chạy Playwright, assert user-visible behavior. Không chạy được runner →
+`NOT_CONFIGURED` + `BLOCKED`. Chỉ đặt `WEB_VALIDATED` khi mọi AC web `RUNTIME` PASS.
+Output là contract đã cập nhật + evidence thật.
 
-### Bước 5: Reviewer
+### Bước 5 — App Developer
 
-Review diff, kiến trúc, bảo mật, hiệu năng. Verdict APPROVE / REQUEST CHANGES.
+Chỉ bắt đầu khi contract `WEB_VALIDATED`. Port WinUI theo contract + tokens; không
+tự đổi behavior. Cập nhật Developer Report và `.agent/parity/<feature>.parity.md`.
+Chạy `dotnet build Vaz.sln`, `dotnet test Vaz.sln`, runtime smoke hoặc ghi
+`MANUAL_REQUIRED`/`BLOCKED`. **Không** tự đặt `APP_IMPLEMENTED`/`PARITY_VERIFIED`.
 
-### Bước 6: Verifier
+### Bước 6 — App Verifier
 
-Chấm từng AC trong contract. "No evidence, no PASS". AC `RUNTIME` phải có runtime
-evidence thật; AC `MANUAL_REQUIRED` phải có user xác nhận. Không chạy được →
-`BLOCKED`. Output là contract đã cập nhật.
+Build/test + runtime smoke + parity checklist. UI chưa automation:
+`MANUAL_REQUIRED`; chưa có user xác nhận → `BLOCKED`. Đặt `APP_IMPLEMENTED` khi
+port/build/test pass; chỉ đặt `PARITY_VERIFIED` khi mọi parity item và AC PASS.
 
-### Bước 7: QA Lead
+### Bước 7 — Tester, Reviewer, QA Lead
 
-Tổng hợp Tester + Reviewer + contract từ Verifier. PASS chỉ khi mọi AC PASS.
-Nếu FAIL, feedback cụ thể cho Developer; tối đa 3 vòng.
+Tester chạy test/edge case/regression. Reviewer review diff, kiến trúc, bảo mật,
+hiệu năng. QA Lead verdict PASS/FAIL/BLOCKED dựa trên contract đã cập nhật.
+PASS chỉ khi mọi AC PASS + feature UI đạt `PARITY_VERIFIED`.
 
-## Feedback Loop
+## Task core/backend
 
-1. QA Lead FAIL → feedback file/dòng/lỗi/cách sửa.
-2. Developer chỉ sửa trong feedback.
-3. Tester + Reviewer kiểm lại.
-4. Verifier chấm lại contract bằng bằng chứng mới.
-5. QA Lead verdict lại. Sau 3 vòng vẫn FAIL → dừng, báo user.
+```
+Orchestrator → Product Owner → Planner → Developer → Tester → Reviewer
+→ Verifier → QA Lead
+```
+
+Dùng `team/developer` và `verifier`. Vẫn bắt buộc Verification Contract; AC
+`RUNTIME` (nếu có) phải có runtime evidence hoặc `BLOCKED`.
+
+## Lệnh kiểm tra
+
+```bash
+npm run check:static   # dotnet build + dotnet test + validate agents
+npm run check:web      # contract + tokens + JS syntax; KHÔNG thay runtime
+npm run check:runtime  # Playwright; NOT_CONFIGURED nếu chưa cài runner
+npm run check:all      # static + web + runtime
+```
+
+`check:web` pass **không** chứng minh UI/flow hoạt động.
 
 ## Handoff Template
 
-```
+```markdown
 ## Handoff: [Agent nguồn] → [Agent đích]
 
 ### Context
-- Task: [mô tả ngắn]
+- Feature: [id]
+- Phase: [WEB_SPEC/WEB_VALIDATED/APP_IMPLEMENTED/PARITY_VERIFIED]
 - Vòng: [1/2/3]
 
 ### Verification Contract
@@ -120,29 +210,21 @@ Nếu FAIL, feedback cụ thể cho Developer; tối đa 3 vòng.
 ### Input
 [Dán output của agent trước]
 
-### Lệnh kiểm tra
-- npm run check:static   # build + test + validate agent
-- npm run check:runtime  # web Playwright; NOT_CONFIGURED nếu chưa cài
-- npm run check:all      # static + runtime
+### Evidence
+- Commands:
+- Output:
+- Runtime/screenshot/log/URL:
 
-### Runtime environment
-- Web runner: Playwright installed? yes/no
-- WinUI runner: none (manual smoke only)
+### Còn thiếu
+- ...
 ```
-
-## Workflow đầy đủ vs. rút gọn
-
-| Tình huống | Workflow |
-|------------|----------|
-| Feature mới, thay đổi kiến trúc | Đầy đủ: Orchestrator + 6 agent + Verifier |
-| Bug fix nhỏ, rõ ràng | Developer → Tester → Verifier → QA Lead |
-| Chỉ docs/config | Developer → Reviewer |
-| Web prototype HTML/CSS/JS | Developer → Tester → Verifier (Playwright) |
-| WinUI UI/flow | Developer → Tester → Verifier (manual smoke; BLOCKED nếu không chạy được app) |
 
 ## Escalation
 
-- Developer bị BLOCKED: báo Planner/Orchestrator để đánh giá lại.
-- Tester không chạy được test: báo QA Lead với verdict BLOCKED.
-- Verifier không có runtime runner: báo user, nêu cách cài Playwright/Appium; không PASS.
-- QA Lead FAIL 3 vòng: dừng, báo user danh sách vấn đề còn lại.
+- Web runner chưa có → `BLOCKED`; hướng dẫn `npm install` +
+  `npx playwright install chromium`; không chuyển sang app.
+- Web AC fail → feedback cho Web Developer; tối đa 3 vòng.
+- App build/test fail → feedback cho App Developer.
+- App UI chưa automation → `MANUAL_REQUIRED`; user chưa xác nhận → `BLOCKED`.
+- Parity fail → contract về `APP_IMPLEMENTED`; sửa và parity lại.
+- QA Lead FAIL 3 vòng → dừng, báo user danh sách vấn đề còn lại.

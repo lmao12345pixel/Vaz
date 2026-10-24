@@ -1,10 +1,14 @@
-# V.A.Z — Web Runtime Tests (Playwright)
+# V.A.Z — Web E2E Tests (Playwright)
 
 ## Mục đích
 
-Kiểm thử runtime cho web prototype tại `docs/design-preview/`, bổ sung cho static check
-(`dotnet build`/`dotnet test`) và unit test. Runtime test chỉ được coi là bằng chứng
-khi nó thực sự chạy và assert kết quả người dùng nhìn thấy.
+Đây là runtime evidence cho **executable specification** tại `docs/design-preview/`.
+Web phải được chứng minh bằng Playwright trước khi WinUI port, theo contract trong
+`docs/contracts/`. Test chỉ được coi là bằng chứng khi nó thực sự chạy và assert
+kết quả người dùng nhìn thấy.
+
+- Web AC PASS → web-verifier đặt contract `WEB_VALIDATED`.
+- Runner thiếu → `RUNTIME CHECK NOT_CONFIGURED` → `BLOCKED`, không PASS.
 
 ## Trạng thái hiện tại
 
@@ -27,7 +31,7 @@ Sau đó chạy:
 
 ```bash
 npm run check:runtime
-# hoặc static + runtime:
+# hoặc toàn bộ static + web + runtime:
 npm run check:all
 ```
 

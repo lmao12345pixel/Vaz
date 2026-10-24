@@ -2,14 +2,14 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $playwrightModule = Join-Path $repoRoot "node_modules\@playwright\test"
-$configPath = Join-Path $repoRoot "tests\runtime\web\playwright.config.ts"
+$configPath = Join-Path $repoRoot "tests\web-e2e\playwright.config.ts"
 
 Write-Host "Runtime scope: web prototype (Playwright). WinUI is plan-only." -ForegroundColor Cyan
 
 if (-not (Test-Path -LiteralPath $playwrightModule) -or -not (Test-Path -LiteralPath $configPath)) {
     Write-Host ""
     Write-Host "RUNTIME CHECK NOT_CONFIGURED: Playwright runner is not installed or configured." -ForegroundColor Yellow
-    Write-Host "  Missing: node_modules\@playwright\test and/or tests\runtime\web\playwright.config.ts"
+    Write-Host "  Missing: node_modules\@playwright\test and/or tests\web-e2e\playwright.config.ts"
     Write-Host "  Install: npm install"
     Write-Host "           npx playwright install chromium"
     Write-Host "  Then run: npm run check:runtime"
@@ -21,7 +21,7 @@ if (-not (Test-Path -LiteralPath $playwrightModule) -or -not (Test-Path -Literal
 Push-Location $repoRoot
 try {
     Write-Host "==> web runtime: Playwright" -ForegroundColor Cyan
-    npx --no-install playwright test --config tests/runtime/web/playwright.config.ts
+    npx --no-install playwright test --config tests/web-e2e/playwright.config.ts
     if ($LASTEXITCODE -ne 0) {
         Write-Host "RUNTIME CHECK FAILED: web Playwright" -ForegroundColor Red
         exit 1

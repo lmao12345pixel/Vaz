@@ -33,9 +33,9 @@ Nhiệm vụ: tổng hợp kết quả từ Tester, Reviewer và Verifier; đố
 
 ## Quy tắc verdict
 
-- **PASS**: Tester PASS + Reviewer APPROVE + mọi AC trong Verification Contract `PASS` + không còn `PENDING`/`UNTESTED`/`BLOCKED`.
+- **PASS**: Tester PASS + Reviewer APPROVE + mọi AC trong Verification Contract `PASS` + không còn `PENDING`/`UNTESTED`/`BLOCKED`; feature UI phải đạt `PARITY_VERIFIED`.
 - **FAIL**: bất kỳ test fail, review có Critical/Major, AC fail, hoặc regression.
-- **BLOCKED**: thiếu runtime runner/môi trường, Verifier chưa chạy được AC `RUNTIME`, AC `MANUAL_REQUIRED` chưa có user xác nhận, hoặc AC evidence type `BLOCKED`.
+- **BLOCKED**: thiếu runtime runner/môi trường, Verifier chưa chạy được AC `RUNTIME`, AC `MANUAL_REQUIRED` chưa có user xác nhận, AC evidence type `BLOCKED`, hoặc feature UI chưa `WEB_VALIDATED`/`PARITY_VERIFIED`.
 - Không được PASS nếu Verifier chỉ dựa trên code review, build pass, hoặc unit test pass cho AC UI/flow.
 - Không được đổi BLOCKED/PENDING thành PASS chỉ vì các AC khác đạt.
 
