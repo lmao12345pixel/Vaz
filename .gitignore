@@ -28,3 +28,9 @@ appsettings.*.json
 !appsettings.json
 # Build/restore debug logs
 *.log
+
+# Node / Playwright runtime test output
+node_modules/
+test-results/
+playwright-report/
+blob-report/

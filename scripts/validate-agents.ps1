@@ -1,27 +1,30 @@
 #!/usr/bin/env pwsh
-# V.A.Z — validate team agent frontmatter and permissions.
-# Fails (exit 1) if any required agent file is missing, malformed, or has
-# broader permissions than its role allows.
+# V.A.Z - validate agent frontmatter, permissions, and mandatory testing rules.
+# Fails (exit 1) if any required agent file is missing, malformed, has broader
+# permissions than its role allows, or lacks required testing-rule phrases.
 
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$agentsDir = Join-Path $repoRoot ".opencode\agents\team"
+$agentsRoot = Join-Path $repoRoot ".opencode\agents"
 
-$expected = [ordered]@{
-    "product-owner" = @{ edit = "deny";  shell = "deny" }
-    "planner"       = @{ edit = "deny";  shell = "deny" }
-    "developer"     = @{ edit = "allow"; shell = "allow" }
-    "tester"        = @{ edit = "deny";  shell = "allow" }
-    "reviewer"      = @{ edit = "deny";  shell = "deny" }
-    "qa-lead"       = @{ edit = "deny";  shell = "deny" }
-}
+$agents = @(
+    [pscustomobject]@{ Name = "product-owner"; Path = "team\product-owner.md"; Mode = "subagent"; Edit = "deny";  Shell = "deny";  Subagent = "deny";  Required = @() },
+    [pscustomobject]@{ Name = "planner";       Path = "team\planner.md";       Mode = "subagent"; Edit = "deny";  Shell = "deny";  Subagent = "deny";  Required = @() },
+    [pscustomobject]@{ Name = "developer";     Path = "team\developer.md";     Mode = "subagent"; Edit = "allow"; Shell = "allow"; Subagent = "deny";  Required = @("Developer Report", "AUTOMATED", "RUNTIME", "MANUAL_REQUIRED", "BLOCKED") },
+    [pscustomobject]@{ Name = "tester";        Path = "team\tester.md";        Mode = "subagent"; Edit = "deny";  Shell = "allow"; Subagent = "deny";  Required = @() },
+    [pscustomobject]@{ Name = "reviewer";      Path = "team\reviewer.md";      Mode = "subagent"; Edit = "deny";  Shell = "deny";  Subagent = "deny";  Required = @() },
+    [pscustomobject]@{ Name = "qa-lead";       Path = "team\qa-lead.md";       Mode = "subagent"; Edit = "deny";  Shell = "deny";  Subagent = "deny";  Required = @("Verification Contract", "RUNTIME", "MANUAL_REQUIRED", "BLOCKED", "PENDING") },
+    [pscustomobject]@{ Name = "verifier";      Path = "verifier.md";           Mode = "subagent"; Edit = "deny";  Shell = "allow"; Subagent = "deny";  Required = @("No evidence, no PASS", "Verification Contract", "RUNTIME", "MANUAL_REQUIRED", "BLOCKED") },
+    [pscustomobject]@{ Name = "orchestrator";  Path = "orchestrator.md";       Mode = "primary";  Edit = "deny";  Shell = "allow"; Subagent = "allow"; Required = @("Verification Contract", "AUTOMATED", "RUNTIME", "MANUAL_REQUIRED", "BLOCKED", "PENDING", "Verifier") }
+)
 
 $errors = [System.Collections.Generic.List[string]]::new()
 $checked = 0
 
-foreach ($name in $expected.Keys) {
-    $path = Join-Path $agentsDir "$name.md"
+foreach ($agent in $agents) {
+    $name = $agent.Name
+    $path = Join-Path $agentsRoot $agent.Path
     if (-not (Test-Path -LiteralPath $path)) {
         $errors.Add("${name}: file not found at $path")
         continue
@@ -43,8 +46,8 @@ foreach ($name in $expected.Keys) {
     if ($front -notmatch "(?m)^description:\s*\S") {
         $errors.Add("${name}: missing description")
     }
-    if ($front -notmatch "(?m)^mode:\s*subagent\s*$") {
-        $errors.Add("${name}: mode must be 'subagent'")
+    if ($front -notmatch ("(?m)^mode:\s*" + [regex]::Escape($agent.Mode) + "\s*$")) {
+        $errors.Add("${name}: mode must be '${agent.Mode}'")
     }
     if ($front -notmatch "(?m)^temperature:\s*[0-9]+(\.[0-9]+)?\s*$") {
         $errors.Add("${name}: missing temperature")
@@ -62,9 +65,15 @@ foreach ($name in $expected.Keys) {
         }
 
         $effect = $match.Groups[1].Value
-        $want = if ($action -eq "subagent") { "deny" } else { $expected[$name][$action] }
+        $want = $agent.$action
         if ($effect -ne $want) {
             $errors.Add("${name}: $action effect is '$effect', expected '$want'")
+        }
+    }
+
+    foreach ($phrase in $agent.Required) {
+        if ($text -notmatch [regex]::Escape($phrase)) {
+            $errors.Add("${name}: missing required testing-rule phrase '$phrase'")
         }
     }
 
@@ -81,5 +90,5 @@ if ($errors.Count -gt 0) {
     exit 1
 }
 
-Write-Host "Agent validation PASSED: $checked/$($expected.Count) file(s)."
+Write-Host "Agent validation PASSED: $checked/$($agents.Count) file(s)."
 exit 0

@@ -7,13 +7,45 @@ Chiến lược test 4 tầng cho V.A.Z, từ nhanh/rẻ đến chậm/đắt.
 ## Cách chạy kiểm tra bắt buộc
 
 ```bash
-npm run check
-# hoặc không cần npm:
+# Static: build + unit test + validate agent config
+npm run check:static
+# hoặc
 .\scripts\check.ps1
+
+# Runtime web (Playwright). Trả NOT_CONFIGURED nếu runner chưa cài.
+npm run check:runtime
+
+# Cả hai
+npm run check:all
 ```
 
-`npm run check` chạy tuần tự: `dotnet build Vaz.sln` → `dotnet test Vaz.sln`
-→ validate frontmatter/quyền của 6 agent. Dừng ngay khi có bước fail.
+`npm run check:static` chạy tuần tự: `dotnet build Vaz.sln` → `dotnet test Vaz.sln`
+→ validate frontmatter/quyền/testing-rule của 8 agent. Dừng ngay khi có bước fail.
+
+> `npm run check` là alias cũ của static check. Nó **không** chứng minh UI/flow hoạt động.
+
+## Phân loại bằng chứng (bắt buộc)
+
+| Loại | Dùng cho | Bằng chứng hợp lệ | Không phải bằng chứng |
+|------|----------|-------------------|------------------------|
+| `AUTOMATED` | build, typecheck, lint, unit/integration test, static analysis | command + exit code + output + tên test | đọc code, "test có vẻ đúng" |
+| `RUNTIME` | UI, flow, browser/app | chạy app + kết quả nhìn thấy, screenshot, log, URL | build pass, unit test pass, code review |
+| `MANUAL_REQUIRED` | không tự động hóa được | user xác nhận + bước làm + kết quả | lời khai của Developer |
+| `BLOCKED` | chưa có runner/môi trường | lý do + runner/môi trường còn thiếu | mọi thứ khác |
+
+Quy tắc: AC UI/flow phải có `RUNTIME` evidence. Không chạy được runtime test →
+**BLOCKED**, không được **PASS**. `MANUAL_REQUIRED` chưa có user xác nhận → **BLOCKED**.
+AC `BLOCKED` không bao giờ PASS. Không DONE khi còn `PENDING`/`UNTESTED`.
+
+## Verification Contract
+
+Mọi task phải có contract trước khi Developer bắt đầu:
+
+| # | Acceptance criterion | Evidence type | Verification method | Required evidence | Status |
+|---|----------------------|---------------|---------------------|-------------------|--------|
+| 1 | ... | AUTOMATED / RUNTIME / MANUAL_REQUIRED / BLOCKED | ... | ... | PENDING / PASS / FAIL / BLOCKED |
+
+Chỉ Verifier cập nhật trạng thái cuối. Contract mẫu đầy đủ: `docs/agent-workflow.md`.
 
 ## Tầng 1: Static Check (Build)
 
@@ -108,37 +140,46 @@ public async Task MethodName_WhenCondition_ShouldExpectedResult()
 }
 ```
 
-## Tầng 3: Component Test (Web Prototype)
+## Tầng 3: Runtime Test — Web Prototype (Playwright)
 
-**Mục đích**: Kiểm tra UI component của web demo tại `docs/design-preview/`.
-**Hiện trạng**: Chưa có test framework cho web demo.
+**Mục đích**: Kiểm tra UI/flow thật của web demo tại `docs/design-preview/`, không chỉ đọc code.
+**Trạng thái**: Đã tạo runner + 3 test tại `tests/runtime/web/`; dependency **chưa cài** trong môi trường hiện tại, nên `npm run check:runtime` trả `RUNTIME CHECK NOT_CONFIGURED` (exit 2).
 
-### Cách kiểm tra hiện tại
+### 3 test ưu tiên
 
-1. Mở `docs/design-preview/index.html` trong browser.
-2. Kiểm tra thủ công: sidebar navigation, nút Play, settings form, modal.
-3. Kiểm tra responsive: thu nhỏ browser window.
-4. Kiểm tra dark/light theme nếu có.
+| # | Test | Assert người dùng nhìn thấy |
+|---|------|-----------------------------|
+| 1 | Sidebar → Settings | Click mục Settings trong sidebar; trang Settings hiển thị, trang Instances ẩn |
+| 2 | Settings lưu giá trị | RAM 8192 được lưu, status hiện thông báo, reload vẫn giữ 8192 |
+| 3 | Empty state Library | Không còn instance; `#instancesEmpty` hiện tiêu đề `Chưa có instance nào.` và hint `Bấm + để tạo instance mới.` |
 
-### Bổ sung sau (khi cần)
-
-Nếu web prototype phát triển phức tạp hơn:
+### Cài đặt và chạy
 
 ```bash
-# Option 1: Playwright (đã có .playwright-mcp/ trong repo)
-npm init -y
-npm install --save-dev @playwright/test
-npx playwright install
-
-# Option 2: Vitest + jsdom (nếu chuyển sang component framework)
+npm install
+npx playwright install chromium
+npm run check:runtime
 ```
 
-> **Hiện tại không thêm dependency cho web demo** — nó là static HTML, kiểm tra thủ công đủ dùng.
+Test nằm trong `tests/runtime/web/vaz.spec.ts`; server tĩnh dùng `serve.mjs`.
+Chi tiết: `tests/runtime/web/README.md`.
 
-## Tầng 4: E2E Test (WinUI App)
+> `NOT_CONFIGURED` = chưa có runner, phải ghi **BLOCKED**. Không được thay bằng
+> "đọc code thấy đúng" hoặc coi static check là runtime evidence.
 
-**Hiện trạng**: Chưa có E2E test cho WinUI app.
-**Lý do**: WinUI E2E cần Windows App Testing framework, chi phí setup cao.
+## Tầng 4: Runtime/E2E — WinUI App (plan only)
+
+**Hiện trạng**: Chưa có E2E test cho WinUI app; chưa cài Appium/FlaUI.
+**Quyết định**: Chỉ lập kế hoạch, không thêm dependency ở giai đoạn này.
+**E2E sau này**: Appium + Windows driver hoặc FlaUI.UIA3.
+
+### Smoke test thủ công (bắt buộc khi task có AC UI/flow WinUI)
+
+1. Launch app thật (Visual Studio hoặc `dotnet run --project src/Vaz.WinUI`).
+2. Xác nhận cửa sổ chính/main screen mở được, không crash ngay.
+3. Kiểm tra log khởi động: không có exception/lỗi nghiêm trọng.
+4. Thực hiện đúng flow trong acceptance criterion và ghi lại kết quả nhìn thấy.
+5. Nếu không chạy được app → **BLOCKED**, không PASS.
 
 ### 5 luồng E2E ưu tiên (thiết kế trước, implement sau)
 
@@ -150,15 +191,16 @@ npx playwright install
 | 4 | Auth flow | Chưa login → Nhấn Play → Auth dialog | Dialog hiện, auth success → Play |
 | 5 | Import modpack | Kéo .mrpack vào app | Import thành công, instance mới xuất hiện |
 
-### Cấu trúc thư mục E2E (chuẩn bị)
+### Cấu trúc dự kiến
 
 ```
 tests/
 ├── Vazer.Core.Tests/          # Unit test hiện có
-└── Vaz.E2E.Tests/             # E2E test (tạo khi cần)
+├── runtime/web/               # Playwright web runtime (hiện có)
+└── Vaz.E2E.Tests/             # WinUI E2E (tạo khi cần)
     ├── Vaz.E2E.Tests.csproj
     ├── Fixtures/
-    │   └── AppFixture.cs      # Setup/teardown app
+    │   └── AppFixture.cs
     ├── Tests/
     │   ├── InstanceFlowTests.cs
     │   ├── SettingsFlowTests.cs
@@ -166,16 +208,16 @@ tests/
     │   ├── AuthFlowTests.cs
     │   └── ImportFlowTests.cs
     └── Helpers/
-        └── UIAutomation.cs    # Windows UI Automation helpers
+        └── UIAutomation.cs
 ```
 
-### Cách bổ sung E2E
+### Cách bổ sung E2E sau này
 
-1. Tạo project xUnit mới: `dotnet new xunit -o tests/Vaz.E2E.Tests`
-2. Thêm reference: `Microsoft.Windows.Apps.Test` hoặc `FlaUI.UIA3`
-3. Thêm vào solution: `dotnet sln add tests/Vaz.E2E.Tests/Vaz.E2E.Tests.csproj`
-4. Viết fixture để launch/kill app.
-5. Implement từng flow theo bảng trên.
+1. Chọn Appium + Windows driver hoặc FlaUI.UIA3; đánh giá độ ổn định trước khi thêm dependency.
+2. Tạo project xUnit `tests/Vaz.E2E.Tests`.
+3. Viết fixture launch/kill app và chụp log.
+4. Implement từng flow; mỗi flow phải assert kết quả người dùng nhìn thấy.
+5. Chỉ đánh dấu PASS khi flow thực sự chạy; nếu không → BLOCKED.
 
 ## Quy tắc chung
 
