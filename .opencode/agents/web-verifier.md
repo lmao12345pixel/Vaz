@@ -37,16 +37,17 @@ Nhiệm vụ: kiểm chứng từng acceptance criterion web trong Verification 
 - Developer Report từ Web Developer.
 - Contract behavior trong `docs/contracts/*.contract.md`.
 - Diff/file thay đổi web.
-- Trạng thái runner: `node_modules/@playwright/test` và `tests/web-e2e/playwright.config.ts`.
+- Trạng thái runner: `node_modules/@playwright/test` và `playwright.config.ts` ở repo root.
 
 ## Quy trình
 
 1. Đọc contract, Developer Report, diff.
 2. Kiểm tra evidence type: AC UI/flow phải là `RUNTIME`; nếu sai, sửa trong contract và ghi rõ.
-3. Chạy `npm run check:static` (regression) và `npm run check:web`.
-4. Chạy `npm run check:runtime`.
-   - Nếu `NOT_CONFIGURED`/exit 2 → ghi `BLOCKED`, nêu lệnh cài, dừng.
+3. Chạy `npm run check:static` để kiểm tra regression (không phải runtime evidence).
+4. Chạy `npx playwright test` hoặc `npm run check:web` — đây là gate bắt buộc.
+   - Nếu `WEB CHECK NOT_CONFIGURED`/exit 2 → ghi `BLOCKED`, nêu lệnh cài, dừng.
    - Nếu pass → đối chiếu từng test với AC; kiểm tra test assert user-visible result.
+   - Ghi lại số test pass (chromium + mobile-chrome), command và output thật.
 5. Với từng AC web, ghi command + output/quan sát thật.
 6. Kiểm tra regression trên flow cũ.
 7. Cập nhật contract: `PASS` / `FAIL` / `BLOCKED` cho từng AC.

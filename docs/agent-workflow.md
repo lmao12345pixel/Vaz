@@ -143,9 +143,9 @@ port WinUI khi contract chưa `WEB_VALIDATED`.
 ### Bước 3 — Web Developer
 
 Implement `docs/design-preview/` theo contract; dùng `docs/design/tokens.json`;
-thêm/cập nhật Playwright test trong `tests/web-e2e/`; chạy `npm run check:web` và
-`npm run check:runtime` nếu runner có. Cập nhật Developer Report; **không** tự đặt
-`WEB_VALIDATED`.
+thêm/cập nhật Playwright test trong `tests/web-e2e/`; chạy `npx playwright test`
+(hoặc `npm run check:web`) và dán output thật. Không được xoá/sửa test để ép pass.
+Cập nhật Developer Report; **không** tự đặt `WEB_VALIDATED`.
 
 ### Bước 4 — Web Verifier
 
@@ -186,12 +186,13 @@ Dùng `team/developer` và `verifier`. Vẫn bắt buộc Verification Contract;
 
 ```bash
 npm run check:static   # dotnet build + dotnet test + validate agents
-npm run check:web      # contract + tokens + JS syntax; KHÔNG thay runtime
-npm run check:runtime  # Playwright; NOT_CONFIGURED nếu chưa cài runner
-npm run check:all      # static + web + runtime
+npm run check:web      # Playwright gate: chromium + mobile-chrome + contract/token checks
+npm run check:runtime  # alias tương thích của check:web
+npm run check:all      # static + web gate
 ```
 
-`check:web` pass **không** chứng minh UI/flow hoạt động.
+`check:static` pass **không** chứng minh UI/flow hoạt động. `check:web` chỉ có giá trị
+khi Playwright thực sự chạy và pass; thiếu runner → `WEB CHECK NOT_CONFIGURED`/`BLOCKED`.
 
 ## Handoff Template
 

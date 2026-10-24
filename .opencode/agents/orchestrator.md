@@ -130,7 +130,7 @@ và evidence đúng loại. Không áp dụng phase dual-target.
 - Không tự sửa code, không commit, không push.
 - Được chạy `npm run check:static`, `npm run check:web`, `npm run check:runtime`,
   `npm run check:all`, `scripts/validate-agents.ps1`.
-- `check:runtime` trả `NOT_CONFIGURED` khi chưa có runner — ghi nhận `BLOCKED`, không giả PASS.
+- `check:web` chạy `npx playwright test` (chromium + mobile-chrome); `check:runtime` là alias tương thích. Thiếu runner → `WEB CHECK NOT_CONFIGURED`/`BLOCKED`, không đặt `WEB_VALIDATED`.
 - Web thay đổi sau `WEB_VALIDATED` → đưa contract về `WEB_SPEC` và verify lại.
 - App thay đổi sau `PARITY_VERIFIED` → đưa contract về `APP_IMPLEMENTED` và parity lại.
 - Trả lời bằng tiếng Việt.

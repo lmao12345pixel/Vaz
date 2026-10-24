@@ -67,16 +67,16 @@ port sang WinUI.
 # Static: build + unit test + validate agent config
 npm run check:static
 # hoặc không cần npm:
-.\scripts\check.ps1
+.\scripts\check.ps1 -Scope static
 .\check.cmd
 
-# Web contract/syntax check (không thay thế runtime)
+# Web gate: contract/token/JS + Playwright (chromium + mobile-chrome)
 npm run check:web
 
-# Runtime web: Playwright (NOT_CONFIGURED nếu chưa cài runner)
+# Alias runtime web (delegate sang check:web)
 npm run check:runtime
 
-# Static + web + runtime
+# Static + web gate
 npm run check:all
 
 # Build toàn bộ solution
@@ -133,7 +133,7 @@ hoặc `BLOCKED`), cách kiểm, bằng chứng bắt buộc, và trạng thái
 7. Verifier không được PASS dựa trên mô tả của Developer/Orchestrator.
 8. Không dùng "đọc code thấy đúng" làm bằng chứng cho AC `RUNTIME`.
 9. Nếu runtime runner chưa có, ghi `NOT_CONFIGURED`, nêu cách cài, và dừng ở **BLOCKED**.
-10. `npm run check:static` không thay thế `npm run check:runtime` cho AC UI/flow.
+10. `npm run check:static` không thay thế `npm run check:web` cho AC UI/flow.
 11. Không gọi Developer khi chưa có Verification Contract.
 12. Không nghiệm thu khi còn AC `PENDING`/`UNTESTED`.
 13. Không đổi `BLOCKED`/`PENDING` thành `PASS` vì các AC khác đạt.
@@ -150,7 +150,7 @@ Một task chỉ được coi là DONE khi:
 1. ✅ Có Verification Contract cho mọi acceptance criterion.
 2. ✅ Mọi AC có trạng thái cuối `PASS`; không còn `PENDING`/`UNTESTED`/`BLOCKED`.
 3. ✅ `npm run check:static` (hoặc `.\scripts\check.ps1`) — pass toàn bộ.
-4. ✅ `npm run check:web` — pass (contract/token/web syntax).
+4. ✅ `npm run check:web` — pass (Playwright chromium + mobile-chrome, 3 test ưu tiên).
 5. ✅ `dotnet build Vaz.sln` — pass, 0 error; `dotnet test Vaz.sln` — tất cả pass, không skip.
 6. ✅ Mọi AC `AUTOMATED` có command + output + tên test thật.
 7. ✅ Mọi AC `RUNTIME` có runtime evidence thật (web Playwright/app chạy thật).
@@ -290,7 +290,7 @@ Trước khi báo hoàn thành, Developer phải tự kiểm:
 - [ ] Đã chạy `npm run check:web` — pass?
 - [ ] Đã chạy `dotnet build Vaz.sln` — pass?
 - [ ] Đã chạy `dotnet test Vaz.sln` — tất cả pass?
-- [ ] AC `RUNTIME`: đã chạy `npm run check:runtime` nếu runner có? Nếu chưa có, đã ghi `NOT_CONFIGURED`/`BLOCKED`?
+- [ ] AC `RUNTIME`: đã chạy `npm run check:web` (hoặc `npx playwright test`) và có output thật? Nếu runner chưa cấu hình, đã ghi `NOT_CONFIGURED`/`BLOCKED`?
 - [ ] AC `MANUAL_REQUIRED`: đã ghi bước user cần làm, không tự PASS?
 - [ ] Không tự đánh giá UI/runtime/parity PASS?
 - [ ] Developer Report đã có trạng thái và bằng chứng cho từng AC?
@@ -311,7 +311,7 @@ Trước khi báo hoàn thành, Developer phải tự kiểm:
 7. **Mọi agent phải dùng format output đã định nghĩa.** Không trả lời tự do.
 8. **Không dùng code review, build pass, hoặc unit test pass làm bằng chứng cho AC `RUNTIME`.**
 9. **Không đổi `BLOCKED`/`PENDING` thành `PASS`** chỉ vì các AC khác đạt hoặc "code trông đúng".
-10. **Không coi `npm run check:static`/`check:web` là đã kiểm thử UI/flow.**
+10. **Không coi `npm run check:static` là đã kiểm thử UI/flow; `check:web` chỉ có giá trị khi Playwright thật sự chạy và pass.**
 11. **Không nghiệm thu khi contract còn AC `PENDING`/`UNTESTED`.**
 12. **No evidence, no PASS.** Không có bằng chứng đúng loại thì không có PASS.
 13. **Không port WinUI trước `WEB_VALIDATED`.**

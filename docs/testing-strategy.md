@@ -26,21 +26,22 @@ npm run check:static
 # hoặc
 .\scripts\check.ps1
 
-# Web contract/token/syntax check (KHÔNG phải runtime)
+# Web gate: contract/token/JS + Playwright (chromium + mobile-chrome)
 npm run check:web
 
-# Runtime web: Playwright (NOT_CONFIGURED nếu chưa cài runner)
-npm run check:runtime
+# Alias runtime web (delegate sang check:web)
+npm run check:web
 
-# Static + web + runtime
+# Static + web gate
 npm run check:all
 ```
 
 - `check:static` không chứng minh UI/flow hoạt động.
-- `check:web` kiểm tra sự tồn tại/format của contract, `docs/design/tokens.json` và
-  cú pháp JS; nó không thay thế Playwright.
-- `check:runtime` in `RUNTIME CHECK NOT_CONFIGURED` (exit 2) nếu thiếu
-  `node_modules/@playwright/test` hoặc config; khi đó AC `RUNTIME` là **BLOCKED**.
+- `check:web` chạy Playwright (chromium + mobile-chrome) sau khi kiểm tra contract/token/JS;
+  chỉ pass khi 3 test ưu tiên thật sự pass.
+- `check:runtime` là alias tương thích của `check:web`. Nếu thiếu
+  `node_modules/@playwright/test` hoặc `playwright.config.ts`, check in `NOT_CONFIGURED`
+  (exit 2); khi đó AC `RUNTIME` là **BLOCKED**.
 - Không có warning nào được bỏ qua hoặc tắt.
 
 ## Phân loại bằng chứng (bắt buộc)
@@ -115,7 +116,7 @@ nội bộ hay biến JavaScript.
 ```bash
 npm install
 npx playwright install chromium
-npm run check:runtime
+npm run check:web
 ```
 
 `NOT_CONFIGURED` = chưa có runner → ghi **BLOCKED**. Không được thay bằng

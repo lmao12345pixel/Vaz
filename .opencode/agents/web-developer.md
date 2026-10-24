@@ -40,8 +40,9 @@ Không tự tạo contract rồi tự PASS.
 4. Cập nhật hoặc bổ sung Playwright test trong `tests/web-e2e/` cho AC `RUNTIME`.
    Test chỉ assert **user-visible behavior** (text, trạng thái nhìn thấy, navigation, persistence);
    không assert CSS class, biến nội bộ, hay implementation detail.
-5. Chạy `npm run check:web`.
-6. Chạy `npm run check:runtime` nếu Playwright đã cấu hình. Nếu chưa, ghi
+5. Chạy `npx playwright test` từ repo root (hoặc `npm run check:web`). Đây là gate bắt buộc;
+   phải dán output thật (số test pass/fail, project chromium + mobile-chrome).
+6. Không được xoá/sửa test để làm pass. Nếu Playwright chưa cấu hình, ghi
    `NOT_CONFIGURED`/`BLOCKED`, không được coi là PASS.
 7. Cập nhật Developer Report với trạng thái từng AC và bằng chứng thật.
 8. Không đổi `status:` trong contract thành `WEB_VALIDATED`; chỉ Web Verifier được làm việc đó.
@@ -77,8 +78,8 @@ WEB_SPEC → (chờ Web Verifier)
 ### Kiểm tra đã chạy
 | Lệnh | Kết quả | Ghi chú |
 |------|---------|---------|
-| `npm run check:web` | PASS/FAIL | ... |
-| `npm run check:runtime` | PASS/FAIL/NOT_CONFIGURED | Playwright |
+| `npx playwright test` / `npm run check:web` | PASS/FAIL | chromium + mobile-chrome |
+| `npm run check:runtime` | PASS/FAIL/NOT_CONFIGURED | alias của check:web |
 | `node --check docs/design-preview/app.js` | PASS/FAIL | ... |
 
 ### Runtime còn thiếu

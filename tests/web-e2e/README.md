@@ -15,7 +15,7 @@ kết quả người dùng nhìn thấy.
 Runner **chưa được cài** trong môi trường này. Vì vậy:
 
 ```bash
-npm run check:runtime
+npm run check:web
 ```
 
 sẽ trả `RUNTIME CHECK NOT_CONFIGURED` (exit 2) — đây là hành vi đúng, không phải PASS.
@@ -30,7 +30,7 @@ npx playwright install chromium
 Sau đó chạy:
 
 ```bash
-npm run check:runtime
+npm run check:web
 # hoặc toàn bộ static + web + runtime:
 npm run check:all
 ```
