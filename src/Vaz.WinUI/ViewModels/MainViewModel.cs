@@ -131,6 +131,19 @@ public sealed partial class MainViewModel : ObservableObject
                 _ = LoadInstancesAsync();
             }
         });
+
+        WeakReferenceMessenger.Default.Register<AccountsChangedMessage>(this, (r, m) =>
+        {
+            var dispatcher = App.Dispatcher;
+            if (dispatcher != null && !dispatcher.HasThreadAccess)
+            {
+                dispatcher.TryEnqueue(() => _ = RefreshActiveAccountAsync());
+            }
+            else
+            {
+                _ = RefreshActiveAccountAsync();
+            }
+        });
     }
 
     private void OnActiveInstanceChanged(object? sender, EventArgs e)

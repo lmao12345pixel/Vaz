@@ -12,6 +12,7 @@
             </ResourceDictionary.MergedDictionaries>
             <helpers:BoolToVisibilityConverter x:Key="BoolToVis" />
             <helpers:InverseBoolToVisibilityConverter x:Key="BoolToVisInv" />
+            <helpers:InverseBoolToVisibilityConverter x:Key="BoolToInvertVis" />
             <helpers:CountToBoolConverter x:Key="CountToBool" />
             <helpers:CountToTextConverter x:Key="CountToText" />
             <helpers:BoolToActiveBorderBrushConverter x:Key="BoolToActiveBorderBrush" />
