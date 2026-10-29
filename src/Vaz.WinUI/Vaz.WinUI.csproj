@@ -44,8 +44,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Preview Discord cần ảnh block + skin (bản màu và bản grayscale 60% bake sẵn).
+    <!-- Assets for Discord Preview, Mod icons, etc.
          Unpackaged WinUI load qua ms-appx:///Assets/... → file phải nằm cạnh exe. -->
-    <Content Include="Assets\**\*.png" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\**\*.png;Assets\**\*.webp;Assets\**\*.jpg" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

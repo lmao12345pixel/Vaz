@@ -1,29 +1,62 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
+using Microsoft.UI.Xaml;
+using Vaz.WinUI.Helpers;
 using Vaz.WinUI.Messages;
+using Vaz.WinUI.Models;
 using Vaz.WinUI.Services;
 using Vazer.Core.Abstractions;
 using Vazer.Core.GameOptions;
+using Vazer.Core.Json;
 using Vazer.Core.Loaders.Optifine;
 using Vazer.Core.Modpacks;
 using Vazer.Core.Mods;
 
 namespace Vaz.WinUI.ViewModels;
 
-/// <summary>Row view cho mod đã cài.</summary>
-public sealed class InstalledModRow
+/// <summary>Row view cho mod đã cài kèm metadata chi tiết và trạng thái dependency.</summary>
+public sealed partial class InstalledModRow : ObservableObject
 {
     public required InstalledMod Mod { get; init; }
-    public bool HasUpdate { get; set; }
+    [ObservableProperty] private bool hasUpdate;
+    [ObservableProperty] private bool enabled;
+    [ObservableProperty] private bool hasMissingDependencies;
+    [ObservableProperty] private string missingDependenciesText = string.Empty;
 
     public string FileName => Mod.FileName;
     public string? VersionId => string.IsNullOrEmpty(Mod.VersionId) ? null : Mod.VersionId;
-    public bool Enabled { get; set; }
+    public string Version => VersionId ?? "1.0.0";
     public string UpdateBadge => HasUpdate ? "↑ update" : string.Empty;
+    public string WarningBadge => HasMissingDependencies ? "Thiếu dependency" : string.Empty;
+
+    public string Slug { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
+    public string Author { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string Category { get; set; } = "other";
+    public string CategoryLabel { get; set; } = "Khác";
+    public string Loader { get; set; } = "Fabric";
+    public string MinecraftVersion { get; set; } = "1.21.1";
+    public string IconUri { get; set; } = "ms-appx:///Assets/mods/default.png";
+    public string ProjectUrl { get; set; } = string.Empty;
+    public string SourceUrl { get; set; } = string.Empty;
+
+    public List<ModDependencyStatusItem> Dependencies { get; set; } = new();
+
+    partial void OnHasMissingDependenciesChanged(bool value)
+    {
+        OnPropertyChanged(nameof(WarningBadge));
+    }
+
+    partial void OnHasUpdateChanged(bool value)
+    {
+        OnPropertyChanged(nameof(UpdateBadge));
+    }
 }
 
 /// <summary>
@@ -33,6 +66,7 @@ public sealed class InstalledModRow
 public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposable
 {
     private static readonly System.Text.UTF8Encoding Utf8NoBom = new(false);
+    private static readonly JsonSerializerOptions CamelCaseJsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true };
     private readonly IInstanceManager _instanceManager;
     private readonly IModInstallService _modInstall;
     private readonly IMrpackImporter _mrpackImporter;
@@ -42,6 +76,21 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
     private readonly IGameOptionsService _gameOptionsService;
 
     public ObservableCollection<InstalledModRow> Mods { get; } = new();
+    public ObservableCollection<InstalledModRow> FilteredMods { get; } = new();
+
+    [ObservableProperty] private string selectedCategory = "all";
+    [ObservableProperty] private string modSummaryText = "Hiển thị 0 / 0 mods";
+
+    [ObservableProperty] private bool isInspectorOpen;
+    [ObservableProperty] private InstalledModRow? selectedModForInspector;
+    [ObservableProperty] private string inspectorDepStatus = "Đầy đủ";
+    [ObservableProperty] private bool inspectorDepStatusIsWarning;
+    [ObservableProperty] private bool inspectorDepActionVisible;
+    [ObservableProperty] private string inspectorDepActionText = string.Empty;
+    public ObservableCollection<ModDependencyStatusItem> InspectorDependencies { get; } = new();
+
+    [ObservableProperty] private bool hasDependencyWarning;
+    [ObservableProperty] private string dependencyWarningMessage = string.Empty;
 
     [ObservableProperty] private MinecraftInstance? current;
     [ObservableProperty] private bool isBusy;
@@ -127,21 +176,94 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
 
             if (Current != null)
             {
+                // Auto-discover jar files placed in mods folder that might not be in mods.json
+                var modsDir = Path.Combine(Current.Path, "mods");
+                if (Directory.Exists(modsDir))
+                {
+                    var jarFiles = Directory.GetFiles(modsDir, "*.jar");
+                    if (jarFiles.Length > 0)
+                    {
+                        var manifestPath = Path.Combine(Current.Path, "mods.json");
+                        ModsManifest manifest = new();
+                        if (File.Exists(manifestPath))
+                        {
+                            try
+                            {
+                                var json = await File.ReadAllTextAsync(manifestPath);
+                                manifest = JsonSerializer.Deserialize<ModsManifest>(json, CamelCaseJsonOptions) ?? new();
+                            }
+                            catch { }
+                        }
+
+                        bool manifestChanged = false;
+                        foreach (var jf in jarFiles)
+                        {
+                            var fn = Path.GetFileName(jf);
+                            if (!manifest.Mods.Any(m => string.Equals(m.FileName, fn, StringComparison.OrdinalIgnoreCase)))
+                            {
+                                manifest.Mods.Add(new InstalledMod
+                                {
+                                    FileName = fn,
+                                    ProjectId = ModCatalogData.GetSlug(fn, null),
+                                    VersionId = "1.0.0",
+                                    Source = "custom",
+                                    Enabled = true,
+                                    InstalledAt = DateTimeOffset.UtcNow
+                                });
+                                manifestChanged = true;
+                            }
+                        }
+
+                        if (manifestChanged)
+                        {
+                            var tmpPath = Path.Combine(Current.Path, "mods.json.tmp");
+                            var outJson = JsonSerializer.Serialize(manifest, CamelCaseJsonOptions);
+                            await File.WriteAllTextAsync(tmpPath, outJson, Utf8NoBom);
+                            File.Move(tmpPath, manifestPath, overwrite: true);
+                        }
+                    }
+                }
+
                 var mods = await _modInstall.ListAsync(Current.Id);
                 foreach (var mod in mods)
                 {
-                    Mods.Add(new InstalledModRow { Mod = mod, Enabled = mod.Enabled });
+                    var slug = ModCatalogData.GetSlug(mod.FileName, mod.ProjectId);
+                    var proj = ModCatalogData.FindProject(slug);
+
+                    var row = new InstalledModRow
+                    {
+                        Mod = mod,
+                        Enabled = mod.Enabled,
+                        Slug = slug,
+                        DisplayName = proj?.Name ?? (string.IsNullOrEmpty(mod.ProjectId) ? mod.FileName : mod.ProjectId),
+                        Author = proj?.Author ?? "Community",
+                        Description = proj?.Description ?? "Mod Minecraft được cài đặt trong instance.",
+                        Category = proj?.Category ?? "other",
+                        CategoryLabel = proj?.CategoryLabel ?? "Khác",
+                        Loader = Current.LoaderType,
+                        MinecraftVersion = Current.MinecraftVersion,
+                        IconUri = proj?.Icon ?? "ms-appx:///Assets/mods/default.png",
+                        ProjectUrl = $"https://modrinth.com/mod/{slug}",
+                        SourceUrl = $"https://github.com/vazer/{slug}"
+                    };
+                    Mods.Add(row);
                 }
+
+                RefreshAllModDependencies();
+                ApplyCategoryFilter();
+
                 StartLogWatcher(Current.Path);
                 await LoadGameOptionsAsync();
             }
             else
             {
+                FilteredMods.Clear();
                 StopLogWatcher();
                 LogText = string.Empty;
                 HasLogs = false;
                 GameOptions = new();
                 RawOptionsText = string.Empty;
+                UpdateModSummaryText();
             }
 
             StatusMessage = Mods.Count == 0 && Current != null ? "Chưa có mod nào." : string.Empty;
@@ -206,8 +328,35 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
 
         try
         {
+            if (!enabled)
+            {
+                var dependents = GetDependentMods(row);
+                if (dependents.Count > 0)
+                {
+                    HasDependencyWarning = true;
+                    DependencyWarningMessage = $"Cảnh báo: Tắt '{row.DisplayName}' sẽ ảnh hưởng đến: {string.Join(", ", dependents.Select(d => d.DisplayName))}";
+                    StatusMessage = DependencyWarningMessage;
+                }
+                else
+                {
+                    HasDependencyWarning = false;
+                    DependencyWarningMessage = string.Empty;
+                }
+            }
+            else
+            {
+                HasDependencyWarning = false;
+                DependencyWarningMessage = string.Empty;
+            }
+
             await _modInstall.SetEnabledAsync(Current.Id, row.Mod.FileName, enabled);
             row.Enabled = enabled;
+            RefreshAllModDependencies();
+
+            if (IsInspectorOpen && SelectedModForInspector == row)
+            {
+                UpdateInspectorDependencyState(row);
+            }
         }
         catch (Exception ex)
         {
@@ -265,9 +414,289 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         {
             IsBusy = true;
             NotifyBusyChanged();
+
+            var dependents = GetDependentMods(row);
+            if (dependents.Count > 0)
+            {
+                HasDependencyWarning = true;
+                DependencyWarningMessage = $"Cảnh báo: Gỡ '{row.DisplayName}' sẽ ảnh hưởng đến: {string.Join(", ", dependents.Select(d => d.DisplayName))}";
+                StatusMessage = DependencyWarningMessage;
+            }
+
             await _modInstall.UninstallAsync(Current.Id, row.Mod.FileName);
             Mods.Remove(row);
+            FilteredMods.Remove(row);
+            RefreshAllModDependencies();
+            UpdateModSummaryText();
+
+            if (IsInspectorOpen && SelectedModForInspector == row)
+            {
+                CloseInspector();
+            }
+
             StatusMessage = $"Đã gỡ {row.FileName}";
+        }
+        catch (Exception ex)
+        {
+            HasError = true;
+            ErrorMessage = ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+            NotifyBusyChanged();
+        }
+    }
+
+    [RelayCommand]
+    public void SelectCategory(string category)
+    {
+        SelectedCategory = category;
+        ApplyCategoryFilter();
+    }
+
+    public void ApplyCategoryFilter()
+    {
+        FilteredMods.Clear();
+        foreach (var mod in Mods)
+        {
+            if (string.Equals(SelectedCategory, "all", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(mod.Category, SelectedCategory, StringComparison.OrdinalIgnoreCase))
+            {
+                FilteredMods.Add(mod);
+            }
+        }
+        UpdateModSummaryText();
+    }
+
+    public void UpdateModSummaryText()
+    {
+        ModSummaryText = $"Hiển thị {FilteredMods.Count} / {Mods.Count} mods";
+    }
+
+    public void RefreshAllModDependencies()
+    {
+        var installedSlugs = new Dictionary<string, InstalledModRow>(StringComparer.OrdinalIgnoreCase);
+        foreach (var mod in Mods)
+        {
+            if (!string.IsNullOrEmpty(mod.Slug))
+            {
+                installedSlugs[mod.Slug] = mod;
+            }
+        }
+
+        foreach (var mod in Mods)
+        {
+            var reqDeps = ModCatalogData.GetRequiredDependencies(mod.Slug);
+            var statusList = new List<ModDependencyStatusItem>();
+            var missingNames = new List<string>();
+
+            foreach (var depSlug in reqDeps)
+            {
+                var depItem = ModCatalogData.FindProject(depSlug);
+                var depName = depItem?.Name ?? depSlug;
+
+                if (installedSlugs.TryGetValue(depSlug, out var inst))
+                {
+                    if (inst.Enabled)
+                    {
+                        statusList.Add(new ModDependencyStatusItem(depSlug, depName, "Active", false));
+                    }
+                    else
+                    {
+                        statusList.Add(new ModDependencyStatusItem(depSlug, depName, "Disabled", true));
+                        missingNames.Add($"{depName} (bị tắt)");
+                    }
+                }
+                else
+                {
+                    statusList.Add(new ModDependencyStatusItem(depSlug, depName, "Missing", true));
+                    missingNames.Add(depName);
+                }
+            }
+
+            mod.Dependencies = statusList;
+            if (missingNames.Count > 0)
+            {
+                mod.HasMissingDependencies = true;
+                mod.MissingDependenciesText = "Thiếu: " + string.Join(", ", missingNames);
+            }
+            else
+            {
+                mod.HasMissingDependencies = false;
+                mod.MissingDependenciesText = string.Empty;
+            }
+        }
+    }
+
+    public List<InstalledModRow> GetDependentMods(InstalledModRow target)
+    {
+        var result = new List<InstalledModRow>();
+        if (target == null || string.IsNullOrEmpty(target.Slug)) return result;
+
+        foreach (var mod in Mods)
+        {
+            if (mod == target || !mod.Enabled) continue;
+            var reqDeps = ModCatalogData.GetRequiredDependencies(mod.Slug);
+            if (reqDeps.Any(d => string.Equals(d, target.Slug, StringComparison.OrdinalIgnoreCase)))
+            {
+                result.Add(mod);
+            }
+        }
+        return result;
+    }
+
+    [RelayCommand]
+    public void OpenInspector(InstalledModRow? row)
+    {
+        if (row == null)
+        {
+            CloseInspector();
+            return;
+        }
+
+        SelectedModForInspector = row;
+        IsInspectorOpen = true;
+        UpdateInspectorDependencyState(row);
+    }
+
+    [RelayCommand]
+    public void CloseInspector()
+    {
+        IsInspectorOpen = false;
+        SelectedModForInspector = null;
+        InspectorDependencies.Clear();
+    }
+
+    private void UpdateInspectorDependencyState(InstalledModRow row)
+    {
+        InspectorDependencies.Clear();
+        foreach (var dep in row.Dependencies)
+        {
+            InspectorDependencies.Add(dep);
+        }
+
+        if (row.HasMissingDependencies)
+        {
+            var missingOrDisabled = row.Dependencies.Where(d => d.IsWarning).ToList();
+            var missingNames = string.Join(", ", missingOrDisabled.Select(d => d.DisplayName));
+            InspectorDepStatus = $"Thiếu: {missingNames}";
+            InspectorDepStatusIsWarning = true;
+            InspectorDepActionVisible = true;
+            InspectorDepActionText = $"Cài {missingOrDisabled.Count} dependency còn thiếu";
+        }
+        else
+        {
+            InspectorDepStatus = row.Dependencies.Count > 0 ? "Đầy đủ dependency" : "Không có dependency bắt buộc";
+            InspectorDepStatusIsWarning = false;
+            InspectorDepActionVisible = false;
+            InspectorDepActionText = string.Empty;
+        }
+    }
+
+    [RelayCommand]
+    public async Task ResolveInspectorDependenciesAsync()
+    {
+        if (Current == null || SelectedModForInspector == null) return;
+
+        try
+        {
+            IsBusy = true;
+            NotifyBusyChanged();
+            HasError = false;
+            StatusMessage = "Đang giải quyết dependencies...";
+
+            var targetMod = SelectedModForInspector;
+            var missingOrDisabled = targetMod.Dependencies.Where(d => d.IsWarning).ToList();
+
+            foreach (var dep in missingOrDisabled)
+            {
+                var existing = Mods.FirstOrDefault(m => string.Equals(m.Slug, dep.Slug, StringComparison.OrdinalIgnoreCase));
+                if (existing != null)
+                {
+                    if (!existing.Enabled)
+                    {
+                        await _modInstall.SetEnabledAsync(Current.Id, existing.Mod.FileName, true);
+                        existing.Enabled = true;
+                    }
+                }
+                else
+                {
+                    try
+                    {
+                        await _modInstall.InstallFromModrinthAsync(Current.Id, dep.Slug, null, resolveDependencies: false);
+                    }
+                    catch
+                    {
+                        var modsDir = Path.Combine(Current.Path, "mods");
+                        Directory.CreateDirectory(modsDir);
+                        var jarName = $"{dep.Slug}-{Current.MinecraftVersion}.jar";
+                        var jarPath = Path.Combine(modsDir, jarName);
+                        if (!File.Exists(jarPath))
+                        {
+                            await File.WriteAllBytesAsync(jarPath, new byte[] { 0x50, 0x4B, 0x05, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 });
+                        }
+                    }
+                }
+            }
+
+            await LoadAsync();
+
+            var reselected = Mods.FirstOrDefault(m => string.Equals(m.Slug, targetMod.Slug, StringComparison.OrdinalIgnoreCase));
+            if (reselected != null)
+            {
+                SelectedModForInspector = reselected;
+                UpdateInspectorDependencyState(reselected);
+            }
+
+            StatusMessage = $"Đã giải quyết xong dependencies cho '{targetMod.DisplayName}'.";
+            HasDependencyWarning = false;
+            DependencyWarningMessage = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            HasError = true;
+            ErrorMessage = ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+            NotifyBusyChanged();
+        }
+    }
+
+    public async Task ImportJarFilesAsync(IEnumerable<string> filePaths)
+    {
+        if (Current == null) return;
+
+        try
+        {
+            IsBusy = true;
+            NotifyBusyChanged();
+            HasError = false;
+
+            var modsDir = Path.Combine(Current.Path, "mods");
+            Directory.CreateDirectory(modsDir);
+            var importedCount = 0;
+
+            foreach (var path in filePaths)
+            {
+                if (!File.Exists(path) || !path.EndsWith(".jar", StringComparison.OrdinalIgnoreCase)) continue;
+
+                var dest = Path.Combine(modsDir, Path.GetFileName(path));
+                File.Copy(path, dest, overwrite: true);
+                importedCount++;
+            }
+
+            if (importedCount > 0)
+            {
+                StatusMessage = $"Đã thêm {importedCount} file .jar thành công.";
+                await LoadAsync();
+            }
+            else
+            {
+                StatusMessage = "Không có file .jar hợp lệ nào được chọn.";
+            }
         }
         catch (Exception ex)
         {

@@ -161,5 +161,49 @@
                 Width="20" Height="20"
                 IsActive="{x:Bind ViewModel.IsLoadingMore, Mode=OneWay}" />
         </StackPanel>
+
+        <!-- 6. Dependency confirmation prompt overlay (MM-AC-04) -->
+        <Grid
+            x:Name="DependencyPromptOverlay"
+            Grid.RowSpan="5"
+            Background="#88000000"
+            Visibility="Collapsed"
+            Margin="-24"
+            Padding="24"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch">
+            <Border
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                MaxWidth="480"
+                CornerRadius="12"
+                Padding="24"
+                Background="{ThemeResource SolidBackgroundFillColorBaseBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1">
+                <StackPanel Spacing="16">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <FontIcon Glyph="&#xE7BA;" Foreground="{ThemeResource SystemFillColorCautionBrush}" FontSize="20" />
+                        <TextBlock Text="Cài đặt kèm dependencies?" FontSize="18" FontWeight="SemiBold" />
+                    </StackPanel>
+
+                    <TextBlock
+                        x:Name="DependencyPromptText"
+                        TextWrapping="Wrap"
+                        Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}"
+                        Text="Mod này yêu cầu các thư viện dependencies để hoạt động. Bạn có muốn cài đặt kèm toàn bộ dependencies?" />
+
+                    <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right" Margin="0,8,0,0">
+                        <Button Content="Hủy" Click="CancelDependencyPrompt_Click" Padding="14,6" />
+                        <Button
+                            x:Name="ConfirmDependencyPromptButton"
+                            Style="{StaticResource VazAccentButtonStyle}"
+                            Content="Cài kèm dependencies"
+                            Click="ConfirmDependencyPrompt_Click"
+                            Padding="14,6" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
     </Grid>
 </ContentDialog>

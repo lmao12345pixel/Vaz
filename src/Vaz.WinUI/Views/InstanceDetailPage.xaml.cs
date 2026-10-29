@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Navigation;
 using Vaz.WinUI.Helpers;
 using Vaz.WinUI.ViewModels;
@@ -237,6 +238,97 @@ public sealed partial class InstanceDetailPage : Page
         if (file != null)
         {
             await ViewModel.ExportOptionsAsync(file.Path);
+        }
+    }
+
+    private void Page_KeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key == Windows.System.VirtualKey.Escape && ViewModel.IsInspectorOpen)
+        {
+            ViewModel.CloseInspectorCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
+
+    private void ModInspector_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement elem && elem.DataContext is InstalledModRow row)
+        {
+            ViewModel.OpenInspector(row);
+        }
+    }
+
+    private void CategoryChip_Checked(object sender, RoutedEventArgs e)
+    {
+        if (sender is RadioButton rb && rb.Tag is string category)
+        {
+            ViewModel?.SelectCategory(category);
+        }
+    }
+
+    private void ModIcon_Failed(object sender, ExceptionRoutedEventArgs e)
+    {
+        if (sender is Image img)
+        {
+            img.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private async void UninstallMod_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement elem && elem.DataContext is InstalledModRow row)
+        {
+            var confirm = new ContentDialog
+            {
+                XamlRoot = XamlRoot,
+                Title = $"Gỡ cài đặt {row.DisplayName}?",
+                Content = $"Mod '{row.FileName}' sẽ bị xóa khỏi instance.",
+                PrimaryButtonText = "Gỡ cài đặt",
+                CloseButtonText = "Hủy",
+                DefaultButton = ContentDialogButton.Close
+            };
+
+            var result = await confirm.ShowAsync();
+            if (result == ContentDialogResult.Primary)
+            {
+                await ViewModel.UninstallAsync(row);
+            }
+        }
+    }
+
+    private async void ImportJar_Click(object sender, RoutedEventArgs e)
+    {
+        var picker = FilePickerHelper.CreateOpenPicker(App.MainWindow, ".jar");
+        var file = await picker.PickSingleFileAsync();
+        if (file != null)
+        {
+            await ViewModel.ImportJarFilesAsync(new[] { file.Path });
+        }
+    }
+
+    private void ModsGrid_DragOver(object sender, DragEventArgs e)
+    {
+        e.AcceptedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
+        e.DragUIOverride.Caption = "Thêm .jar vào mods";
+        e.DragUIOverride.IsCaptionVisible = true;
+        e.DragUIOverride.IsContentVisible = true;
+    }
+
+    private async void ModsGrid_Drop(object sender, DragEventArgs e)
+    {
+        if (e.DataView.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems))
+        {
+            var items = await e.DataView.GetStorageItemsAsync();
+            var paths = items
+                .OfType<Windows.Storage.IStorageFile>()
+                .Where(f => f.FileType.Equals(".jar", StringComparison.OrdinalIgnoreCase))
+                .Select(f => f.Path)
+                .ToList();
+
+            if (paths.Count > 0)
+            {
+                await ViewModel.ImportJarFilesAsync(paths);
+            }
         }
     }
 }

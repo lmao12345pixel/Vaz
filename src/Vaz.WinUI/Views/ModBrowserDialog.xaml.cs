@@ -51,11 +51,40 @@ public sealed partial class ModBrowserDialog : ContentDialog
         _ = ViewModel.SearchCommand.ExecuteAsync(null);
     }
 
-    private void Install_Click(object sender, RoutedEventArgs e)
+    private SearchHitRow? _pendingRowForInstall;
+
+    private async void Install_Click(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement fe && fe.DataContext is SearchHitRow row)
         {
-            _ = ViewModel.InstallAsync(row);
+            var reqDeps = Models.ModCatalogData.GetRequiredDependencies(row.Slug);
+            if (reqDeps.Count > 0)
+            {
+                _pendingRowForInstall = row;
+                var depNames = string.Join(", ", reqDeps.Select(d => char.ToUpper(d[0]) + d.Substring(1)));
+                DependencyPromptText.Text = $"Mod '{row.Title}' yêu cầu các thư viện phụ thuộc: {depNames}.\n\nBạn có muốn tự động tải và cài đặt kèm toàn bộ dependencies này để game hoạt động ổn định?";
+                DependencyPromptOverlay.Visibility = Visibility.Visible;
+                return;
+            }
+
+            await ViewModel.InstallAsync(row);
+        }
+    }
+
+    private void CancelDependencyPrompt_Click(object sender, RoutedEventArgs e)
+    {
+        DependencyPromptOverlay.Visibility = Visibility.Collapsed;
+        _pendingRowForInstall = null;
+    }
+
+    private async void ConfirmDependencyPrompt_Click(object sender, RoutedEventArgs e)
+    {
+        DependencyPromptOverlay.Visibility = Visibility.Collapsed;
+        if (_pendingRowForInstall != null)
+        {
+            var target = _pendingRowForInstall;
+            _pendingRowForInstall = null;
+            await ViewModel.InstallAsync(target);
         }
     }
 
