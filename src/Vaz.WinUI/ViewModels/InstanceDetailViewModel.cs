@@ -3,8 +3,11 @@ using System.Diagnostics;
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
+using Vaz.WinUI.Messages;
 using Vaz.WinUI.Services;
 using Vazer.Core.Abstractions;
+using Vazer.Core.GameOptions;
 using Vazer.Core.Loaders.Optifine;
 using Vazer.Core.Modpacks;
 using Vazer.Core.Mods;
@@ -29,14 +32,14 @@ public sealed class InstalledModRow
 /// </summary>
 public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposable
 {
+    private static readonly System.Text.UTF8Encoding Utf8NoBom = new(false);
     private readonly IInstanceManager _instanceManager;
     private readonly IModInstallService _modInstall;
     private readonly IMrpackImporter _mrpackImporter;
     private readonly IOptifineInstallerService _optifine;
-    private readonly IGameLauncher _launcher;
-    private readonly IJavaResolver _javaResolver;
-    private readonly IAccountStore _accountStore;
     private readonly ActiveInstanceService _activeInstance;
+    private readonly MainViewModel _mainViewModel;
+    private readonly IGameOptionsService _gameOptionsService;
 
     public ObservableCollection<InstalledModRow> Mods { get; } = new();
 
@@ -48,6 +51,10 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
     [ObservableProperty] private int progressPercent;
     [ObservableProperty] private int updateCount;
     [ObservableProperty] private string launchStatus = string.Empty;
+
+    [ObservableProperty] private GameOptions gameOptions = new();
+    [ObservableProperty] private string rawOptionsText = string.Empty;
+    [ObservableProperty] private bool isRawViewMode;
 
     [ObservableProperty] private string logText = string.Empty;
     [ObservableProperty] private bool hasLogs;
@@ -74,20 +81,31 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         IModInstallService modInstall,
         IMrpackImporter mrpackImporter,
         IOptifineInstallerService optifine,
-        IGameLauncher launcher,
-        IJavaResolver javaResolver,
-        IAccountStore accountStore,
-        ActiveInstanceService activeInstance)
+        ActiveInstanceService activeInstance,
+        MainViewModel mainViewModel,
+        IGameOptionsService gameOptionsService)
     {
         _instanceManager = instanceManager;
         _modInstall = modInstall;
         _mrpackImporter = mrpackImporter;
         _optifine = optifine;
-        _launcher = launcher;
-        _javaResolver = javaResolver;
-        _accountStore = accountStore;
         _activeInstance = activeInstance;
-        _activeInstance.CurrentChanged += (_, _) => _ = LoadAsync();
+        _mainViewModel = mainViewModel;
+        _gameOptionsService = gameOptionsService;
+        _activeInstance.CurrentChanged += OnActiveInstanceChanged;
+    }
+
+    private void OnActiveInstanceChanged(object? sender, EventArgs e)
+    {
+        var dispatcher = App.Dispatcher;
+        if (dispatcher != null && !dispatcher.HasThreadAccess)
+        {
+            dispatcher.TryEnqueue(() => _ = LoadAsync());
+        }
+        else
+        {
+            _ = LoadAsync();
+        }
     }
 
     [RelayCommand]
@@ -115,12 +133,15 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
                     Mods.Add(new InstalledModRow { Mod = mod, Enabled = mod.Enabled });
                 }
                 StartLogWatcher(Current.Path);
+                await LoadGameOptionsAsync();
             }
             else
             {
                 StopLogWatcher();
                 LogText = string.Empty;
                 HasLogs = false;
+                GameOptions = new();
+                RawOptionsText = string.Empty;
             }
 
             StatusMessage = Mods.Count == 0 && Current != null ? "Chưa có mod nào." : string.Empty;
@@ -141,42 +162,30 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
     public async Task LaunchAsync()
     {
         if (Current == null) return;
+        if (_mainViewModel.IsRunning || _mainViewModel.IsLaunching) return;
 
         try
         {
             IsBusy = true;
             NotifyBusyChanged();
             HasError = false;
-            LaunchStatus = "Đang chuẩn bị launch...";
+            LaunchStatus = "Đang khởi chạy...";
 
-            var account = await _accountStore.GetActiveAsync();
-            if (account == null)
+            await _mainViewModel.LaunchInstanceAsync(Current);
+
+            if (_mainViewModel.IsRunning)
             {
-                HasError = true;
-                ErrorMessage = "Chưa có tài khoản active — thêm tài khoản ở trang Accounts.";
-                LaunchStatus = string.Empty;
-                return;
+                LaunchStatus = _mainViewModel.CurrentProcessId.HasValue
+                    ? $"Đã launch (PID {_mainViewModel.CurrentProcessId})"
+                    : "Đang chạy";
+
+                var logPath = Path.Combine(Current.Path, "logs", "latest.log");
+                ReadNewLogContent(logPath);
             }
-
-            var java = await _javaResolver.EnsureAsync(
-                _javaResolver.RequiredJava(Current.MinecraftVersion),
-                progress: null);
-
-            var result = await _launcher.LaunchAsync(new LaunchParameters
+            else
             {
-                InstanceId = Current.Id,
-                InstancePath = Current.Path,
-                Account = account,
-                Java = java,
-                MinecraftVersion = Current.MinecraftVersion,
-                MaxRamMb = 4096
-            });
-
-            LaunchStatus = $"Đã launch (PID {result.ProcessId})";
-            await _instanceManager.UpdateLastPlayedAsync(Current.Id);
-
-            var logPath = Path.Combine(Current.Path, "logs", "latest.log");
-            ReadNewLogContent(logPath);
+                LaunchStatus = string.Empty;
+            }
         }
         catch (Exception ex)
         {
@@ -218,7 +227,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
             NotifyBusyChanged();
             HasError = false;
 
-            var progress = new Progress<InstallProgress>(p => App.Dispatcher.TryEnqueue(() =>
+            var progress = new Progress<InstallProgress>(p => App.Dispatcher?.TryEnqueue(() =>
             {
                 ProgressPercent = p.PercentComplete;
                 if (!string.IsNullOrEmpty(p.Status)) StatusMessage = p.Status;
@@ -320,7 +329,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
 
             var progress = new Progress<InstallProgress>(p =>
             {
-                _ = App.Dispatcher.TryEnqueue(() =>
+                _ = App.Dispatcher?.TryEnqueue(() =>
                 {
                     ProgressPercent = p.PercentComplete;
                     if (!string.IsNullOrEmpty(p.Status)) StatusMessage = p.Status;
@@ -362,7 +371,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
 
             var progress = new Progress<InstallProgress>(p =>
             {
-                _ = App.Dispatcher.TryEnqueue(() =>
+                _ = App.Dispatcher?.TryEnqueue(() =>
                 {
                     ProgressPercent = p.PercentComplete;
                     if (!string.IsNullOrEmpty(p.Status)) StatusMessage = p.Status;
@@ -419,10 +428,149 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         Process.Start(new ProcessStartInfo("explorer.exe", modsPath) { UseShellExecute = true });
     }
 
+    public async Task LoadGameOptionsAsync()
+    {
+        if (Current == null) return;
+        try
+        {
+            var raw = await _gameOptionsService.LoadRawAsync(Current.Path);
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                GameOptions = new GameOptions();
+                RawOptionsText = GameOptionsParser.Serialize(GameOptions);
+            }
+            else
+            {
+                RawOptionsText = raw;
+                GameOptions = GameOptionsParser.Parse(raw);
+            }
+        }
+        catch (Exception ex)
+        {
+            HasError = true;
+            ErrorMessage = $"Không thể tải options.txt: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    public async Task SaveGameOptionsAsync()
+    {
+        if (Current == null) return;
+
+        if ((_mainViewModel.IsRunning || _mainViewModel.IsLaunching) && _mainViewModel.RunningInstanceId == Current.Id)
+        {
+            HasError = true;
+            ErrorMessage = "Không thể lưu cấu hình options.txt khi game đang chạy. Vui lòng đóng game trước.";
+            return;
+        }
+
+        try
+        {
+            IsBusy = true;
+            NotifyBusyChanged();
+            HasError = false;
+
+            if (IsRawViewMode)
+            {
+                GameOptions = GameOptionsParser.Parse(RawOptionsText);
+                await _gameOptionsService.SaveRawAsync(Current.Path, RawOptionsText);
+            }
+            else
+            {
+                await _gameOptionsService.SaveAsync(Current.Path, GameOptions);
+                RawOptionsText = GameOptionsParser.Serialize(GameOptions);
+            }
+
+            StatusMessage = "Đã lưu cấu hình options.txt thành công.";
+        }
+        catch (Exception ex)
+        {
+            HasError = true;
+            ErrorMessage = $"Lỗi khi lưu options.txt: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+            NotifyBusyChanged();
+        }
+    }
+
+    [RelayCommand]
+    public void ApplyPreset(string presetName)
+    {
+        var preset = GameOptionsPresets.GetByName(presetName);
+        if (preset == null) return;
+
+        var updated = GameOptions.Clone();
+        preset.ApplyTo(updated);
+        GameOptions = updated;
+        RawOptionsText = GameOptionsParser.Serialize(GameOptions);
+
+        StatusMessage = $"Đã áp dụng preset {presetName}. Nhấn 'Lưu cấu hình' để ghi ra file.";
+    }
+
+    [RelayCommand]
+    public void SwitchViewMode(bool raw)
+    {
+        if (IsRawViewMode == raw) return;
+
+        if (raw)
+        {
+            RawOptionsText = GameOptionsParser.Serialize(GameOptions);
+        }
+        else
+        {
+            GameOptions = GameOptionsParser.Parse(RawOptionsText);
+        }
+
+        IsRawViewMode = raw;
+    }
+
+    public async Task ExportOptionsAsync(string filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath)) return;
+
+        try
+        {
+            var content = IsRawViewMode
+                ? RawOptionsText
+                : GameOptionsParser.Serialize(GameOptions);
+
+            var dir = Path.GetDirectoryName(filePath);
+            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+
+            await File.WriteAllTextAsync(filePath, content, Utf8NoBom);
+            StatusMessage = $"Đã xuất cấu hình ra {Path.GetFileName(filePath)}";
+        }
+        catch (Exception ex)
+        {
+            HasError = true;
+            ErrorMessage = $"Xuất file thất bại: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    public void OpenInstanceFolder()
+    {
+        if (Current == null) return;
+        Directory.CreateDirectory(Current.Path);
+        Process.Start(new ProcessStartInfo("explorer.exe", Current.Path) { UseShellExecute = true });
+    }
+
     [RelayCommand]
     public async Task DeleteAsync()
     {
         if (Current == null) return;
+
+        if ((_mainViewModel.IsRunning || _mainViewModel.IsLaunching) && _mainViewModel.RunningInstanceId == Current.Id)
+        {
+            HasError = true;
+            ErrorMessage = "Không thể xóa instance khi đang chạy.";
+            return;
+        }
 
         try
         {
@@ -435,6 +583,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
             Mods.Clear();
             OnPropertyChanged(nameof(HasInstance));
             StatusMessage = "Đã xóa instance.";
+            WeakReferenceMessenger.Default.Send(new InstancesChangedMessage());
         }
         catch (Exception ex)
         {
@@ -544,7 +693,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
                 if (fs.Length < _lastLogPosition)
                 {
                     _lastLogPosition = 0;
-                    App.Dispatcher.TryEnqueue(() => LogText = string.Empty);
+                    App.Dispatcher?.TryEnqueue(() => LogText = string.Empty);
                 }
 
                 fs.Seek(_lastLogPosition, SeekOrigin.Begin);
@@ -554,9 +703,14 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
 
                 if (!string.IsNullOrEmpty(newContent))
                 {
-                    App.Dispatcher.TryEnqueue(() =>
+                    App.Dispatcher?.TryEnqueue(() =>
                     {
-                        LogText += newContent;
+                        var combined = LogText + newContent;
+                        if (combined.Length > 100_000)
+                        {
+                            combined = combined.Substring(combined.Length - 80_000);
+                        }
+                        LogText = combined;
                         HasLogs = true;
                         LogAppended?.Invoke();
                     });
@@ -571,6 +725,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
 
     public void Dispose()
     {
+        _activeInstance.CurrentChanged -= OnActiveInstanceChanged;
         StopLogWatcher();
     }
 

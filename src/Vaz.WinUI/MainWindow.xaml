@@ -3,31 +3,217 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:views="using:Vaz.WinUI.Views"
+    xmlns:vm="using:Vaz.WinUI.ViewModels"
+    xmlns:core="using:Vazer.Core.Abstractions"
     Title="Vazer Launcher">
 
-    <NavigationView
-        x:Name="NavView"
-        IsBackButtonVisible="Collapsed"
-        IsSettingsVisible="False"
-        PaneDisplayMode="Left"
-        OpenPaneLength="220"
-        SelectionChanged="NavView_SelectionChanged">
+    <Window.SystemBackdrop>
+        <MicaBackdrop Kind="Base" />
+    </Window.SystemBackdrop>
 
-        <NavigationView.MenuItems>
-            <NavigationViewItem Content="Instances" Tag="instances" IsSelected="True">
-                <NavigationViewItem.Icon>
-                    <FontIcon Glyph="&#xE7F8;" />
-                </NavigationViewItem.Icon>
-            </NavigationViewItem>
-            <NavigationViewItem Content="Accounts" Tag="accounts">
-                <NavigationViewItem.Icon>
-                    <FontIcon Glyph="&#xE77B;" />
-                </NavigationViewItem.Icon>
-            </NavigationViewItem>
-        </NavigationView.MenuItems>
+    <Grid x:Name="ShellRoot" RowDefinitions="Auto,*,Auto" Background="{StaticResource VazShellBackgroundBrush}">
+        <!-- Custom WinUI Titlebar with Drag Area -->
+        <Grid
+            x:Name="AppTitleBar"
+            Grid.Row="0"
+            Height="44"
+            Background="Transparent"
+            Padding="16,0,140,0"
+            VerticalAlignment="Center">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
 
-        <Frame x:Name="ContentFrame" />
+            <!-- App Logo & Branding -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Border
+                    Width="24" Height="24"
+                    CornerRadius="6"
+                    Background="{StaticResource VazAccentBrush}">
+                    <FontIcon Glyph="&#xE7F8;" FontSize="13" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <TextBlock
+                    Text="V.A.Z"
+                    FontWeight="Bold"
+                    FontSize="13"
+                    CharacterSpacing="80"
+                    VerticalAlignment="Center" />
+                <Border
+                    Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                    CornerRadius="4"
+                    Padding="6,2"
+                    Margin="4,0,0,0"
+                    VerticalAlignment="Center">
+                    <TextBlock
+                        Text="2026 EDITION"
+                        FontSize="10"
+                        FontWeight="SemiBold"
+                        Opacity="0.75" />
+                </Border>
+            </StackPanel>
+        </Grid>
 
-    </NavigationView>
+        <!-- Main content area -->
+        <NavigationView
+            x:Name="NavView"
+            Grid.Row="1"
+            Background="Transparent"
+            IsBackButtonVisible="Collapsed"
+            IsSettingsVisible="False"
+            PaneDisplayMode="Left"
+            OpenPaneLength="220"
+            SelectionChanged="NavView_SelectionChanged">
 
+            <NavigationView.MenuItems>
+                <NavigationViewItem Content="Instances" Tag="instances" IsSelected="True">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE7F8;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="Accounts" Tag="accounts">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE77B;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="Settings" Tag="settings">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE713;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.MenuItems>
+
+            <Frame x:Name="ContentFrame" />
+        </NavigationView>
+
+        <!-- Minecraft Play Dock (Fixed Bottom) -->
+        <Border
+            Grid.Row="2"
+            Height="74"
+            Background="{StaticResource VazDockBackgroundBrush}"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+            BorderThickness="0,1,0,0"
+            Padding="24,0">
+            <Grid ColumnDefinitions="Auto,*,Auto,*,Auto" VerticalAlignment="Center">
+
+                <!-- Left: Instance dropdown -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <Border
+                        Width="38" Height="38"
+                        CornerRadius="8"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1">
+                        <FontIcon Glyph="&#xE7F8;" FontSize="18" Foreground="{StaticResource VazAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel Spacing="2" VerticalAlignment="Center">
+                        <TextBlock Text="INSTANCE ĐANG CHỌN" FontSize="10" FontWeight="SemiBold" Opacity="0.6" CharacterSpacing="30" />
+                        <ComboBox
+                            x:Name="InstanceComboBox"
+                            ItemsSource="{x:Bind ViewModel.Instances, Mode=OneWay}"
+                            SelectedItem="{x:Bind ViewModel.SelectedInstance, Mode=TwoWay}"
+                            IsEnabled="{x:Bind ViewModel.CanChangeInstance, Mode=OneWay}"
+                            MinWidth="220"
+                            CornerRadius="8"
+                            PlaceholderText="Chọn instance...">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="core:MinecraftInstance">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="{x:Bind Name}" FontWeight="Medium" />
+                                        <TextBlock Text="{x:Bind MinecraftVersion}" Opacity="0.6" FontSize="12" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Center: Emerald Play Button -->
+                <Button
+                    Grid.Column="2"
+                    Command="{x:Bind ViewModel.PlayCommand}"
+                    Style="{StaticResource MinecraftPlayButtonStyle}"
+                    Background="{x:Bind ViewModel.PlayButtonBackground, Mode=OneWay}"
+                    Height="52"
+                    MinWidth="260"
+                    Padding="24,0"
+                    CornerRadius="10"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <ProgressRing
+                            Grid.Column="0"
+                            IsActive="{x:Bind ViewModel.IsLaunching, Mode=OneWay}"
+                            Width="20" Height="20"
+                            Foreground="White"
+                            Visibility="{x:Bind ViewModel.LaunchingVisibility, Mode=OneWay}" />
+                        <FontIcon
+                            Grid.Column="0"
+                            Glyph="{x:Bind ViewModel.PlayButtonGlyph, Mode=OneWay}"
+                            FontSize="20"
+                            Foreground="White"
+                            Visibility="{x:Bind ViewModel.NotLaunchingVisibility, Mode=OneWay}" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="0">
+                            <TextBlock
+                                Text="{x:Bind ViewModel.PlayButtonText, Mode=OneWay}"
+                                FontSize="16"
+                                FontWeight="Bold"
+                                Foreground="White"
+                                HorizontalAlignment="Left" />
+                            <TextBlock
+                                Text="{x:Bind ViewModel.PlayButtonSubText, Mode=OneWay}"
+                                FontSize="11"
+                                Foreground="White"
+                                Opacity="0.85"
+                                HorizontalAlignment="Left"
+                                Visibility="{x:Bind ViewModel.SubTextVisibility, Mode=OneWay}" />
+                        </StackPanel>
+                    </Grid>
+                </Button>
+
+                <!-- Right: Active Account Badge (Clickable to go to Accounts) -->
+                <Button
+                    Grid.Column="4"
+                    Click="AccountBadge_Click"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Padding="8,6"
+                    CornerRadius="8"
+                    ToolTipService.ToolTip="Xem và quản lý tài khoản người chơi">
+                    <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                        <StackPanel HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="2">
+                            <TextBlock
+                                Text="{x:Bind ViewModel.ActiveAccountName, Mode=OneWay}"
+                                FontWeight="SemiBold"
+                                FontSize="13"
+                                HorizontalAlignment="Right" />
+                            <TextBlock
+                                Text="{x:Bind ViewModel.AccountKindText, Mode=OneWay}"
+                                FontSize="11"
+                                Opacity="0.6"
+                                HorizontalAlignment="Right" />
+                        </StackPanel>
+                        <Grid Width="38" Height="38">
+                            <Border
+                                CornerRadius="8"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1">
+                                <FontIcon Glyph="&#xE77B;" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <Ellipse
+                                Width="10" Height="10"
+                                Fill="{StaticResource VazAccentBrush}"
+                                Stroke="{StaticResource VazDockBackgroundBrush}"
+                                StrokeThickness="2"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Bottom"
+                                Margin="0,0,-2,-2" />
+                        </Grid>
+                    </StackPanel>
+                </Button>
+
+            </Grid>
+        </Border>
+    </Grid>
 </Window>

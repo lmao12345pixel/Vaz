@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Vazer.Core.Abstractions;
 using Vazer.Core.Auth;
+using Vazer.Core.GameOptions;
 using Vazer.Core.Http;
 using Vazer.Core.Instances;
 using Vazer.Core.Java;
@@ -14,6 +15,7 @@ using Vazer.Core.Loaders.Optifine;
 using Vazer.Core.Modpacks;
 using Vazer.Core.Modrinth;
 using Vazer.Core.Mods;
+using Vazer.Core.Settings;
 using Vazer.Core.Store;
 
 namespace Vazer.Core.Extensions;
@@ -81,6 +83,7 @@ public static class MinecraftServiceCollectionExtensions
 
         // Core services
         services.AddSingleton<IAccountStore, AccountStore>();
+        services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<IAuthProvider, OfflineAuthProvider>();
         services.AddSingleton<IAuthProvider, MsalAuthProvider>();
         services.AddSingleton<CompositeAuthProvider>();
@@ -100,6 +103,7 @@ public static class MinecraftServiceCollectionExtensions
         services.AddSingleton<IModrinthClient, ModrinthClient>();
         services.AddSingleton<IModInstallService, ModInstallService>();
         services.AddSingleton<IMrpackImporter, MrpackImporter>();
+        services.AddSingleton<IGameOptionsService, GameOptionsService>();
         services.AddSingleton<IOptifineInstallerService>(sp => new OptifineInstallerService(
             sp.GetRequiredService<IHttpClientFactory>(),
             sp.GetRequiredService<IOptions<MinecraftOptions>>(),

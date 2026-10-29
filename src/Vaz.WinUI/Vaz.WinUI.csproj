@@ -42,4 +42,10 @@
   <ItemGroup>
     <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- Preview Discord cần ảnh block + skin (bản màu và bản grayscale 60% bake sẵn).
+         Unpackaged WinUI load qua ms-appx:///Assets/... → file phải nằm cạnh exe. -->
+    <Content Include="Assets\**\*.png" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

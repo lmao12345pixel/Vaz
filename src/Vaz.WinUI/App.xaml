@@ -14,6 +14,119 @@
             <helpers:InverseBoolToVisibilityConverter x:Key="BoolToVisInv" />
             <helpers:CountToBoolConverter x:Key="CountToBool" />
             <helpers:CountToTextConverter x:Key="CountToText" />
+            <helpers:BoolToActiveBorderBrushConverter x:Key="BoolToActiveBorderBrush" />
+            <helpers:BoolToActiveBorderThicknessConverter x:Key="BoolToActiveBorderThickness" />
+            <helpers:DoubleToIntConverter x:Key="DoubleToInt" />
+            <helpers:SettingsSectionVisibilityConverter x:Key="SettingsSectionVis" />
+            <helpers:AccentHexToBrushConverter x:Key="AccentHexToBrush" />
+
+            <!-- Design tokens dùng chung — docs/design/tokens.json (spacing/radius) -->
+            <x:Double x:Key="VazSpaceXs">4</x:Double>
+            <x:Double x:Key="VazSpaceSm">8</x:Double>
+            <x:Double x:Key="VazSpaceMd">16</x:Double>
+            <x:Double x:Key="VazSpaceLg">24</x:Double>
+            <Thickness x:Key="VazPaddingMd">16</Thickness>
+            <Thickness x:Key="VazPaddingLg">24</Thickness>
+            <CornerRadius x:Key="VazRadiusSm">7</CornerRadius>
+            <CornerRadius x:Key="VazRadiusMd">12</CornerRadius>
+            <CornerRadius x:Key="VazRadiusLg">16</CornerRadius>
+
+            <!-- Accent mặc định = ACCENT_PALETTES.emerald của executable spec web.
+                 AppThemeManager cập nhật màu các brush này (và resource control-level
+                 của WinUI) ngay khi người dùng đổi accent — SET-AC-04. -->
+            <SolidColorBrush x:Key="VazAccentBrush" Color="#10B981" />
+            <SolidColorBrush x:Key="VazAccentHoverBrush" Color="#3FCB99" />
+            <SolidColorBrush x:Key="VazAccentPressedBrush" Color="#0D9C6E" />
+            <SolidColorBrush x:Key="VazAccentSubtleBrush" Color="#2610B981" />
+
+            <!-- Surface toàn shell. AppThemeManager đổi màu theo theme (dark/light/obsidian)
+                 ngay khi khởi động và khi người dùng đổi theme. -->
+            <SolidColorBrush x:Key="VazShellBackgroundBrush" Color="#0B0F16" />
+            <SolidColorBrush x:Key="VazPaneBackgroundBrush" Color="#0F1522" />
+            <SolidColorBrush x:Key="VazDockBackgroundBrush" Color="#0F1522" />
+
+            <!-- NavigationView pane: mặc định WinUI dùng acrylic trong suốt → khi cửa sổ
+                 không có backdrop sẽ lộ nền đen (Light theme: chữ tối trên nền đen).
+                 Override bằng brush đặc để pane luôn theo theme (SET-AC-04). -->
+            <SolidColorBrush x:Key="NavigationViewDefaultPaneBackground" Color="#0F1522" />
+            <SolidColorBrush x:Key="NavigationViewExpandedPaneBackground" Color="#0F1522" />
+
+            <!-- Nút primary dùng accent ở MỌI state (normal/hover/pressed/disabled).
+                 Template tối giản, không animation để tôn trọng reduce-motion. -->
+            <Style x:Key="VazAccentButtonStyle" TargetType="Button">
+                <Setter Property="Background" Value="{StaticResource VazAccentBrush}" />
+                <Setter Property="Foreground" Value="White" />
+                <Setter Property="BorderBrush" Value="{StaticResource VazAccentBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Padding" Value="16,7" />
+                <Setter Property="HorizontalContentAlignment" Value="Center" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border
+                                x:Name="RootBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="{TemplateBinding CornerRadius}"
+                                Padding="{TemplateBinding Padding}">
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="CommonStates">
+                                        <VisualState x:Name="Normal" />
+                                        <VisualState x:Name="PointerOver">
+                                            <VisualState.Setters>
+                                                <Setter Target="RootBorder.Background" Value="{StaticResource VazAccentHoverBrush}" />
+                                                <Setter Target="RootBorder.BorderBrush" Value="{StaticResource VazAccentHoverBrush}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Pressed">
+                                            <VisualState.Setters>
+                                                <Setter Target="RootBorder.Background" Value="{StaticResource VazAccentPressedBrush}" />
+                                                <Setter Target="RootBorder.BorderBrush" Value="{StaticResource VazAccentPressedBrush}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Disabled">
+                                            <VisualState.Setters>
+                                                <Setter Target="RootBorder.Opacity" Value="0.4" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+                                <ContentPresenter
+                                    x:Name="ContentPresenter"
+                                    Content="{TemplateBinding Content}"
+                                    ContentTemplate="{TemplateBinding ContentTemplate}"
+                                    Foreground="{TemplateBinding Foreground}"
+                                    HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                    VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Minecraft emerald theme tokens -->
+            <SolidColorBrush x:Key="MinecraftEmeraldBrush" Color="#22C55E" />
+            <SolidColorBrush x:Key="MinecraftEmeraldHoverBrush" Color="#16A34A" />
+            <SolidColorBrush x:Key="MinecraftEmeraldPressedBrush" Color="#15803D" />
+            <SolidColorBrush x:Key="MinecraftEmeraldBorderBrush" Color="#4ADE80" />
+            <SolidColorBrush x:Key="MinecraftRunningRedBrush" Color="#EF4444" />
+
+            <!-- Minecraft Play Button Style -->
+            <Style x:Key="MinecraftPlayButtonStyle" TargetType="Button">
+                <Setter Property="Background" Value="{StaticResource MinecraftEmeraldBrush}" />
+                <Setter Property="Foreground" Value="White" />
+                <Setter Property="BorderBrush" Value="{StaticResource MinecraftEmeraldBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="HorizontalContentAlignment" Value="Center" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

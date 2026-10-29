@@ -7,27 +7,67 @@
     <Grid RowDefinitions="Auto,*" Padding="24" RowSpacing="16">
 
         <!-- Header -->
-        <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
-            <TextBlock Text="Instances" FontSize="28" FontWeight="SemiBold" VerticalAlignment="Center" />
-            <Button Grid.Column="1" Click="NewInstance_Click" ToolTipService.ToolTip="New Instance">
-                <StackPanel Orientation="Horizontal" Spacing="6">
-                    <SymbolIcon Symbol="Add" />
-                    <TextBlock Text="New" />
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+            <StackPanel Spacing="4">
+                <TextBlock Text="Instances" FontSize="28" FontWeight="SemiBold" />
+                <TextBlock
+                    Text="Quản lý và khởi chạy các bản cài đặt Minecraft."
+                    Style="{StaticResource CaptionTextBlockStyle}"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
+            <Button
+                Grid.Column="1"
+                Click="NewInstance_Click"
+                Style="{StaticResource VazAccentButtonStyle}"
+                ToolTipService.ToolTip="Tạo bản cài đặt Minecraft mới">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE710;" FontSize="14" />
+                    <TextBlock Text="Tạo Instance mới" FontWeight="SemiBold" />
                 </StackPanel>
             </Button>
         </Grid>
 
         <!-- Empty state -->
-        <StackPanel
+        <Border
             Grid.Row="1"
             HorizontalAlignment="Center"
             VerticalAlignment="Center"
-            Spacing="8"
+            MaxWidth="420"
+            Padding="32,28"
+            CornerRadius="{StaticResource VazRadiusMd}"
+            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+            BorderThickness="1"
             Visibility="{x:Bind ViewModel.HasNoInstances, Mode=OneWay, Converter={StaticResource BoolToVis}}">
-            <FontIcon Glyph="&#xE7F8;" FontSize="48" Opacity="0.4" />
-            <TextBlock Text="Chưa có instance nào." HorizontalAlignment="Center" Opacity="0.6" />
-            <TextBlock Text="Bấm + để tạo instance mới." HorizontalAlignment="Center" Opacity="0.4" />
-        </StackPanel>
+            <StackPanel Spacing="16" HorizontalAlignment="Center">
+                <Border
+                    Width="64" Height="64"
+                    CornerRadius="32"
+                    Background="{StaticResource VazAccentSubtleBrush}"
+                    HorizontalAlignment="Center">
+                    <FontIcon Glyph="&#xE7F8;" FontSize="32" Foreground="{StaticResource VazAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <StackPanel Spacing="6" HorizontalAlignment="Center">
+                    <TextBlock Text="Chưa có instance nào" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                    <TextBlock
+                        Text="Tạo bản cài đặt Minecraft đầu tiên để bắt đầu chơi cùng mod và modpack yêu thích."
+                        TextWrapping="Wrap"
+                        TextAlignment="Center"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        FontSize="13" />
+                </StackPanel>
+                <Button
+                    Click="NewInstance_Click"
+                    Style="{StaticResource VazAccentButtonStyle}"
+                    HorizontalAlignment="Center"
+                    Padding="20,8">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE710;" FontSize="14" />
+                        <TextBlock Text="Tạo instance đầu tiên" FontWeight="SemiBold" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Border>
 
         <!-- Instance grid -->
         <GridView
@@ -39,86 +79,140 @@
             <GridView.ItemTemplate>
                 <DataTemplate x:DataType="vm:InstanceCardItem">
                     <Border
-                        Width="220" MinHeight="130"
-                        Padding="12"
-                        CornerRadius="8"
+                        Width="240" MinHeight="145"
+                        Padding="14"
+                        CornerRadius="{StaticResource VazRadiusMd}"
                         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1">
+                        BorderBrush="{x:Bind IsActiveTarget, Mode=OneWay, Converter={StaticResource BoolToActiveBorderBrush}}"
+                        BorderThickness="{x:Bind IsActiveTarget, Mode=OneWay, Converter={StaticResource BoolToActiveBorderThickness}}">
                         <Border.ContextFlyout>
                             <MenuFlyout>
-                                <MenuFlyoutItem Text="Play" Tag="{x:Bind Id}" Click="ContextPlay_Click">
+                                <MenuFlyoutItem Text="Chơi ngay" Tag="{x:Bind Id}" Click="ContextPlay_Click">
                                     <MenuFlyoutItem.Icon>
                                         <FontIcon Glyph="&#xE768;" />
                                     </MenuFlyoutItem.Icon>
                                 </MenuFlyoutItem>
-                                <MenuFlyoutItem Text="Edit" Tag="{x:Bind Id}" Click="ContextEdit_Click">
+                                <MenuFlyoutItem Text="Chi tiết &amp; Cấu hình" Tag="{x:Bind Id}" Click="ContextEdit_Click">
                                     <MenuFlyoutItem.Icon>
                                         <FontIcon Glyph="&#xE713;" />
                                     </MenuFlyoutItem.Icon>
                                 </MenuFlyoutItem>
-                                <MenuFlyoutItem Text="Open folder" Tag="{x:Bind Id}" Click="ContextOpenFolder_Click">
+                                <MenuFlyoutItem Text="Mở thư mục" Tag="{x:Bind Id}" Click="ContextOpenFolder_Click">
                                     <MenuFlyoutItem.Icon>
                                         <FontIcon Glyph="&#xE838;" />
                                     </MenuFlyoutItem.Icon>
                                 </MenuFlyoutItem>
                                 <MenuFlyoutSeparator />
-                                <MenuFlyoutItem Text="Delete" Tag="{x:Bind Id}" Click="ContextDelete_Click">
+                                <MenuFlyoutItem Text="Xóa instance" Tag="{x:Bind Id}" Click="ContextDelete_Click">
                                     <MenuFlyoutItem.Icon>
-                                        <FontIcon Glyph="&#xE74D;" />
+                                        <FontIcon Glyph="&#xE74D;" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
                                     </MenuFlyoutItem.Icon>
                                 </MenuFlyoutItem>
                             </MenuFlyout>
                         </Border.ContextFlyout>
-                        <Grid RowDefinitions="*,Auto" RowSpacing="8">
-                            <StackPanel Spacing="4">
+                        <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10">
+                            <!-- Row 0: Name + Active badge -->
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
                                 <TextBlock
                                     Text="{x:Bind Name}"
                                     FontWeight="SemiBold"
                                     FontSize="15"
-                                    TextTrimming="CharacterEllipsis" />
-                                <TextBlock
-                                    Text="{x:Bind MinecraftVersion}"
-                                    Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}"
-                                    FontSize="12" />
-                                <TextBlock
-                                    Text="{x:Bind LoaderType}"
-                                    Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}"
-                                    FontSize="12" />
+                                    TextTrimming="CharacterEllipsis"
+                                    VerticalAlignment="Center" />
+                                <Border
+                                    Grid.Column="1"
+                                    Background="{StaticResource VazAccentSubtleBrush}"
+                                    BorderBrush="{StaticResource VazAccentBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    Padding="6,2"
+                                    VerticalAlignment="Center"
+                                    Visibility="{x:Bind IsActiveTarget, Mode=OneWay, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="ĐANG CHỌN" FontSize="9" FontWeight="Bold" Foreground="{StaticResource VazAccentBrush}" />
+                                </Border>
+                            </Grid>
+
+                            <!-- Row 1: Badges & status -->
+                            <StackPanel Grid.Row="1" Spacing="6">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <Border
+                                        Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="4"
+                                        Padding="6,2">
+                                        <TextBlock
+                                            Text="{x:Bind MinecraftVersion}"
+                                            FontSize="11"
+                                            FontWeight="Medium"
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    </Border>
+                                    <Border
+                                        Background="{StaticResource VazAccentSubtleBrush}"
+                                        BorderBrush="{StaticResource VazAccentBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="4"
+                                        Padding="6,2">
+                                        <TextBlock
+                                            Text="{x:Bind LoaderType}"
+                                            FontSize="11"
+                                            FontWeight="SemiBold"
+                                            Foreground="{StaticResource VazAccentBrush}" />
+                                    </Border>
+                                </StackPanel>
                                 <TextBlock
                                     Text="{x:Bind StatusText, Mode=OneWay}"
-                                    Foreground="{ThemeResource SystemAccentColor}"
-                                    FontSize="12"
+                                    Foreground="{StaticResource VazAccentBrush}"
+                                    FontSize="11"
                                     FontWeight="SemiBold"
                                     TextTrimming="CharacterEllipsis"
                                     Visibility="{x:Bind HasStatusText, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
                             </StackPanel>
-                            <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="6">
+
+                            <!-- Row 2: Action buttons -->
+                            <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
                                 <Button
                                     DataContext="{x:Bind}"
                                     Click="Play_Click"
                                     IsEnabled="{x:Bind IsNotLaunching, Mode=OneWay}"
-                                    ToolTipService.ToolTip="Launch"
-                                    Padding="8,6">
-                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                    ToolTipService.ToolTip="Khởi chạy instance"
+                                    Style="{StaticResource VazAccentButtonStyle}"
+                                    HorizontalAlignment="Stretch"
+                                    Padding="10,6"
+                                    CornerRadius="6">
+                                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                                         <ProgressRing
                                             IsActive="{x:Bind IsLaunching, Mode=OneWay}"
                                             Width="14" Height="14"
+                                            Foreground="White"
                                             Visibility="{x:Bind IsLaunching, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
                                         <FontIcon
                                             Glyph="&#xE768;"
-                                            FontSize="14"
+                                            FontSize="12"
+                                            Foreground="White"
                                             Visibility="{x:Bind IsNotLaunching, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
+                                        <TextBlock Text="Chơi" FontSize="12" FontWeight="SemiBold" Foreground="White" />
                                     </StackPanel>
                                 </Button>
                                 <Button
+                                    Grid.Column="1"
                                     DataContext="{x:Bind}"
                                     Click="Edit_Click"
-                                    ToolTipService.ToolTip="Settings"
-                                    Padding="8,6">
-                                    <FontIcon Glyph="&#xE713;" FontSize="14" />
+                                    ToolTipService.ToolTip="Cài đặt &amp; Quản lý Mods"
+                                    Padding="8,6"
+                                    CornerRadius="6">
+                                    <FontIcon Glyph="&#xE713;" FontSize="13" />
                                 </Button>
-                            </StackPanel>
+                                <Button
+                                    Grid.Column="2"
+                                    DataContext="{x:Bind}"
+                                    Click="CardFolder_Click"
+                                    ToolTipService.ToolTip="Mở thư mục instance"
+                                    Padding="8,6"
+                                    CornerRadius="6">
+                                    <FontIcon Glyph="&#xE838;" FontSize="13" />
+                                </Button>
+                            </Grid>
                         </Grid>
                     </Border>
                 </DataTemplate>

@@ -5,6 +5,7 @@ using Vazer.Core.Auth;
 using Vazer.Core.Modpacks;
 using Vazer.Core.Modrinth;
 using Vazer.Core.Mods;
+using Vazer.Core.Settings;
 using Vazer.Core.Store;
 
 namespace Vazer.Core.Json;
@@ -36,6 +37,7 @@ namespace Vazer.Core.Json;
 [JsonSerializable(typeof(XboxAuthRequest))]
 [JsonSerializable(typeof(XstsAuthRequest))]
 [JsonSerializable(typeof(MinecraftLoginRequest))]
+[JsonSerializable(typeof(GlobalSettings))]
 internal sealed partial class VazJsonContext : JsonSerializerContext
 {
     private static readonly JsonSerializerOptions CamelCaseOptions = new()
@@ -58,6 +60,16 @@ internal sealed partial class VazJsonContext : JsonSerializerContext
 
     /// <summary>Account file: camelCase and nulls omitted, matching the previous store format.</summary>
     internal static readonly VazJsonContext Accounts = new(AccountOptions);
+
+    private static readonly JsonSerializerOptions SettingsOptions = new()
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true
+    };
+
+    /// <summary>Global launcher settings (settings.json) — camelCase như web state.</summary>
+    internal static readonly VazJsonContext Settings = new(SettingsOptions);
 
     private static readonly JsonSerializerOptions PlainOptions = new()
     {

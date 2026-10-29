@@ -5,40 +5,81 @@
     xmlns:vm="using:Vaz.WinUI.ViewModels"
     NavigationCacheMode="Disabled">
 
-    <Grid x:Name="PageRoot" RowDefinitions="Auto,Auto,Auto,*" Padding="24" RowSpacing="16">
+    <Grid x:Name="PageRoot" RowDefinitions="Auto,Auto,*" Padding="24" RowSpacing="16">
 
-        <StackPanel
-            Grid.Row="0"
-            Grid.RowSpan="4"
-            Spacing="16">
+        <!-- Header -->
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" VerticalAlignment="Center">
+            <!-- Back Button -->
+            <Button
+                Grid.Column="0"
+                Click="BackButton_Click"
+                Background="Transparent"
+                BorderThickness="0"
+                Padding="8"
+                CornerRadius="8"
+                VerticalAlignment="Center"
+                ToolTipService.ToolTip="Quay lại danh sách Instance">
+                <FontIcon Glyph="&#xE72B;" FontSize="16" />
+            </Button>
 
-            <!-- Header -->
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-                <StackPanel Spacing="4">
-                    <TextBlock
-                        Text="{x:Bind ViewModel.Current.Name, Mode=OneWay}"
-                        FontSize="28"
-                        FontWeight="SemiBold" />
-                    <StackPanel Orientation="Horizontal" Spacing="12">
-                        <TextBlock Text="{x:Bind ViewModel.Current.MinecraftVersion, Mode=OneWay}" />
+            <!-- Title & Metadata Badges -->
+            <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Center">
+                <TextBlock
+                    Text="{x:Bind ViewModel.Current.Name, Mode=OneWay}"
+                    FontSize="24"
+                    FontWeight="SemiBold" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Border
+                        Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        Padding="8,2">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <FontIcon Glyph="&#xE7F8;" FontSize="11" Foreground="{StaticResource VazAccentBrush}" />
+                            <TextBlock Text="{x:Bind ViewModel.Current.MinecraftVersion, Mode=OneWay}" FontSize="12" FontWeight="Medium" />
+                        </StackPanel>
+                    </Border>
+                    <Border
+                        Background="{StaticResource VazAccentSubtleBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        Padding="8,2">
                         <TextBlock
                             Text="{x:Bind ViewModel.LoaderDisplay, Mode=OneWay}"
-                            Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}" />
-                    </StackPanel>
+                            FontSize="12"
+                            FontWeight="SemiBold"
+                            Foreground="{StaticResource VazAccentBrush}" />
+                    </Border>
                     <TextBlock
                         Text="{x:Bind ViewModel.LaunchStatus, Mode=OneWay}"
-                        Foreground="{ThemeResource SystemAccentColor}"
-                        Style="{StaticResource CaptionTextBlockStyle}" />
+                        Foreground="{StaticResource VazAccentBrush}"
+                        FontSize="12"
+                        FontWeight="Medium"
+                        VerticalAlignment="Center"
+                        Margin="4,0,0,0" />
                 </StackPanel>
-                <Button
-                    Grid.Column="1"
-                    VerticalAlignment="Center"
-                    Content="Launch"
-                    Command="{x:Bind ViewModel.LaunchCommand}"
-                    IsEnabled="{x:Bind ViewModel.IsNotBusy, Mode=OneWay}" />
-            </Grid>
+            </StackPanel>
 
-            <!-- Status / error -->
+            <!-- Launch Button -->
+            <Button
+                Grid.Column="2"
+                VerticalAlignment="Center"
+                Command="{x:Bind ViewModel.LaunchCommand}"
+                IsEnabled="{x:Bind ViewModel.IsNotBusy, Mode=OneWay}"
+                Style="{StaticResource VazAccentButtonStyle}"
+                Padding="20,10"
+                CornerRadius="8">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE768;" FontSize="14" />
+                    <TextBlock Text="Khởi chạy" FontWeight="SemiBold" />
+                </StackPanel>
+            </Button>
+        </Grid>
+
+        <!-- Status / error -->
+        <StackPanel Grid.Row="1" Spacing="4">
             <InfoBar
                 IsOpen="{x:Bind ViewModel.HasError, Mode=TwoWay}"
                 Severity="Error"
@@ -53,111 +94,152 @@
                 Maximum="100"
                 Value="{x:Bind ViewModel.ProgressPercent, Mode=OneWay}"
                 Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
+        </StackPanel>
 
-            <!-- Tabs -->
-            <TabView IsAddTabButtonVisible="False" Margin="0,8,0,0">
-                <TabViewItem Header="Mods" IsClosable="False">
-                    <TabViewItem.Content>
-                        <Grid RowDefinitions="Auto,*" RowSpacing="12" Padding="0,12,0,0">
-                            <!-- Toolbar -->
-                            <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8">
-                                <!-- Nhóm 1: Mod Management -->
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <Button Command="{x:Bind ViewModel.CheckUpdatesCommand}">
-                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <SymbolIcon Symbol="Sync" />
-                                            <TextBlock Text="Check updates" />
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Command="{x:Bind ViewModel.UpdateAllCommand}">
-                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <SymbolIcon Symbol="Download" />
-                                            <TextBlock Text="Update all" />
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Click="DownloadMods_Click">
-                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <SymbolIcon Symbol="Add" />
-                                            <TextBlock Text="Download Mods" />
-                                        </StackPanel>
-                                    </Button>
-                                </StackPanel>
-
-                                <!-- Divider -->
-                                <Border Width="1" Height="24" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="4,0" VerticalAlignment="Center" />
-
-                                <!-- Nhóm 2: Installers -->
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <Button Click="InstallMrpack_Click">
-                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <SymbolIcon Symbol="Import" />
-                                            <TextBlock Text="Install .mrpack" />
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Click="InstallOptifine_Click">
-                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <SymbolIcon Symbol="Setting" />
-                                            <TextBlock Text="Install OptiFine" />
-                                        </StackPanel>
-                                    </Button>
-                                </StackPanel>
-
-                                <!-- Divider -->
-                                <Border Width="1" Height="24" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="4,0" VerticalAlignment="Center" />
-
-                                <!-- Nhóm 3: Utilities -->
-                                <Button Command="{x:Bind ViewModel.OpenModsFolderCommand}">
+        <!-- Tabs -->
+        <TabView Grid.Row="2" IsAddTabButtonVisible="False" Margin="0,8,0,0">
+            <TabViewItem IsClosable="False">
+                <TabViewItem.Header>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE74C;" FontSize="14" Foreground="{StaticResource VazAccentBrush}" />
+                        <TextBlock Text="Mods" FontWeight="Medium" />
+                    </StackPanel>
+                </TabViewItem.Header>
+                <TabViewItem.Content>
+                    <Grid RowDefinitions="Auto,*" RowSpacing="12" Padding="0,12,0,0">
+                        <!-- Toolbar -->
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8">
+                            <!-- Nhóm 1: Mod Management -->
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Command="{x:Bind ViewModel.CheckUpdatesCommand}">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
-                                        <SymbolIcon Symbol="Folder" />
-                                        <TextBlock Text="Open mods folder" />
+                                        <SymbolIcon Symbol="Sync" />
+                                        <TextBlock Text="Check updates" />
                                     </StackPanel>
                                 </Button>
-
-                                <InfoBar
-                                    Severity="Informational"
-                                    IsOpen="{x:Bind ViewModel.UpdateCount, Mode=OneWay, Converter={StaticResource CountToBool}}"
-                                    Message="{x:Bind ViewModel.UpdateCount, Mode=OneWay, Converter={StaticResource CountToText}}" />
+                                <Button Command="{x:Bind ViewModel.UpdateAllCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <SymbolIcon Symbol="Download" />
+                                        <TextBlock Text="Update all" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Click="DownloadMods_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <SymbolIcon Symbol="Add" />
+                                        <TextBlock Text="Download Mods" />
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
 
-                            <!-- Mod list -->
-                            <ListView
-                                Grid.Row="1"
-                                ItemsSource="{x:Bind ViewModel.Mods, Mode=OneWay}"
-                                SelectionMode="None">
-                                <ListView.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:InstalledModRow">
-                                        <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8" Padding="4">
-                                            <FontIcon Grid.Column="0" Glyph="&#xE74C;" VerticalAlignment="Center" />
-                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="0">
-                                                <TextBlock Text="{x:Bind FileName}" TextTrimming="CharacterEllipsis" />
+                            <!-- Divider -->
+                            <Border Width="1" Height="24" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="4,0" VerticalAlignment="Center" />
+
+                            <!-- Nhóm 2: Installers -->
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Click="InstallMrpack_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <SymbolIcon Symbol="Import" />
+                                        <TextBlock Text="Install .mrpack" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Click="InstallOptifine_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <SymbolIcon Symbol="Setting" />
+                                        <TextBlock Text="Install OptiFine" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+
+                            <!-- Divider -->
+                            <Border Width="1" Height="24" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="4,0" VerticalAlignment="Center" />
+
+                            <!-- Nhóm 3: Utilities -->
+                            <Button Command="{x:Bind ViewModel.OpenModsFolderCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <SymbolIcon Symbol="Folder" />
+                                    <TextBlock Text="Open mods folder" />
+                                </StackPanel>
+                            </Button>
+
+                            <InfoBar
+                                Severity="Informational"
+                                IsOpen="{x:Bind ViewModel.UpdateCount, Mode=OneWay, Converter={StaticResource CountToBool}}"
+                                Message="{x:Bind ViewModel.UpdateCount, Mode=OneWay, Converter={StaticResource CountToText}}" />
+                        </StackPanel>
+
+                        <!-- Mod list -->
+                        <ListView
+                            Grid.Row="1"
+                            ItemsSource="{x:Bind ViewModel.Mods, Mode=OneWay}"
+                            SelectionMode="None">
+                            <ListView.ItemTemplate>
+                                <DataTemplate x:DataType="vm:InstalledModRow">
+                                    <Border
+                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="12,8"
+                                        Margin="0,0,0,6">
+                                        <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="12">
+                                            <Border
+                                                Grid.Column="0"
+                                                Width="32" Height="32"
+                                                CornerRadius="6"
+                                                Background="{StaticResource VazAccentSubtleBrush}"
+                                                VerticalAlignment="Center">
+                                                <FontIcon Glyph="&#xE74C;" FontSize="14" Foreground="{StaticResource VazAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                                <TextBlock Text="{x:Bind FileName}" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
                                                 <TextBlock
                                                     Text="{x:Bind VersionId}"
-                                                    Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}"
-                                                    Style="{StaticResource CaptionTextBlockStyle}" />
+                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                    FontSize="12" />
                                             </StackPanel>
-                                            <TextBlock
+                                            <Border
                                                 Grid.Column="2"
-                                                Text="{x:Bind UpdateBadge}"
-                                                Foreground="{ThemeResource SystemAccentColor}"
-                                                VerticalAlignment="Center" />
+                                                Background="{StaticResource VazAccentSubtleBrush}"
+                                                CornerRadius="4"
+                                                Padding="6,2"
+                                                VerticalAlignment="Center">
+                                                <TextBlock
+                                                    Text="{x:Bind UpdateBadge}"
+                                                    Foreground="{StaticResource VazAccentBrush}"
+                                                    FontSize="11"
+                                                    FontWeight="SemiBold" />
+                                            </Border>
                                             <ToggleSwitch
                                                 Grid.Column="3"
                                                 IsOn="{x:Bind Enabled, Mode=OneWay}"
-                                                Toggled="ModEnabled_Toggled" />
+                                                Toggled="ModEnabled_Toggled"
+                                                OffContent=""
+                                                OnContent=""
+                                                MinWidth="0"
+                                                VerticalAlignment="Center" />
                                         </Grid>
-                                    </DataTemplate>
-                                </ListView.ItemTemplate>
-                                <ListView.ItemContainerStyle>
-                                    <Style TargetType="ListViewItem">
-                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                    </Style>
-                                </ListView.ItemContainerStyle>
-                            </ListView>
-                        </Grid>
-                    </TabViewItem.Content>
-                </TabViewItem>
-                <TabViewItem Header="Logs" IsClosable="False">
-                    <TabViewItem.Content>
+                                    </Border>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                            <ListView.ItemContainerStyle>
+                                <Style TargetType="ListViewItem">
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                    <Setter Property="Padding" Value="0" />
+                                    <Setter Property="Margin" Value="0" />
+                                </Style>
+                            </ListView.ItemContainerStyle>
+                        </ListView>
+                    </Grid>
+                </TabViewItem.Content>
+            </TabViewItem>
+            <TabViewItem IsClosable="False">
+                <TabViewItem.Header>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE756;" FontSize="14" Foreground="{StaticResource VazAccentBrush}" />
+                        <TextBlock Text="Logs &amp; Console" FontWeight="Medium" />
+                    </StackPanel>
+                </TabViewItem.Header>
+                <TabViewItem.Content>
                         <Grid RowDefinitions="Auto,*" RowSpacing="12" Padding="0,12,0,0">
                             <!-- Toolbar -->
                             <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8">
@@ -220,26 +302,249 @@
                         </Grid>
                     </TabViewItem.Content>
                 </TabViewItem>
-                <TabViewItem Header="Settings" IsClosable="False">
+            <TabViewItem IsClosable="False">
+                <TabViewItem.Header>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE713;" FontSize="14" Foreground="{StaticResource VazAccentBrush}" />
+                        <TextBlock Text="Cấu hình Game (options.txt)" FontWeight="Medium" />
+                    </StackPanel>
+                </TabViewItem.Header>
                     <TabViewItem.Content>
-                        <StackPanel MaxWidth="480" HorizontalAlignment="Left" Spacing="12" Padding="0,12,0,0">
-                            <InfoBar
-                                Severity="Warning"
-                                IsOpen="True"
-                                Title="RAM / JVM args"
-                                Message="RAM / JVM args chưa có trong Core. Follow-up." />
-                            <TextBlock Text="Thư mục instance:" FontWeight="SemiBold" />
-                            <TextBox
-                                IsReadOnly="True"
-                                Text="{x:Bind ViewModel.FolderPath, Mode=OneWay}" />
-                            <Button
-                                Content="Delete instance"
-                                Click="DeleteInstance_Click"
-                                HorizontalAlignment="Left" />
-                        </StackPanel>
+                        <Grid RowDefinitions="Auto,*" RowSpacing="12" Padding="0,12,0,0">
+                            <!-- Toolbar -->
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8">
+                                <Button
+                                    Command="{x:Bind ViewModel.SaveGameOptionsCommand}"
+                                    Style="{StaticResource AccentButtonStyle}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <SymbolIcon Symbol="Save" />
+                                        <TextBlock Text="Lưu cấu hình" />
+                                    </StackPanel>
+                                </Button>
+
+                                <DropDownButton Content="Cấu hình sẵn">
+                                    <DropDownButton.Flyout>
+                                        <MenuFlyout>
+                                            <MenuFlyoutItem Text="Tối ưu FPS" Click="PresetPerformance_Click">
+                                                <MenuFlyoutItem.Icon>
+                                                    <FontIcon Glyph="&#xE7E8;" />
+                                                </MenuFlyoutItem.Icon>
+                                            </MenuFlyoutItem>
+                                            <MenuFlyoutItem Text="Cân bằng" Click="PresetBalanced_Click">
+                                                <MenuFlyoutItem.Icon>
+                                                    <FontIcon Glyph="&#xE9F5;" />
+                                                </MenuFlyoutItem.Icon>
+                                            </MenuFlyoutItem>
+                                            <MenuFlyoutItem Text="Đồ họa cao" Click="PresetHighQuality_Click">
+                                                <MenuFlyoutItem.Icon>
+                                                    <FontIcon Glyph="&#xE734;" />
+                                                </MenuFlyoutItem.Icon>
+                                            </MenuFlyoutItem>
+                                        </MenuFlyout>
+                                    </DropDownButton.Flyout>
+                                </DropDownButton>
+
+                                <Button Click="ExportOptions_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <SymbolIcon Symbol="Share" />
+                                        <TextBlock Text="Xuất file options.txt" />
+                                    </StackPanel>
+                                </Button>
+
+                                <Button Command="{x:Bind ViewModel.OpenInstanceFolderCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <SymbolIcon Symbol="Folder" />
+                                        <TextBlock Text="Mở thư mục" />
+                                    </StackPanel>
+                                </Button>
+
+                                <Border Width="1" Height="24" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="4,0" VerticalAlignment="Center" />
+
+                                <ToggleSwitch
+                                    OffContent="Visual"
+                                    OnContent="Raw"
+                                    IsOn="{x:Bind ViewModel.IsRawViewMode, Mode=OneWay}"
+                                    Toggled="ViewMode_Toggled"
+                                    VerticalAlignment="Center" />
+                            </StackPanel>
+
+                            <!-- Nội dung Visual Editor -->
+                            <ScrollViewer
+                                Grid.Row="1"
+                                Visibility="{x:Bind ViewModel.IsRawViewMode, Mode=OneWay, Converter={StaticResource BoolToVisInv}}"
+                                VerticalScrollBarVisibility="Auto">
+                                <StackPanel Spacing="16" MaxWidth="720" HorizontalAlignment="Left" Padding="0,0,16,16">
+                                    <!-- Card Đồ họa -->
+                                    <Border
+                                        Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="16">
+                                        <StackPanel Spacing="12">
+                                            <TextBlock Text="Đồ họa (Graphics)" FontSize="16" FontWeight="SemiBold" />
+
+                                            <Slider
+                                                Header="Khoảng cách hiển thị (Render distance - chunks)"
+                                                Minimum="2" Maximum="32" StepFrequency="1"
+                                                Value="{x:Bind ViewModel.GameOptions.RenderDistance, Mode=TwoWay, Converter={StaticResource DoubleToInt}}" />
+
+                                            <Slider
+                                                Header="Khoảng cách mô phỏng (Simulation distance - chunks)"
+                                                Minimum="2" Maximum="32" StepFrequency="1"
+                                                Value="{x:Bind ViewModel.GameOptions.SimulationDistance, Mode=TwoWay, Converter={StaticResource DoubleToInt}}" />
+
+                                            <Slider
+                                                Header="Giới hạn FPS (Max FPS)"
+                                                Minimum="10" Maximum="260" StepFrequency="10"
+                                                Value="{x:Bind ViewModel.GameOptions.MaxFps, Mode=TwoWay, Converter={StaticResource DoubleToInt}}" />
+
+                                            <StackPanel Spacing="4">
+                                                <TextBlock Text="Chế độ đồ họa (Graphics Mode)" Style="{StaticResource CaptionTextBlockStyle}" />
+                                                <ComboBox x:Name="GraphicsModeComboBox" SelectionChanged="GraphicsMode_SelectionChanged" Width="200">
+                                                    <ComboBoxItem Content="Fast (Tối ưu)" Tag="fast" />
+                                                    <ComboBoxItem Content="Fancy (Mặc định)" Tag="fancy" />
+                                                    <ComboBoxItem Content="Fabulous (Rực rỡ)" Tag="fabulous" />
+                                                </ComboBox>
+                                            </StackPanel>
+
+                                            <Slider
+                                                Header="Độ sáng (Gamma / Brightness)"
+                                                Minimum="0.0" Maximum="1.0" StepFrequency="0.05"
+                                                Value="{x:Bind ViewModel.GameOptions.Gamma, Mode=TwoWay}" />
+
+                                            <Slider
+                                                Header="Tỉ lệ giao diện (GUI Scale - 0 là Auto)"
+                                                Minimum="0" Maximum="4" StepFrequency="1"
+                                                Value="{x:Bind ViewModel.GameOptions.GuiScale, Mode=TwoWay, Converter={StaticResource DoubleToInt}}" />
+
+                                            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
+                                                <ToggleSwitch Header="Đồng bộ dọc (V-Sync)" IsOn="{x:Bind ViewModel.GameOptions.EnableVsync, Mode=TwoWay}" />
+                                                <ToggleSwitch Grid.Column="1" Header="Bóng thực thể (Shadows)" IsOn="{x:Bind ViewModel.GameOptions.EntityShadows, Mode=TwoWay}" />
+                                                <ToggleSwitch Grid.Column="2" Header="Mây trời (Clouds)" IsOn="{x:Bind ViewModel.GameOptions.RenderClouds, Mode=TwoWay}" />
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Card Âm thanh -->
+                                    <Border
+                                        Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="16">
+                                        <StackPanel Spacing="12">
+                                            <TextBlock Text="Âm thanh (Audio)" FontSize="16" FontWeight="SemiBold" />
+
+                                            <Slider
+                                                Header="Âm lượng tổng (Master Volume)"
+                                                Minimum="0.0" Maximum="1.0" StepFrequency="0.01"
+                                                Value="{x:Bind ViewModel.GameOptions.SoundCategoryMaster, Mode=TwoWay}" />
+
+                                            <Grid ColumnDefinitions="*,*" ColumnSpacing="16" RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
+                                                <Slider
+                                                    Header="Nhạc nền (Music)"
+                                                    Minimum="0.0" Maximum="1.0" StepFrequency="0.01"
+                                                    Value="{x:Bind ViewModel.GameOptions.SoundCategoryMusic, Mode=TwoWay}" />
+                                                <Slider
+                                                    Grid.Column="1"
+                                                    Header="Thời tiết (Weather)"
+                                                    Minimum="0.0" Maximum="1.0" StepFrequency="0.01"
+                                                    Value="{x:Bind ViewModel.GameOptions.SoundCategoryWeather, Mode=TwoWay}" />
+                                                <Slider
+                                                    Grid.Row="1"
+                                                    Header="Khối / Địa hình (Blocks)"
+                                                    Minimum="0.0" Maximum="1.0" StepFrequency="0.01"
+                                                    Value="{x:Bind ViewModel.GameOptions.SoundCategoryBlock, Mode=TwoWay}" />
+                                                <Slider
+                                                    Grid.Row="1" Grid.Column="1"
+                                                    Header="Quái vật hung dữ (Hostile)"
+                                                    Minimum="0.0" Maximum="1.0" StepFrequency="0.01"
+                                                    Value="{x:Bind ViewModel.GameOptions.SoundCategoryHostile, Mode=TwoWay}" />
+                                                <Slider
+                                                    Grid.Row="2"
+                                                    Header="Người chơi (Players)"
+                                                    Minimum="0.0" Maximum="1.0" StepFrequency="0.01"
+                                                    Value="{x:Bind ViewModel.GameOptions.SoundCategoryPlayer, Mode=TwoWay}" />
+                                                <Slider
+                                                    Grid.Row="2" Grid.Column="1"
+                                                    Header="Môi trường (Ambient)"
+                                                    Minimum="0.0" Maximum="1.0" StepFrequency="0.01"
+                                                    Value="{x:Bind ViewModel.GameOptions.SoundCategoryAmbient, Mode=TwoWay}" />
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Card Điều khiển -->
+                                    <Border
+                                        Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="16">
+                                        <StackPanel Spacing="12">
+                                            <TextBlock Text="Điều khiển (Controls)" FontSize="16" FontWeight="SemiBold" />
+
+                                            <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
+                                                <Slider
+                                                    Header="Độ nhạy chuột (Mouse Sensitivity)"
+                                                    Minimum="0.0" Maximum="1.0" StepFrequency="0.01"
+                                                    Value="{x:Bind ViewModel.GameOptions.MouseSensitivity, Mode=TwoWay}" />
+                                                <Slider
+                                                    Grid.Column="1"
+                                                    Header="Góc nhìn (FOV)"
+                                                    Minimum="30.0" Maximum="110.0" StepFrequency="1.0"
+                                                    Value="{x:Bind ViewModel.GameOptions.Fov, Mode=TwoWay}" />
+                                            </Grid>
+
+                                            <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8">
+                                                <ToggleSwitch Header="Đảo ngược chuột Y" IsOn="{x:Bind ViewModel.GameOptions.InvertYMouse, Mode=TwoWay}" />
+                                                <ToggleSwitch Grid.Column="1" Header="Tự động nhảy" IsOn="{x:Bind ViewModel.GameOptions.AutoJump, Mode=TwoWay}" />
+                                                <ToggleSwitch Grid.Column="2" Header="Toggle Sneak" IsOn="{x:Bind ViewModel.GameOptions.SneakToggle, Mode=TwoWay}" />
+                                                <ToggleSwitch Grid.Column="3" Header="Toggle Sprint" IsOn="{x:Bind ViewModel.GameOptions.SprintToggle, Mode=TwoWay}" />
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Card Instance Info / Delete -->
+                                    <Border
+                                        Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="16">
+                                        <StackPanel Spacing="12">
+                                            <TextBlock Text="Thư mục &amp; Quản trị Instance" FontSize="16" FontWeight="SemiBold" />
+                                            <TextBlock Text="Đường dẫn thư mục:" Style="{StaticResource CaptionTextBlockStyle}" />
+                                            <TextBox IsReadOnly="True" Text="{x:Bind ViewModel.FolderPath, Mode=OneWay}" />
+                                            <Button
+                                                Content="Xóa instance"
+                                                Click="DeleteInstance_Click"
+                                                HorizontalAlignment="Left" />
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </ScrollViewer>
+
+                            <!-- Nội dung Raw Editor -->
+                            <Grid
+                                Grid.Row="1"
+                                Visibility="{x:Bind ViewModel.IsRawViewMode, Mode=OneWay, Converter={StaticResource BoolToVis}}"
+                                MinHeight="360">
+                                <TextBox
+                                    Text="{x:Bind ViewModel.RawOptionsText, Mode=TwoWay}"
+                                    AcceptsReturn="True"
+                                    TextWrapping="NoWrap"
+                                    FontFamily="Cascadia Code, Consolas, monospace"
+                                    FontSize="13"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                    ScrollViewer.HorizontalScrollBarVisibility="Auto" />
+                            </Grid>
+                        </Grid>
                     </TabViewItem.Content>
                 </TabViewItem>
             </TabView>
-        </StackPanel>
     </Grid>
 </Page>

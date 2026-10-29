@@ -21,13 +21,38 @@ public sealed partial class InstanceDetailPage : Page
             .GetRequiredService<InstanceDetailViewModel>();
         InitializeComponent();
         ViewModel.LogAppended += OnLogAppended;
+        ViewModel.PropertyChanged += OnViewModelPropertyChanged;
+        Loaded += (s, e) => SyncGraphicsModeComboBox();
+        Unloaded += (s, e) =>
+        {
+            ViewModel.PropertyChanged -= OnViewModelPropertyChanged;
+            ViewModel.LogAppended -= OnLogAppended;
+            ViewModel.Dispose();
+        };
+    }
+
+    private void BackButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (Frame.CanGoBack)
+        {
+            Frame.GoBack();
+        }
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ViewModel.GameOptions))
+        {
+            SyncGraphicsModeComboBox();
+            Bindings.Update();
+        }
     }
 
     private void OnLogAppended()
     {
         if (ViewModel.AutoScroll && LogScrollViewer != null)
         {
-            _ = App.Dispatcher.TryEnqueue(() =>
+            _ = App.Dispatcher?.TryEnqueue(() =>
             {
                 LogScrollViewer.ChangeView(null, LogScrollViewer.ScrollableHeight, null, false);
             });
@@ -41,9 +66,19 @@ public sealed partial class InstanceDetailPage : Page
         {
             var active = ((App)Application.Current).Services
                 .GetRequiredService<Vaz.WinUI.Services.ActiveInstanceService>();
-            active.SetCurrent(instanceId);
+            if (instanceId == active.CurrentInstanceId)
+            {
+                _ = ViewModel.LoadCommand.ExecuteAsync(null);
+            }
+            else
+            {
+                active.SetCurrent(instanceId);
+            }
         }
-        _ = ViewModel.LoadCommand.ExecuteAsync(null);
+        else
+        {
+            _ = ViewModel.LoadCommand.ExecuteAsync(null);
+        }
     }
 
     private void ModEnabled_Toggled(object sender, RoutedEventArgs e)
@@ -137,6 +172,71 @@ public sealed partial class InstanceDetailPage : Page
         if (result == ContentDialogResult.Primary)
         {
             await ViewModel.DeleteCommand.ExecuteAsync(null);
+        }
+    }
+
+    private void ViewMode_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (sender is ToggleSwitch ts)
+        {
+            ViewModel.SwitchViewMode(ts.IsOn);
+            if (!ts.IsOn)
+            {
+                SyncGraphicsModeComboBox();
+                Bindings.Update();
+            }
+        }
+    }
+
+    private void PresetPerformance_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.ApplyPreset("Performance");
+        SyncGraphicsModeComboBox();
+        Bindings.Update();
+    }
+
+    private void PresetBalanced_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.ApplyPreset("Balanced");
+        SyncGraphicsModeComboBox();
+        Bindings.Update();
+    }
+
+    private void PresetHighQuality_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.ApplyPreset("HighQuality");
+        SyncGraphicsModeComboBox();
+        Bindings.Update();
+    }
+
+    private void GraphicsMode_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (GraphicsModeComboBox.SelectedItem is ComboBoxItem item && item.Tag is string mode)
+        {
+            if (ViewModel?.GameOptions != null)
+            {
+                ViewModel.GameOptions.GraphicsMode = mode;
+            }
+        }
+    }
+
+    private void SyncGraphicsModeComboBox()
+    {
+        if (GraphicsModeComboBox == null || ViewModel?.GameOptions == null) return;
+        var mode = ViewModel.GameOptions.GraphicsMode?.ToLowerInvariant();
+        var match = GraphicsModeComboBox.Items
+            .OfType<ComboBoxItem>()
+            .FirstOrDefault(x => string.Equals((string)x.Tag, mode, StringComparison.OrdinalIgnoreCase));
+        GraphicsModeComboBox.SelectedItem = match ?? GraphicsModeComboBox.Items.OfType<ComboBoxItem>().FirstOrDefault(x => (string)x.Tag == "fancy");
+    }
+
+    private async void ExportOptions_Click(object sender, RoutedEventArgs e)
+    {
+        var picker = FilePickerHelper.CreateSavePicker(App.MainWindow, "options.txt", ".txt", "Minecraft Options");
+        var file = await picker.PickSaveFileAsync();
+        if (file != null)
+        {
+            await ViewModel.ExportOptionsAsync(file.Path);
         }
     }
 }

@@ -3,7 +3,8 @@ import { readFile } from "node:fs/promises";
 import { extname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const root = resolve(fileURLToPath(new URL("../../../docs/design-preview/", import.meta.url)));
+const root = resolve(fileURLToPath(new URL("../../docs/design-preview/", import.meta.url)));
+const websiteRoot = resolve(fileURLToPath(new URL("../../website/", import.meta.url)));
 const port = 5173;
 
 const mime = {
@@ -29,11 +30,23 @@ const server = createServer(async (req, res) => {
   let pathname = decodeURIComponent(url.pathname);
   if (pathname === "/") pathname = "/index.html";
 
-  const filePath = resolve(root, `.${pathname}`);
-  if (filePath !== root && !filePath.startsWith(root + sep)) {
-    res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
-    res.end("Forbidden");
-    return;
+  let filePath;
+  if (pathname === "/website" || pathname.startsWith("/website/")) {
+    let sub = pathname === "/website" ? "" : pathname.slice("/website/".length);
+    if (!sub || sub === "/") sub = "index.html";
+    filePath = resolve(websiteRoot, sub);
+    if (filePath !== websiteRoot && !filePath.startsWith(websiteRoot + sep)) {
+      res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
+      res.end("Forbidden");
+      return;
+    }
+  } else {
+    filePath = resolve(root, `.${pathname}`);
+    if (filePath !== root && !filePath.startsWith(root + sep)) {
+      res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
+      res.end("Forbidden");
+      return;
+    }
   }
 
   try {
