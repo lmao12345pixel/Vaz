@@ -122,3 +122,22 @@ Các kịch bản sau chưa thể mô phỏng hoàn toàn tự động vì cần
 5. **MC-LD-01 (Khóa file khi game đang chạy)**: Bật/tắt mod khi process game đang chiếm dụng file jar.
 6. **MC-LD-02 (Hộp thoại xác nhận xóa mod)**: Xác nhận xóa mod qua dialog tương tác.
 7. **MC-LD-04 (HiDPI scaling 125%/150%)**: Đổi scale màn hình Windows thật để kiểm tra độ sắc nét.
+
+---
+
+## 8. Đợt 1 Commit 4 — Search & Safe Download Hardening
+
+- **SM-08 (Empty query)**: Khi query rỗng hoặc toàn khoảng trắng, trả ngay `SearchResults.Empty` mà không gửi HTTP request đến Modrinth API. Đã kiểm chứng qua unit test `SearchAsync_EmptyOrWhitespaceQuery_ReturnsEmptyWithoutHttpCall`.
+- **SM-13/14 (Limit clamp)**: Kẹp giới hạn kết quả `Limit = Math.Clamp(limit, 1, 100)` trong `SearchQuery` và `ModrinthClient.SearchAsync`. Đã kiểm chứng qua unit tests `SearchQuery_Limit_ClampedBetween1And100` và `SearchAsync_Limit_ClampedTo100`.
+- **ER-1..4 (ModrinthErrorMapper & Auto-retry)**:
+  - `ModrinthErrorMapper`: chuẩn hóa các lỗi Network (HttpRequestException), Timeout (TaskCanceledException), Rate-limit (429 với `Retry-After`), Server error (5xx).
+  - Tự động thử lại: 0 lần cho lỗi 429 (ném ngay `ModrinthRateLimitException` kèm Retry-After), 1 lần cho lỗi Timeout / 5xx. Đã kiểm chứng qua các unit test retry và mapper.
+- **DP-1 (Debounce 300ms & Keystrokes cancel)**: Gõ nhanh liên tục hủy CancellationToken cũ, chỉ chạy query cuối cùng. Đã kiểm chứng qua unit test `DP1_RapidTyping_CancelsPreviousQueries_OnlyLastCompletes`.
+- **PH-2/3 (PaginationState)**: Quản lý trạng thái phân trang `{ Offset, Limit, HasMore, Total, IsLoadingMore }` cùng các chỉ mục sắp xếp (`relevance`, `downloads`, `follows`, `newest`, `updated`). Đã kiểm chứng qua unit tests `PaginationState_AdvancesOffsetCorrectly` và `PaginationState_HandlesEmptyResults`.
+- **DL-1..3 (Tải an toàn qua file tạm hệ thống)**:
+  - Tải vào file tạm hệ thống `Path.Combine(Path.GetTempPath(), $"vazer-{Guid.NewGuid():N}.tmp")`.
+  - Kiểm tra SHA512 trên file tạm TRƯỚC KHI gọi `File.Move` vào thư mục `mods/`.
+  - Hủy giữa chừng (CancellationToken) hoặc lỗi tải / sai SHA512 lập tức xóa file tạm, file đích không được tạo. Tiến trình báo đầy đủ số byte và %. Đã kiểm chứng qua các unit tests `DL_CancelledDownload_CleansUpTempFileImmediately`, `DL_FailedSha512_CleansUpPartialFile`, và `DL_ProgressReports_BytesAndPercent`.
+- **DEP (Dependencies bắt buộc vs tùy chọn)**:
+  - Thêm CheckBox "Tải kèm dependencies" (hai chiều với `ViewModel.IncludeDependencies`) trên giao diện `ModBrowserDialog`.
+  - Dependency bắt buộc mặc định chọn bản release mới nhất tương thích MC + loader. Khi bỏ chọn checkbox, không tải kèm dependency. Đã kiểm chứng qua unit test `DEP_UncheckedDependencies_DoesNotInstallRequiredDep`.
