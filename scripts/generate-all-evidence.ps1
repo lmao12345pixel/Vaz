@@ -110,8 +110,14 @@ Start-Sleep -Milliseconds 200
 [System.Windows.Forms.SendKeys]::SendWait("xyznonexistent")
 Start-Sleep -Milliseconds 600
 Snap "RPS-AC-09-empty-state-1025x533.png"
+Snap "RPS-AC-09-empty-state-search-1025x533.png"
 [System.Windows.Forms.SendKeys]::SendWait("^a{BACKSPACE}")
 Start-Sleep -Milliseconds 400
+
+# Test Empty State No Active Packs (F5)
+[System.Windows.Forms.SendKeys]::SendWait("{F5}")
+Start-Sleep -Milliseconds 600
+Snap "RPS-AC-09-empty-state-no-active-1025x533.png"
 
 # --- PHASE 2: Shaders Tab at 1025x533 ---
 # Switch to Shaders Tab at (623, 85)
