@@ -40,6 +40,11 @@
                 ItemsSource="{x:Bind ViewModel.SortOptions}"
                 SelectedItem="{x:Bind ViewModel.SelectedSort, Mode=TwoWay}"
                 MinWidth="130" />
+            <CheckBox
+                Content="Tải kèm dependencies"
+                IsChecked="{x:Bind ViewModel.IncludeDependencies, Mode=TwoWay}"
+                VerticalAlignment="Bottom"
+                Margin="4,0,0,2" />
         </StackPanel>
 
         <!-- 3. Status / error / progress -->

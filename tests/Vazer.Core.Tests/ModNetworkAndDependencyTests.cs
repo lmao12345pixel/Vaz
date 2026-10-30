@@ -389,14 +389,138 @@ public sealed class ModNetworkAndDependencyTests : IDisposable
         modrinthMock.Setup(m => m.DownloadAsync(ver.Files[0].Url, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MemoryStream(Encoding.UTF8.GetBytes("content-with-different-hash")));
 
+        var initialTempFiles = Directory.GetFiles(Path.GetTempPath(), "vazer-*.tmp");
         var svc = new ModInstallService(instMgrMock.Object, modrinthMock.Object, Options.Create(TestOptions), NullLogger<ModInstallService>.Instance);
         var act = () => svc.InstallFromModrinthAsync("inst-1", "bad-hash");
 
         await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*SHA512 mismatch*");
 
-        // Xác nhận .partial và file đích KHÔNG còn trên đĩa
-        File.Exists(Path.Combine(modsDir, "bad.jar.partial")).Should().BeFalse();
+        // Xác nhận file tạm trong temp path và file đích KHÔNG còn trên đĩa
+        var remainingTempFiles = Directory.GetFiles(Path.GetTempPath(), "vazer-*.tmp");
+        remainingTempFiles.Length.Should().Be(initialTempFiles.Length);
         File.Exists(Path.Combine(modsDir, "bad.jar")).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task DL_CancelledDownload_CleansUpTempFileImmediately()
+    {
+        var instancePath = Path.Combine(_tempDir, "inst-dl-cancel");
+        var modsDir = Path.Combine(instancePath, "mods");
+        Directory.CreateDirectory(modsDir);
+
+        var instMgrMock = new Mock<IInstanceManager>();
+        instMgrMock.Setup(m => m.GetAsync("inst-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MinecraftInstance { Id = "inst-1", Name = "Test", Path = instancePath, LoaderType = "fabric", MinecraftVersion = "1.21.1", CreatedAt = DateTimeOffset.UtcNow });
+
+        var modrinthMock = new Mock<IModrinthClient>();
+        var proj = new ModrinthProject { Id = "pCancel", Slug = "cancel-mod", Title = "Cancel Mod", ProjectType = "mod" };
+        var ver = new ProjectVersion
+        {
+            Id = "vCancel",
+            ProjectId = "pCancel",
+            VersionType = "release",
+            DatePublished = DateTimeOffset.UtcNow,
+            Files = [new VersionFile { Url = "https://cdn.modrinth.com/cancel.jar", Filename = "cancel.jar", Primary = true }],
+            Dependencies = []
+        };
+
+        var cts = new CancellationTokenSource();
+        modrinthMock.Setup(m => m.GetProjectAsync("cancel-mod", It.IsAny<CancellationToken>())).ReturnsAsync(proj);
+        modrinthMock.Setup(m => m.GetVersionsAsync("cancel-mod", "fabric", "1.21.1", It.IsAny<CancellationToken>())).ReturnsAsync([ver]);
+        modrinthMock.Setup(m => m.DownloadAsync(ver.Files[0].Url, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CancellingStream(cts));
+
+        var initialTempFiles = Directory.GetFiles(Path.GetTempPath(), "vazer-*.tmp");
+        var svc = new ModInstallService(instMgrMock.Object, modrinthMock.Object, Options.Create(TestOptions), NullLogger<ModInstallService>.Instance);
+        var act = () => svc.InstallFromModrinthAsync("inst-1", "cancel-mod", ct: cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+
+        var remainingTempFiles = Directory.GetFiles(Path.GetTempPath(), "vazer-*.tmp");
+        remainingTempFiles.Length.Should().Be(initialTempFiles.Length);
+        File.Exists(Path.Combine(modsDir, "cancel.jar")).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task DL_ProgressReports_BytesAndPercent()
+    {
+        var instancePath = Path.Combine(_tempDir, "inst-dl-progress");
+        var modsDir = Path.Combine(instancePath, "mods");
+        Directory.CreateDirectory(modsDir);
+
+        var instMgrMock = new Mock<IInstanceManager>();
+        instMgrMock.Setup(m => m.GetAsync("inst-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MinecraftInstance { Id = "inst-1", Name = "Test", Path = instancePath, LoaderType = "fabric", MinecraftVersion = "1.21.1", CreatedAt = DateTimeOffset.UtcNow });
+
+        var content = new byte[100_000];
+        Array.Fill<byte>(content, 42);
+        using var sha = System.Security.Cryptography.SHA512.Create();
+        var shaHex = Convert.ToHexString(sha.ComputeHash(content));
+
+        var modrinthMock = new Mock<IModrinthClient>();
+        var proj = new ModrinthProject { Id = "pProg", Slug = "prog-mod", Title = "Prog Mod", ProjectType = "mod" };
+        var ver = new ProjectVersion
+        {
+            Id = "vProg",
+            ProjectId = "pProg",
+            VersionType = "release",
+            DatePublished = DateTimeOffset.UtcNow,
+            Files = [new VersionFile { Url = "https://cdn.modrinth.com/prog.jar", Filename = "prog.jar", Primary = true, Size = content.Length, Hashes = new FileHashes { Sha512 = shaHex } }],
+            Dependencies = []
+        };
+
+        modrinthMock.Setup(m => m.GetProjectAsync("prog-mod", It.IsAny<CancellationToken>())).ReturnsAsync(proj);
+        modrinthMock.Setup(m => m.GetVersionsAsync("prog-mod", "fabric", "1.21.1", It.IsAny<CancellationToken>())).ReturnsAsync([ver]);
+        modrinthMock.Setup(m => m.DownloadAsync(ver.Files[0].Url, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MemoryStream(content));
+
+        var reports = new List<InstallProgress>();
+        var progress = new Progress<InstallProgress>(p => reports.Add(p));
+
+        var svc = new ModInstallService(instMgrMock.Object, modrinthMock.Object, Options.Create(TestOptions), NullLogger<ModInstallService>.Instance);
+        var result = await svc.InstallFromModrinthAsync("inst-1", "prog-mod", progress: progress);
+
+        result.Success.Should().BeTrue();
+        reports.Should().NotBeEmpty();
+        reports.Any(r => r.DownloadedBytes > 0).Should().BeTrue();
+        reports.Last().PercentComplete.Should().Be(100);
+    }
+
+    [Fact]
+    public async Task DEP_UncheckedDependencies_DoesNotInstallRequiredDep()
+    {
+        var instancePath = Path.Combine(_tempDir, "inst-dep-unchecked");
+        var modsDir = Path.Combine(instancePath, "mods");
+        Directory.CreateDirectory(modsDir);
+
+        var instMgrMock = new Mock<IInstanceManager>();
+        instMgrMock.Setup(m => m.GetAsync("inst-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MinecraftInstance { Id = "inst-1", Name = "Test", Path = instancePath, LoaderType = "fabric", MinecraftVersion = "1.21.1", CreatedAt = DateTimeOffset.UtcNow });
+
+        var modrinthMock = new Mock<IModrinthClient>();
+        var projA = new ModrinthProject { Id = "pA", Slug = "mod-a", Title = "Mod A", ProjectType = "mod" };
+        var verA = new ProjectVersion
+        {
+            Id = "vA",
+            ProjectId = "pA",
+            VersionType = "release",
+            DatePublished = DateTimeOffset.UtcNow,
+            Files = [new VersionFile { Url = "https://cdn.modrinth.com/mod-a.jar", Filename = "mod-a.jar", Primary = true, Hashes = new FileHashes() }],
+            Dependencies = [new VersionDependency { ProjectId = "pB", DependencyType = "required" }]
+        };
+
+        modrinthMock.Setup(m => m.GetProjectAsync("mod-a", It.IsAny<CancellationToken>())).ReturnsAsync(projA);
+        modrinthMock.Setup(m => m.GetVersionsAsync("mod-a", "fabric", "1.21.1", It.IsAny<CancellationToken>())).ReturnsAsync([verA]);
+        modrinthMock.Setup(m => m.DownloadAsync(verA.Files[0].Url, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MemoryStream(Encoding.UTF8.GetBytes("fake-mod-a")));
+
+        var svc = new ModInstallService(instMgrMock.Object, modrinthMock.Object, Options.Create(TestOptions), NullLogger<ModInstallService>.Instance);
+        var result = await svc.InstallFromModrinthAsync("inst-1", "mod-a", resolveDependencies: false);
+
+        result.Success.Should().BeTrue();
+        result.InstalledDependencies.Should().BeEmpty();
+        File.Exists(Path.Combine(instancePath, "mods", "mod-a.jar")).Should().BeTrue();
+        File.Exists(Path.Combine(instancePath, "mods", "mod-b.jar")).Should().BeFalse();
     }
 
     // ── Mrpack: Untrusted download host blocked ──
@@ -441,5 +565,35 @@ public sealed class ModNetworkAndDependencyTests : IDisposable
 
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*Blocked download from untrusted host in mrpack*");
+    }
+
+    private sealed class CancellingStream : Stream
+    {
+        private readonly CancellationTokenSource _cts;
+        public CancellingStream(CancellationTokenSource cts) => _cts = cts;
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => 1000;
+        public override long Position { get => 0; set => throw new NotSupportedException(); }
+        public override void Flush() { }
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            _cts.Cancel();
+            throw new OperationCanceledException();
+        }
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            _cts.Cancel();
+            throw new OperationCanceledException();
+        }
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            _cts.Cancel();
+            throw new OperationCanceledException();
+        }
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 }

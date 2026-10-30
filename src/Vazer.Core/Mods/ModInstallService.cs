@@ -171,7 +171,7 @@ public class ModInstallService : IModInstallService
         }
 
         string targetFilename = isEnabled ? candidate : candidate + ".disabled";
-        var partialPath = Path.Combine(modsDir, targetFilename + ".partial");
+        var tempFilePath = Path.Combine(Path.GetTempPath(), $"vazer-{Guid.NewGuid():N}.tmp");
         var finalPath = Path.Combine(modsDir, targetFilename);
 
         string? sha512Hex = null;
@@ -181,7 +181,7 @@ public class ModInstallService : IModInstallService
             {
                 await _fileDownloader.CopyStreamAsync(
                     downloadStream,
-                    partialPath,
+                    tempFilePath,
                     file.Size > 0 ? file.Size : null,
                     $"Downloading {file.Filename}",
                     progress,
@@ -190,7 +190,7 @@ public class ModInstallService : IModInstallService
 
             if (!string.IsNullOrWhiteSpace(file.Hashes?.Sha512))
             {
-                sha512Hex = await ComputeSha512HexAsync(partialPath, ct);
+                sha512Hex = await ComputeSha512HexAsync(tempFilePath, ct);
                 if (!string.Equals(sha512Hex, file.Hashes.Sha512.Trim(), StringComparison.OrdinalIgnoreCase))
                 {
                     throw new InvalidOperationException($"SHA512 mismatch for {file.Filename}");
@@ -233,13 +233,13 @@ public class ModInstallService : IModInstallService
                 }
             }
 
-            File.Move(partialPath, finalPath, overwrite: true);
+            File.Move(tempFilePath, finalPath, overwrite: true);
         }
         finally
         {
-            if (File.Exists(partialPath))
+            if (File.Exists(tempFilePath))
             {
-                try { File.Delete(partialPath); } catch { /* ignore */ }
+                try { File.Delete(tempFilePath); } catch { /* ignore */ }
             }
         }
 

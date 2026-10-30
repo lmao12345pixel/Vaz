@@ -75,6 +75,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
     [ObservableProperty] private bool canInstallPerformancePack = true;
     [ObservableProperty] private bool hasWarning;
     [ObservableProperty] private string warningMessage = string.Empty;
+    [ObservableProperty] private bool includeDependencies = true;
 
     public bool IsNotBusy => !IsBusy;
     public bool CanLoadMore => !IsBusy && !IsLoadingMore;
@@ -316,7 +317,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
             });
 
             var result = await _modInstall.InstallFromModrinthAsync(
-                inst.Id, row.Slug, versionId: null, resolveDependencies: true, progress: progress, ct: ct);
+                inst.Id, row.Slug, versionId: null, resolveDependencies: IncludeDependencies, progress: progress, ct: ct);
 
             ProgressPercent = 100;
             StatusMessage = result.Success
