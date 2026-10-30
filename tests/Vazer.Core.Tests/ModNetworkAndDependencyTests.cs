@@ -88,7 +88,7 @@ public sealed class ModNetworkAndDependencyTests : IDisposable
     // ── ER-3: 429 có Retry-After ──
 
     [Fact]
-    public async Task ER3_TooManyRequests_RetriesAndSucceedsWhenNextCallOk()
+    public async Task ER3_TooManyRequests_SurfacesRateLimit_WithRetryAfter()
     {
         var query = new SearchQuery { Query = "rate-limit-test" };
         var facets = ModrinthClient.BuildFacets(query);
@@ -98,23 +98,15 @@ public sealed class ModNetworkAndDependencyTests : IDisposable
         _handler.Map(HttpMethod.Get, path, _ =>
         {
             callCount++;
-            if (callCount == 1)
-            {
-                var resp = new HttpResponseMessage(HttpStatusCode.TooManyRequests);
-                resp.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(TimeSpan.Zero);
-                return resp;
-            }
-
-            return new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent("""{"hits":[],"total_hits":0,"offset":0,"limit":20}""", Encoding.UTF8, "application/json")
-            };
+            var resp = new HttpResponseMessage(HttpStatusCode.TooManyRequests);
+            resp.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(TimeSpan.FromSeconds(2));
+            return resp;
         });
 
-        var result = await _client.SearchAsync(query);
-        result.Should().NotBeNull();
-        result.TotalHits.Should().Be(0);
-        callCount.Should().Be(2);
+        var act = () => _client.SearchAsync(query);
+        var ex = await act.Should().ThrowAsync<ModrinthRateLimitException>();
+        ex.Which.RetryAfterSeconds.Should().Be(2);
+        callCount.Should().Be(1); // 0 auto retry for 429, tôn trọng Retry-After cho UI
     }
 
     // ── ER-4: 5xx server error ──

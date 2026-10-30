@@ -31,13 +31,19 @@ public sealed record VersionFilesUpdateRequest
 
 public sealed record SearchQuery
 {
+    private readonly int _limit = 20;
+
     public string? Query { get; init; }
     public string[]? Loaders { get; init; }
     public string[]? GameVersions { get; init; }
     public string[]? Categories { get; init; }
     public string? SortIndex { get; init; } // relevance, downloads, follows, newest, updated
     public int Offset { get; init; }
-    public int Limit { get; init; } = 20; // max 100
+    public int Limit
+    {
+        get => _limit;
+        init => _limit = Math.Clamp(value, 1, 100);
+    }
 }
 
 public sealed record SearchResult

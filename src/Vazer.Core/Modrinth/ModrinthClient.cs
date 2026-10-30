@@ -35,9 +35,22 @@ public sealed class ModrinthClient : IModrinthClient
 
     public async Task<SearchResult> SearchAsync(SearchQuery query, CancellationToken ct = default)
     {
-        var facets = BuildFacets(query);
         var limit = Math.Clamp(query.Limit, 1, 100);
-        var url = $"{BaseUrl}/search?query={Uri.EscapeDataString(query.Query ?? "")}" +
+
+        // SM-08: Nếu query Trim rỗng => không gọi API, trả về empty result
+        if (string.IsNullOrWhiteSpace(query.Query))
+        {
+            return new SearchResult
+            {
+                Hits = [],
+                TotalHits = 0,
+                Offset = query.Offset,
+                Limit = limit
+            };
+        }
+
+        var facets = BuildFacets(query);
+        var url = $"{BaseUrl}/search?query={Uri.EscapeDataString(query.Query.Trim())}" +
                   $"&limit={limit}&offset={query.Offset}" +
                   (query.SortIndex != null ? $"&index={query.SortIndex}" : "") +
                   $"&facets={Uri.EscapeDataString(facets)}";
@@ -186,36 +199,66 @@ public sealed class ModrinthClient : IModrinthClient
 
     private async Task<T> SendWithRetryAsync<T>(string url, JsonTypeInfo<T> typeInfo, CancellationToken ct)
     {
-        for (int attempt = 0; attempt < MaxRetries; attempt++)
+        const int maxAttempts = 2; // ER-1..4: 1 initial + 1 auto-retry cho timeout/5xx; 0 cho 429
+        for (int attempt = 0; attempt < maxAttempts; attempt++)
         {
-            var client = _httpClientFactory.CreateClient(ApiClientName);
-            client.DefaultRequestHeaders.UserAgent.ParseAdd(_options.ModrinthUserAgent);
-
-            using var response = await client.GetAsync(url, ct);
-
-            if (response.StatusCode == HttpStatusCode.TooManyRequests)
+            try
             {
-                var retryAfter = response.Headers.RetryAfter?.Delta ?? TimeSpan.FromSeconds(1);
-                _logger.LogWarning("Modrinth 429 on attempt {Attempt}, waiting {Delay}", attempt + 1, retryAfter);
-                await Task.Delay(retryAfter, ct);
-                continue;
+                var client = _httpClientFactory.CreateClient(ApiClientName);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(_options.ModrinthUserAgent);
+
+                using var response = await client.GetAsync(url, ct);
+
+                if (response.StatusCode == HttpStatusCode.TooManyRequests)
+                {
+                    int? retryAfterSeconds = (int?)response.Headers.RetryAfter?.Delta?.TotalSeconds;
+                    if (!retryAfterSeconds.HasValue && response.Headers.TryGetValues("Retry-After", out var vals))
+                    {
+                        var first = vals.FirstOrDefault();
+                        if (int.TryParse(first, out var sec)) retryAfterSeconds = sec;
+                    }
+                    _logger.LogWarning("Modrinth 429 Rate Limit for {Url}, retry-after: {Seconds}s", url, retryAfterSeconds);
+                    throw new ModrinthRateLimitException("Modrinth API 429 Rate Limit exceeded", retryAfterSeconds);
+                }
+
+                if ((int)response.StatusCode >= 500 && (int)response.StatusCode < 600)
+                {
+                    if (attempt + 1 < maxAttempts)
+                    {
+                        _logger.LogWarning("Modrinth server error {Status} on attempt {Attempt}, auto-retrying in 1s", (int)response.StatusCode, attempt + 1);
+                        await Task.Delay(1000, ct);
+                        continue;
+                    }
+
+                    throw new HttpRequestException($"Modrinth server error {(int)response.StatusCode}: {url}", null, response.StatusCode);
+                }
+
+                response.EnsureSuccessStatusCode();
+
+                var json = await response.Content.ReadAsStringAsync(ct);
+                var result = JsonSerializer.Deserialize(json, typeInfo);
+
+                if (result is SearchHit or ModrinthProject or ProjectVersion)
+                {
+                    // Check for extension data on types that support it
+                    LogExtensionData(result);
+                }
+
+                return result!;
             }
-
-            response.EnsureSuccessStatusCode();
-
-            var json = await response.Content.ReadAsStringAsync(ct);
-            var result = JsonSerializer.Deserialize(json, typeInfo);
-
-            if (result is SearchHit or ModrinthProject or ProjectVersion)
+            catch (Exception ex) when (ex is TaskCanceledException or TimeoutException)
             {
-                // Check for extension data on types that support it
-                LogExtensionData(result);
+                if (attempt + 1 < maxAttempts && !ct.IsCancellationRequested)
+                {
+                    _logger.LogWarning("Modrinth timeout on attempt {Attempt}, auto-retrying in 1s", attempt + 1);
+                    await Task.Delay(1000, ct);
+                    continue;
+                }
+                throw;
             }
-
-            return result!;
         }
 
-        throw new HttpRequestException($"Modrinth API request failed after {MaxRetries} retries: {url}");
+        throw new HttpRequestException($"Modrinth API request failed: {url}");
     }
 
     private void LogExtensionData(object result)

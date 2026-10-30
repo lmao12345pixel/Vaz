@@ -93,10 +93,10 @@ public sealed class ModrinthClientTests : IDisposable
         result.Hits[0].ProjectId.Should().Be("abc");
     }
 
-    // ── 4. Retry429_RetriesAfterDelay_ThenThrowsAfterMax ──
+    // ── 4. Retry429_ThrowsRateLimitException_WithoutAutoRetry ──
 
     [Fact]
-    public async Task Retry429_RetriesAfterDelay_ThenThrowsAfterMax()
+    public async Task Retry429_ThrowsRateLimitException_WithoutAutoRetry()
     {
         var query = new SearchQuery { Query = "retry" };
         var facets = ModrinthClient.BuildFacets(query);
@@ -105,13 +105,14 @@ public sealed class ModrinthClientTests : IDisposable
         _handler.Map(HttpMethod.Get, path, _ =>
         {
             var resp = new HttpResponseMessage(HttpStatusCode.TooManyRequests);
-            resp.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(TimeSpan.Zero);
+            resp.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(TimeSpan.FromSeconds(2));
             return resp;
         });
 
         var act = () => _client.SearchAsync(query);
-        await act.Should().ThrowAsync<HttpRequestException>();
-        _handler.CallCount(HttpMethod.Get, path).Should().Be(3);
+        var ex = await act.Should().ThrowAsync<ModrinthRateLimitException>();
+        ex.Which.RetryAfterSeconds.Should().Be(2);
+        _handler.CallCount(HttpMethod.Get, path).Should().Be(1); // 0 auto retry for 429
     }
 
     // ── 5. Cache_SecondCallWithinTTL_HitsCache ──
@@ -202,5 +203,108 @@ public sealed class ModrinthClientTests : IDisposable
         roundTripped.Id.Should().Be("MIT");
         roundTripped.Name.Should().Be("MIT License");
         roundTripped.Url.Should().Be("https://opensource.org/licenses/MIT");
+    }
+
+    // ── 9. SM-08: EmptyQuery_ReturnsEmpty_WithoutHttp ──
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task EmptyQuery_ReturnsEmpty_WithoutHttp(string? emptyQuery)
+    {
+        var query = new SearchQuery { Query = emptyQuery, Limit = 20 };
+        var result = await _client.SearchAsync(query);
+
+        result.Hits.Should().BeEmpty();
+        result.TotalHits.Should().Be(0);
+        result.Limit.Should().Be(20);
+        _handler.Requests.Should().BeEmpty(); // Khong goi HTTP request nao
+    }
+
+    // ── 10. SM-13/14: LimitClamp_Boundaries ──
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(1, 1)]
+    [InlineData(100, 100)]
+    [InlineData(101, 100)]
+    [InlineData(500, 100)]
+    public void LimitClamp_SearchQuery_ClampsBetween1And100(int input, int expected)
+    {
+        var query = new SearchQuery { Limit = input };
+        query.Limit.Should().Be(expected);
+    }
+
+    // ── 11. ER-1..4: ModrinthErrorMapper Tests ──
+
+    [Fact]
+    public void ErrorMapper_429_WithRetryAfter_ReturnsRateLimited()
+    {
+        var ex = new ModrinthRateLimitException("Too Many Requests", retryAfterSeconds: 2);
+        var info = ModrinthErrorMapper.Map(ex);
+
+        info.ErrorType.Should().Be(ModrinthErrorType.RateLimited);
+        info.CanRetry.Should().BeTrue();
+        info.RetryAfterSeconds.Should().Be(2);
+        info.Message.Should().Contain("2 giây");
+    }
+
+    [Fact]
+    public void ErrorMapper_500_ReturnsServer()
+    {
+        var ex = new HttpRequestException("Server error", null, HttpStatusCode.InternalServerError);
+        var info = ModrinthErrorMapper.Map(ex);
+
+        info.ErrorType.Should().Be(ModrinthErrorType.Server);
+        info.CanRetry.Should().BeTrue();
+        info.Message.Should().Contain("500");
+    }
+
+    [Fact]
+    public void ErrorMapper_Timeout_ReturnsTimeout()
+    {
+        var ex = new TimeoutException("Operation timed out");
+        var info = ModrinthErrorMapper.Map(ex);
+
+        info.ErrorType.Should().Be(ModrinthErrorType.Timeout);
+        info.CanRetry.Should().BeTrue();
+        info.Message.Should().Contain("timeout");
+    }
+
+    [Fact]
+    public void ErrorMapper_Network_ReturnsNetwork()
+    {
+        var ex = new HttpRequestException("Connection refused");
+        var info = ModrinthErrorMapper.Map(ex);
+
+        info.ErrorType.Should().Be(ModrinthErrorType.Network);
+        info.CanRetry.Should().BeTrue();
+        info.Message.Should().Contain("kết nối");
+    }
+
+    // ── 12. PH-2/3: PaginationState Tests ──
+
+    [Fact]
+    public void PaginationState_TracksTwoPages_Correctly()
+    {
+        var state = new PaginationState();
+        state.Reset(limit: 20);
+
+        state.Offset.Should().Be(0);
+        state.Limit.Should().Be(20);
+        state.HasMore.Should().BeFalse();
+
+        // Trang 1: 20 ket qua, tong cong 35
+        state.Update(hitsCount: 20, totalHits: 35);
+        state.Offset.Should().Be(20);
+        state.Total.Should().Be(35);
+        state.HasMore.Should().BeTrue();
+
+        // Trang 2: 15 ket qua tiep theo, tong cong 35
+        state.Update(hitsCount: 15, totalHits: 35);
+        state.Offset.Should().Be(35);
+        state.Total.Should().Be(35);
+        state.HasMore.Should().BeFalse(); // Da het trang
     }
 }
