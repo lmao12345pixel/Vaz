@@ -424,20 +424,25 @@ public sealed class ModNetworkAndDependencyTests : IDisposable
             Dependencies = []
         };
 
+        string? createdTempFile = null;
+        var initialTempFiles = Directory.GetFiles(Path.GetTempPath(), "vazer-*.tmp");
         var cts = new CancellationTokenSource();
         modrinthMock.Setup(m => m.GetProjectAsync("cancel-mod", It.IsAny<CancellationToken>())).ReturnsAsync(proj);
         modrinthMock.Setup(m => m.GetVersionsAsync("cancel-mod", "fabric", "1.21.1", It.IsAny<CancellationToken>())).ReturnsAsync([ver]);
         modrinthMock.Setup(m => m.DownloadAsync(ver.Files[0].Url, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new CancellingStream(cts));
+            .ReturnsAsync(new CancellingStream(cts, () =>
+            {
+                var current = Directory.GetFiles(Path.GetTempPath(), "vazer-*.tmp");
+                createdTempFile = current.Except(initialTempFiles).FirstOrDefault();
+            }));
 
-        var initialTempFiles = Directory.GetFiles(Path.GetTempPath(), "vazer-*.tmp");
         var svc = new ModInstallService(instMgrMock.Object, modrinthMock.Object, Options.Create(TestOptions), NullLogger<ModInstallService>.Instance);
         var act = () => svc.InstallFromModrinthAsync("inst-1", "cancel-mod", ct: cts.Token);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
 
-        var remainingTempFiles = Directory.GetFiles(Path.GetTempPath(), "vazer-*.tmp");
-        remainingTempFiles.Length.Should().Be(initialTempFiles.Length);
+        createdTempFile.Should().NotBeNull();
+        File.Exists(createdTempFile!).Should().BeFalse();
         File.Exists(Path.Combine(modsDir, "cancel.jar")).Should().BeFalse();
     }
 
@@ -570,7 +575,12 @@ public sealed class ModNetworkAndDependencyTests : IDisposable
     private sealed class CancellingStream : Stream
     {
         private readonly CancellationTokenSource _cts;
-        public CancellingStream(CancellationTokenSource cts) => _cts = cts;
+        private readonly Action? _onBeforeCancel;
+        public CancellingStream(CancellationTokenSource cts, Action? onBeforeCancel = null)
+        {
+            _cts = cts;
+            _onBeforeCancel = onBeforeCancel;
+        }
         public override bool CanRead => true;
         public override bool CanSeek => false;
         public override bool CanWrite => false;
@@ -579,16 +589,19 @@ public sealed class ModNetworkAndDependencyTests : IDisposable
         public override void Flush() { }
         public override int Read(byte[] buffer, int offset, int count)
         {
+            _onBeforeCancel?.Invoke();
             _cts.Cancel();
             throw new OperationCanceledException();
         }
         public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
+            _onBeforeCancel?.Invoke();
             _cts.Cancel();
             throw new OperationCanceledException();
         }
         public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
+            _onBeforeCancel?.Invoke();
             _cts.Cancel();
             throw new OperationCanceledException();
         }
