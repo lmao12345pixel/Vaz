@@ -446,6 +446,24 @@ public sealed partial class InstanceDetailPage : Page
         }
     }
 
+    private void ModCard_Tapped(object sender, Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
+    {
+        var cur = e.OriginalSource as Microsoft.UI.Xaml.DependencyObject;
+        while (cur != null && !ReferenceEquals(cur, sender))
+        {
+            if (cur is Microsoft.UI.Xaml.Controls.Primitives.ButtonBase)
+            {
+                return;
+            }
+            cur = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(cur);
+        }
+
+        if (sender is FrameworkElement elem && elem.DataContext is InstalledModRow row)
+        {
+            ViewModel.OpenInspector(row);
+        }
+    }
+
     private void CategoryChip_Checked(object sender, RoutedEventArgs e)
     {
         if (sender is RadioButton rb && rb.Tag is string category)

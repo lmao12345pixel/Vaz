@@ -317,18 +317,19 @@
                                 <ListView.ItemTemplate>
                                     <DataTemplate x:DataType="vm:InstalledModRow">
                                         <Border
+                                            DataContext="{x:Bind}"
                                             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                             BorderThickness="1"
                                             CornerRadius="8"
                                             Padding="12,8"
-                                            Margin="0,0,0,6">
+                                            Margin="0,0,0,6"
+                                            Tapped="ModCard_Tapped">
                                             <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="12">
                                                 <!-- Mod Icon (Click opens inspector) -->
                                                 <Button
                                                     Grid.Column="0"
                                                     Click="ModInspector_Click"
-                                                    DataContext="{x:Bind}"
                                                     Background="Transparent"
                                                     BorderThickness="0"
                                                     Padding="0"
@@ -358,7 +359,6 @@
                                                 <Button
                                                     Grid.Column="1"
                                                     Click="ModInspector_Click"
-                                                    DataContext="{x:Bind}"
                                                     Background="Transparent"
                                                     BorderThickness="0"
                                                     Padding="0"
