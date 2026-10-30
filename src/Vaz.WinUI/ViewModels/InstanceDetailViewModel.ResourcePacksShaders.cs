@@ -33,6 +33,13 @@ public sealed partial class ResourcePackRow : ObservableObject
     public string CompatibilityText => IsCompatible ? "Tương thích 1.21.1" : $"Sai phiên bản (Format {PackFormat})";
     public string PriorityBadge => $"# {Priority + 1}";
 
+    public string ViewDetailsAutomationName => $"Xem chi tiết {Name}";
+    public string EnablePackAutomationName => $"Bật gói {Name}";
+    public string DisablePackAutomationName => $"Tắt gói {Name}";
+    public string MoveUpAutomationName => $"Tăng mức ưu tiên {Name}";
+    public string MoveDownAutomationName => $"Giảm mức ưu tiên {Name}";
+    public string MoreOptionsAutomationName => $"Tùy chọn khác cho {Name}";
+
     partial void OnPriorityChanged(int value)
     {
         OnPropertyChanged(nameof(PriorityBadge));
@@ -70,6 +77,9 @@ public sealed partial class ShaderPackRow : ObservableObject
     public Uri? ImageUriSource => !string.IsNullOrEmpty(Shader.ImageUri) ? new Uri(Shader.ImageUri) : null;
     public string AccentColor => Shader.AccentColor;
     public System.Collections.Generic.List<string> Features => Shader.Features;
+
+    public string ViewDetailsAutomationName => $"Xem chi tiết {Name}";
+    public string ActivateShaderAutomationName => $"Kích hoạt shader {Name}";
 
     public ShaderPackRow(ShaderPackItem shader, bool current = false)
     {

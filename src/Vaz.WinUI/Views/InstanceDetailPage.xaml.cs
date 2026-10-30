@@ -412,6 +412,12 @@ public sealed partial class InstanceDetailPage : Page
             if (target != null && ViewModel.ActiveResourcePacks.Contains(target))
             {
                 ViewModel.MovePackUp(target);
+                ViewModel.SelectedResourcePack = target;
+                ActivePacksListView?.ScrollIntoView(target);
+                if (ActivePacksListView?.ContainerFromItem(target) is Control c)
+                {
+                    c.Focus(FocusState.Keyboard);
+                }
                 e.Handled = true;
             }
         }
@@ -421,6 +427,12 @@ public sealed partial class InstanceDetailPage : Page
             if (target != null && ViewModel.ActiveResourcePacks.Contains(target))
             {
                 ViewModel.MovePackDown(target);
+                ViewModel.SelectedResourcePack = target;
+                ActivePacksListView?.ScrollIntoView(target);
+                if (ActivePacksListView?.ContainerFromItem(target) is Control c)
+                {
+                    c.Focus(FocusState.Keyboard);
+                }
                 e.Handled = true;
             }
         }

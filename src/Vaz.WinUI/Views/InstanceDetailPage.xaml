@@ -803,13 +803,13 @@
                                                             <!-- Actions -->
                                                             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                                                                 <Button ToolTipService.ToolTip="Xem chi tiết"
-                                                                        AutomationProperties.Name="Xem chi tiết"
+                                                                        AutomationProperties.Name="{x:Bind ViewDetailsAutomationName}"
                                                                         Click="PackInspector_Click"
                                                                         Padding="6,4">
                                                                     <FontIcon Glyph="&#xE946;" FontSize="12" />
                                                                 </Button>
                                                                 <Button ToolTipService.ToolTip="Bật gói này"
-                                                                        AutomationProperties.Name="Bật gói này"
+                                                                        AutomationProperties.Name="{x:Bind EnablePackAutomationName}"
                                                                         Click="PackEnable_Click"
                                                                         Style="{StaticResource VazAccentButtonStyle}"
                                                                         Padding="8,4">
@@ -854,6 +854,7 @@
                                         <TextBlock Grid.Row="0" Text="Gói đang dùng (Ưu tiên từ trên xuống)" FontWeight="SemiBold" FontSize="14" Margin="4,0,0,8" />
 
                                         <ListView Grid.Row="1"
+                                                  x:Name="ActivePacksListView"
                                                   ItemsSource="{x:Bind ViewModel.ActiveResourcePacks, Mode=OneWay}"
                                                   SelectionMode="None">
                                             <ListView.ItemTemplate>
@@ -898,21 +899,21 @@
                                                             <!-- Reordering Up/Down & Action Overflow -->
                                                             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                                                                 <Button ToolTipService.ToolTip="Tăng mức ưu tiên"
-                                                                        AutomationProperties.Name="Tăng mức ưu tiên"
+                                                                        AutomationProperties.Name="{x:Bind MoveUpAutomationName}"
                                                                         Click="PackMoveUp_Click"
                                                                         IsEnabled="{x:Bind CanMoveUp, Mode=OneWay}"
                                                                         Padding="6,4">
                                                                     <FontIcon Glyph="&#xE70E;" FontSize="12" />
                                                                 </Button>
                                                                 <Button ToolTipService.ToolTip="Giảm mức ưu tiên"
-                                                                        AutomationProperties.Name="Giảm mức ưu tiên"
+                                                                        AutomationProperties.Name="{x:Bind MoveDownAutomationName}"
                                                                         Click="PackMoveDown_Click"
                                                                         IsEnabled="{x:Bind CanMoveDown, Mode=OneWay}"
                                                                         Padding="6,4">
                                                                     <FontIcon Glyph="&#xE70D;" FontSize="12" />
                                                                 </Button>
                                                                 <Button ToolTipService.ToolTip="Tùy chọn khác"
-                                                                        AutomationProperties.Name="Tùy chọn khác"
+                                                                        AutomationProperties.Name="{x:Bind MoreOptionsAutomationName}"
                                                                         Padding="6,4">
                                                                     <FontIcon Glyph="&#xE712;" FontSize="12" />
                                                                     <Button.Flyout>
@@ -1174,7 +1175,7 @@
 
                                                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                                                             <Button ToolTipService.ToolTip="Xem chi tiết"
-                                                                    AutomationProperties.Name="Xem chi tiết"
+                                                                    AutomationProperties.Name="{x:Bind ViewDetailsAutomationName}"
                                                                     Click="ShaderInspector_Click"
                                                                     Padding="6,4">
                                                                 <FontIcon Glyph="&#xE946;" FontSize="12" />
@@ -1193,7 +1194,7 @@
                                                             </Border>
 
                                                             <Button ToolTipService.ToolTip="Kích hoạt shader này"
-                                                                    AutomationProperties.Name="Kích hoạt shader này"
+                                                                    AutomationProperties.Name="{x:Bind ActivateShaderAutomationName}"
                                                                     Click="ActivateShader_Click"
                                                                     Visibility="{x:Bind IsActive, Mode=OneWay, Converter={StaticResource BoolToVisInv}}"
                                                                     Style="{StaticResource VazAccentButtonStyle}"
