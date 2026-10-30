@@ -74,6 +74,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
 
     // Cache metadata jar theo (tên file, ngày sửa, size) — tránh đọc lại zip mỗi lần Load
     private readonly Dictionary<(string Name, DateTime LastWriteUtc, long Length), JarMetadata?> _jarMetaCache = new();
+    private bool _diskCacheLoaded;
     private readonly IInstanceManager _instanceManager;
     private readonly IModInstallService _modInstall;
     private readonly IMrpackImporter _mrpackImporter;
@@ -183,139 +184,179 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
 
             if (Current != null)
             {
-                // Auto-discover jar files placed in mods folder that might not be in mods.json
-                var modsDir = Path.Combine(Current.Path, "mods");
-                if (Directory.Exists(modsDir))
+                var currentPath = Current.Path;
+                var currentId = Current.Id;
+                var currentLoader = Current.LoaderType;
+                var currentMcVersion = Current.MinecraftVersion;
+
+                var loadedRows = await Task.Run(async () =>
                 {
-                    var jarFiles = Directory.GetFiles(modsDir, "*.jar");
-                    if (jarFiles.Length > 0)
+                    EnsureDiskCacheLoaded(currentPath);
+
+                    // Auto-discover jar files placed in mods folder that might not be in mods.json
+                    var modsDir = Path.Combine(currentPath, "mods");
+                    if (Directory.Exists(modsDir))
                     {
-                        var manifestPath = Path.Combine(Current.Path, "mods.json");
-                        ModsManifest manifest = new();
-                        if (File.Exists(manifestPath))
+                        var jarFiles = Directory.GetFiles(modsDir, "*.jar");
+                        if (jarFiles.Length > 0)
                         {
-                            try
+                            var manifestPath = Path.Combine(currentPath, "mods.json");
+                            ModsManifest manifest = new();
+                            if (File.Exists(manifestPath))
                             {
-                                var json = await File.ReadAllTextAsync(manifestPath);
-                                manifest = JsonSerializer.Deserialize<ModsManifest>(json, CamelCaseJsonOptions) ?? new();
-                            }
-                            catch { }
-                        }
-
-                        bool manifestChanged = false;
-                        foreach (var jf in jarFiles)
-                        {
-                            var fn = Path.GetFileName(jf);
-                            if (manifest.Mods.Any(m => string.Equals(m.FileName, fn, StringComparison.OrdinalIgnoreCase)))
-                            {
-                                continue;
+                                try
+                                {
+                                    var json = await File.ReadAllTextAsync(manifestPath);
+                                    manifest = JsonSerializer.Deserialize<ModsManifest>(json, CamelCaseJsonOptions) ?? new();
+                                }
+                                catch { }
                             }
 
-                            // Đọc metadata thật trong jar (LD: jar lạ phải hiện đúng id/version,
-                            // không nhét version giả "1.0.0")
-                            JarMetadata? meta;
-                            try
+                            bool manifestChanged = false;
+                            foreach (var jf in jarFiles)
                             {
-                                meta = ReadJarMetadataCached(jf);
-                            }
-                            catch
-                            {
-                                meta = null; // jar hỏng — không crash
+                                var fn = Path.GetFileName(jf);
+                                if (manifest.Mods.Any(m => string.Equals(m.FileName, fn, StringComparison.OrdinalIgnoreCase)))
+                                {
+                                    continue;
+                                }
+
+                                JarMetadata? meta;
+                                try
+                                {
+                                    meta = ReadJarMetadataCached(jf);
+                                }
+                                catch
+                                {
+                                    meta = null; // jar hỏng — không crash
+                                }
+
+                                manifest.Mods.Add(new InstalledMod
+                                {
+                                    FileName = fn,
+                                    ProjectId = string.IsNullOrWhiteSpace(meta?.ModId) ? fn : meta.ModId,
+                                    VersionId = string.IsNullOrWhiteSpace(meta?.Version) ? "unknown" : meta.Version,
+                                    Source = "custom",
+                                    Enabled = true,
+                                    InstalledAt = DateTimeOffset.UtcNow
+                                });
+                                manifestChanged = true;
                             }
 
-                            manifest.Mods.Add(new InstalledMod
+                            if (manifestChanged)
                             {
-                                FileName = fn,
-                                ProjectId = string.IsNullOrWhiteSpace(meta?.ModId) ? fn : meta.ModId,
-                                VersionId = string.IsNullOrWhiteSpace(meta?.Version) ? "unknown" : meta.Version,
-                                Source = "custom",
-                                Enabled = true,
-                                InstalledAt = DateTimeOffset.UtcNow
-                            });
-                            manifestChanged = true;
-                        }
-
-                        if (manifestChanged)
-                        {
-                            var tmpPath = Path.Combine(Current.Path, "mods.json.tmp");
-                            var outJson = JsonSerializer.Serialize(manifest, CamelCaseJsonOptions);
-                            await File.WriteAllTextAsync(tmpPath, outJson, Utf8NoBom);
-                            File.Move(tmpPath, manifestPath, overwrite: true);
+                                var tmpPath = Path.Combine(currentPath, "mods.json.tmp");
+                                var outJson = JsonSerializer.Serialize(manifest, CamelCaseJsonOptions);
+                                await File.WriteAllTextAsync(tmpPath, outJson, Utf8NoBom);
+                                File.Move(tmpPath, manifestPath, overwrite: true);
+                            }
                         }
                     }
-                }
 
-                var mods = await _modInstall.ListAsync(Current.Id);
-                foreach (var mod in mods)
-                {
-                    var slug = ModCatalogData.GetSlug(mod.FileName, mod.ProjectId);
-                    var proj = ModCatalogData.FindProject(slug);
+                    var mods = await _modInstall.ListAsync(currentId);
+                    var rowList = new List<InstalledModRow>();
 
-                    var row = new InstalledModRow
+                    foreach (var mod in mods)
                     {
-                        Mod = mod,
-                        Enabled = mod.Enabled,
-                        Slug = slug,
-                        DisplayName = proj?.Name ?? (string.IsNullOrEmpty(mod.ProjectId) ? mod.FileName : mod.ProjectId),
-                        Author = proj?.Author ?? "Community",
-                        Description = proj?.Description ?? "Mod Minecraft được cài đặt trong instance.",
-                        Category = proj?.Category ?? "other",
-                        CategoryLabel = proj?.CategoryLabel ?? "Khác",
-                        Loader = Current.LoaderType,
-                        MinecraftVersion = Current.MinecraftVersion,
-                        IconUri = proj?.Icon ?? "ms-appx:///Assets/mods/default.png",
-                        // Liên kết thật chỉ khi biết nguồn (Modrinth hoặc catalog);
-                        // không tạo URL giả cho mod lạ
-                        ProjectUrl = proj != null ||
-                                     string.Equals(mod.Source, "modrinth", StringComparison.OrdinalIgnoreCase)
-                            ? $"https://modrinth.com/mod/{slug}"
-                            : string.Empty
-                    };
+                        var slug = ModCatalogData.GetSlug(mod.FileName, mod.ProjectId);
+                        var proj = ModCatalogData.FindProject(slug);
 
-                    // Mod ngoài catalog: đọc metadata thật từ jar (cache theo tên+ngày sửa+size)
-                    // để hiển thị đúng và cảnh báo riêng từng mod lỗi
-                    if (proj == null)
-                    {
-                        var jarPath = Path.Combine(Current.Path, "mods", mod.FileName);
-                        if (File.Exists(jarPath))
+                        var row = new InstalledModRow
                         {
-                            JarMetadata? meta;
-                            try
-                            {
-                                meta = ReadJarMetadataCached(jarPath);
-                            }
-                            catch
-                            {
-                                meta = null;
-                            }
+                            Mod = mod,
+                            Enabled = mod.Enabled,
+                            Slug = slug,
+                            DisplayName = proj?.Name ?? (string.IsNullOrEmpty(mod.ProjectId) ? mod.FileName : mod.ProjectId),
+                            Author = proj?.Author ?? "Community",
+                            Description = proj?.Description ?? "Mod Minecraft được cài đặt trong instance.",
+                            Category = proj?.Category ?? "other",
+                            CategoryLabel = proj?.CategoryLabel ?? "Khác",
+                            Loader = currentLoader,
+                            MinecraftVersion = currentMcVersion,
+                            IconUri = proj?.Icon ?? "ms-appx:///Assets/mods/default.png",
+                            ProjectUrl = proj != null ||
+                                         string.Equals(mod.Source, "modrinth", StringComparison.OrdinalIgnoreCase)
+                                ? $"https://modrinth.com/mod/{slug}"
+                                : string.Empty
+                        };
 
-                            if (meta != null)
+                        if (proj == null)
+                        {
+                            var jarPath = Path.Combine(currentPath, "mods", mod.FileName);
+                            if (File.Exists(jarPath))
                             {
-                                row.DisplayName = meta.Name;
-                                if (meta.Authors.Count > 0)
+                                JarMetadata? meta;
+                                try
                                 {
-                                    row.Author = string.Join(", ", meta.Authors);
+                                    meta = ReadJarMetadataCached(jarPath);
                                 }
-                                if (!string.IsNullOrEmpty(meta.Description))
+                                catch
                                 {
-                                    row.Description = meta.Description;
+                                    meta = null;
                                 }
-                                if (!string.IsNullOrWhiteSpace(meta.Loader) &&
-                                    !string.Equals(meta.Loader, Current.LoaderType, StringComparison.OrdinalIgnoreCase))
+
+                                if (meta != null)
+                                {
+                                    row.DisplayName = meta.Name;
+                                    if (meta.Authors.Count > 0)
+                                    {
+                                        row.Author = string.Join(", ", meta.Authors);
+                                    }
+                                    if (!string.IsNullOrEmpty(meta.Description))
+                                    {
+                                        row.Description = meta.Description;
+                                    }
+                                    if (!string.IsNullOrWhiteSpace(meta.Loader) &&
+                                        !string.Equals(meta.Loader, currentLoader, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        row.LoadWarning =
+                                            $"Loader của jar là '{meta.Loader}' nhưng instance đang dùng '{currentLoader}'. Hậu quả: Game không thể tải mod này.";
+                                    }
+                                    else if (!string.IsNullOrWhiteSpace(meta.MinecraftRequirement) &&
+                                             !JarMetadataReader.IsMinecraftVersionCompatible(meta.MinecraftRequirement, currentMcVersion))
+                                    {
+                                        row.LoadWarning =
+                                            $"Yêu cầu Minecraft '{meta.MinecraftRequirement}' nhưng instance dùng '{currentMcVersion}'. Hậu quả: Game sẽ crash khi khởi động do không tương thích phiên bản (ModResolutionException).";
+                                    }
+                                }
+                                else
                                 {
                                     row.LoadWarning =
-                                        $"Loader của jar là '{meta.Loader}' nhưng instance đang dùng '{Current.LoaderType}'.";
+                                        "Jar hỏng hoặc không có metadata nhận dạng được (fabric.mod.json / quilt.mod.json / mods.toml / neoforge.mods.toml). Hậu quả: Mod sẽ bị loader bỏ qua.";
                                 }
                             }
-                            else
+                        }
+
+                        rowList.Add(row);
+                    }
+
+                    // Kiểm tra trùng mod id giữa các jar
+                    var modIdGroups = rowList
+                        .Where(r => r.Mod != null && !string.IsNullOrWhiteSpace(r.Mod.ProjectId) && r.Mod.ProjectId != "unknown")
+                        .GroupBy(r => r.Mod!.ProjectId, StringComparer.OrdinalIgnoreCase);
+
+                    foreach (var group in modIdGroups)
+                    {
+                        var list = group.ToList();
+                        if (list.Count > 1)
+                        {
+                            foreach (var r in list)
                             {
-                                row.LoadWarning =
-                                    "Jar hỏng hoặc không có metadata nhận dạng được (fabric.mod.json / quilt.mod.json / mods.toml / neoforge.mods.toml).";
+                                var otherFiles = string.Join(", ", list.Where(x => x != r).Select(x => x.FileName));
+                                var warn = $"Trùng mod id '{group.Key}' với file '{otherFiles}'. Hậu quả: Loader sẽ crash khi khởi động do DuplicateModException.";
+                                r.LoadWarning = string.IsNullOrEmpty(r.LoadWarning) ? warn : $"{r.LoadWarning} | {warn}";
                             }
                         }
                     }
 
-                    Mods.Add(row);
+                    SaveDiskCache(currentPath);
+                    return rowList;
+                });
+
+                Mods.Clear();
+                foreach (var r in loadedRows)
+                {
+                    Mods.Add(r);
                 }
 
                 RefreshAllModDependencies();
@@ -908,6 +949,52 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
 
         _jarMetaCache[key] = meta;
         return meta;
+    }
+
+    private void EnsureDiskCacheLoaded(string instancePath)
+    {
+        if (_diskCacheLoaded) return;
+        _diskCacheLoaded = true;
+        try
+        {
+            var cacheFile = Path.Combine(instancePath, ".jar-metadata-cache.json");
+            if (File.Exists(cacheFile))
+            {
+                var json = File.ReadAllText(cacheFile);
+                var map = JsonSerializer.Deserialize<Dictionary<string, JarMetadata?>>(json, CamelCaseJsonOptions);
+                if (map != null)
+                {
+                    foreach (var (k, v) in map)
+                    {
+                        var parts = k.Split('|');
+                        if (parts.Length == 3 &&
+                            long.TryParse(parts[1], out var ticks) &&
+                            long.TryParse(parts[2], out var len))
+                        {
+                            var writeUtc = new DateTime(ticks, DateTimeKind.Utc);
+                            _jarMetaCache[(parts[0], writeUtc, len)] = v;
+                        }
+                    }
+                }
+            }
+        }
+        catch { }
+    }
+
+    private void SaveDiskCache(string instancePath)
+    {
+        try
+        {
+            var cacheFile = Path.Combine(instancePath, ".jar-metadata-cache.json");
+            var map = new Dictionary<string, JarMetadata?>();
+            foreach (var (k, v) in _jarMetaCache)
+            {
+                map[$"{k.Name}|{k.LastWriteUtc.Ticks}|{k.Length}"] = v;
+            }
+            var json = JsonSerializer.Serialize(map, CamelCaseJsonOptions);
+            File.WriteAllText(cacheFile, json, Utf8NoBom);
+        }
+        catch { }
     }
 
     private static async Task<string> ComputeSha512HexAsync(string filePath)

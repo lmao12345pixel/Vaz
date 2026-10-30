@@ -196,6 +196,43 @@ public sealed class JarMetadataReaderTests : IDisposable
     }
 
     [Fact]
+    public void Read_FabricJar_WithMinecraftDependency_ExtractsRequirement()
+    {
+        var json = """
+            {
+              "id": "somemod",
+              "version": "1.0.0",
+              "depends": {
+                "minecraft": ">=1.21 <1.22"
+              }
+            }
+            """;
+        var jarPath = CreateJar(("fabric.mod.json", json));
+
+        var meta = JarMetadataReader.Read(jarPath);
+
+        meta.Should().NotBeNull();
+        meta!.MinecraftRequirement.Should().Be(">=1.21 <1.22");
+    }
+
+    [Theory]
+    [InlineData("1.20.1", "1.21.1", false)]
+    [InlineData("1.21.1", "1.21.1", true)]
+    [InlineData(">=1.20 <1.21", "1.21.1", false)]
+    [InlineData(">=1.21 <1.22", "1.21.1", true)]
+    [InlineData("<=1.20.4", "1.21.1", false)]
+    [InlineData("~1.21", "1.21.1", true)]
+    [InlineData("~1.20", "1.21.1", false)]
+    [InlineData("*", "1.21.1", true)]
+    [InlineData("", "1.21.1", true)]
+    [InlineData(null, "1.21.1", true)]
+    public void IsMinecraftVersionCompatible_EvaluatesCorrectly(string? req, string instanceMc, bool expected)
+    {
+        var result = JarMetadataReader.IsMinecraftVersionCompatible(req, instanceMc);
+        result.Should().Be(expected);
+    }
+
+    [Fact]
     public void Read_FromStream_MatchesFileRead()
     {
         var json = """{ "id": "streammod", "version": "3.3", "name": "Stream Mod" }""";

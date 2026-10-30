@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml.Controls;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Vaz.WinUI.Models;
 using Vaz.WinUI.Services;
 using Vazer.Core.Abstractions;
 using Vazer.Core.Modrinth;
@@ -22,6 +23,11 @@ public sealed class SearchHitRow
     public string Slug => Hit.Slug;
     public string ProjectId => Hit.ProjectId;
     public long Downloads => Hit.Downloads;
+
+    public bool IsInstalled { get; init; }
+
+    public Microsoft.UI.Xaml.Visibility IsInstalledVisibility =>
+        IsInstalled ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
 
     public string DownloadsText => FormatCount(Hit.Downloads);
 
@@ -186,6 +192,18 @@ public sealed partial class ModBrowserViewModel : ObservableObject
 
             var result = await _modrinth.SearchAsync(query, ct);
 
+            var installedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (inst != null)
+            {
+                var installedMods = await _modInstall.ListAsync(inst.Id, ct);
+                foreach (var m in installedMods)
+                {
+                    if (!string.IsNullOrEmpty(m.ProjectId)) installedIds.Add(m.ProjectId);
+                    var s = ModCatalogData.GetSlug(m.FileName, m.ProjectId);
+                    if (!string.IsNullOrEmpty(s)) installedIds.Add(s);
+                }
+            }
+
             if (reset)
             {
                 Results.Clear();
@@ -193,14 +211,15 @@ public sealed partial class ModBrowserViewModel : ObservableObject
 
             foreach (var hit in result.Hits)
             {
-                Results.Add(new SearchHitRow { Hit = hit });
+                bool isInstalled = installedIds.Contains(hit.ProjectId) || installedIds.Contains(hit.Slug);
+                Results.Add(new SearchHitRow { Hit = hit, IsInstalled = isInstalled });
             }
 
             _offset = query.Offset + result.Hits.Length;
             HasResults = Results.Count > 0;
             StatusMessage = Results.Count == 0
-                ? "No results"
-                : $"{Results.Count} / {result.TotalHits} results";
+                ? "Không tìm thấy kết quả. Thử từ khóa tiếng Anh (ví dụ: sodium, iris, fabric)..."
+                : $"{Results.Count} / {result.TotalHits} kết quả";
         }
         catch (OperationCanceledException)
         {

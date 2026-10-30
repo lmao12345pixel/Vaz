@@ -19,6 +19,8 @@ public sealed record JarMetadata
     public string Loader { get; init; } = "";
     public IReadOnlyList<string> Authors { get; init; } = Array.Empty<string>();
     public string Description { get; init; } = "";
+    /// <summary>Yêu cầu phiên bản Minecraft (ví dụ ">=1.21 <1.22", "~1.20.1", "1.20.1"). Rỗng khi không chỉ định.</summary>
+    public string MinecraftRequirement { get; init; } = "";
 }
 
 public static class JarMetadataReader
@@ -112,6 +114,26 @@ public static class JarMetadataReader
                               && descEl.ValueKind == JsonValueKind.String
                 ? descEl.GetString() ?? "" : "";
 
+            string mcReq = "";
+            if (root.TryGetProperty("depends", out var dependsEl) && dependsEl.ValueKind == JsonValueKind.Object)
+            {
+                if (dependsEl.TryGetProperty("minecraft", out var mcEl))
+                {
+                    if (mcEl.ValueKind == JsonValueKind.String)
+                    {
+                        mcReq = mcEl.GetString() ?? "";
+                    }
+                    else if (mcEl.ValueKind == JsonValueKind.Array)
+                    {
+                        var arr = mcEl.EnumerateArray()
+                            .Where(e => e.ValueKind == JsonValueKind.String)
+                            .Select(e => e.GetString()!)
+                            .ToArray();
+                        mcReq = string.Join(", ", arr);
+                    }
+                }
+            }
+
             return new JarMetadata
             {
                 ModId = id,
@@ -119,7 +141,8 @@ public static class JarMetadataReader
                 Version = version,
                 Loader = loader,
                 Authors = authors,
-                Description = description
+                Description = description,
+                MinecraftRequirement = mcReq
             };
         }
         catch (JsonException)
@@ -323,5 +346,73 @@ public static class JarMetadataReader
         }
 
         return Array.Empty<string>();
+    }
+
+    /// <summary>
+    /// Kiểm tra phiên bản instance Minecraft có đáp ứng điều kiện chỉ định trong metadata mod không.
+    /// Hỗ trợ các biểu thức phổ biến: exact ("1.20.1"), range (">=1.21 <1.22", "<=1.20.4"), tilde ("~1.21"), wildcard ("*").
+    /// </summary>
+    public static bool IsMinecraftVersionCompatible(string? requirement, string instanceMcVersion)
+    {
+        if (string.IsNullOrWhiteSpace(requirement) || requirement.Trim() == "*")
+        {
+            return true;
+        }
+        if (string.IsNullOrWhiteSpace(instanceMcVersion))
+        {
+            return true;
+        }
+
+        var cleanReq = requirement.Trim();
+        var parts = cleanReq.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+        if (Version.TryParse(NormalizeVersion(instanceMcVersion), out var instVer))
+        {
+            foreach (var part in parts)
+            {
+                var p = part.Trim();
+                if (p.StartsWith(">=") && Version.TryParse(NormalizeVersion(p[2..]), out var minVer))
+                {
+                    if (instVer < minVer) return false;
+                }
+                else if (p.StartsWith("<=") && Version.TryParse(NormalizeVersion(p[2..]), out var maxVer))
+                {
+                    if (instVer > maxVer) return false;
+                }
+                else if (p.StartsWith(">") && Version.TryParse(NormalizeVersion(p[1..]), out var strictlyAbove))
+                {
+                    if (instVer <= strictlyAbove) return false;
+                }
+                else if (p.StartsWith("<") && Version.TryParse(NormalizeVersion(p[1..]), out var strictlyBelow))
+                {
+                    if (instVer >= strictlyBelow) return false;
+                }
+                else if (p.StartsWith("=") && Version.TryParse(NormalizeVersion(p[1..]), out var exactVer))
+                {
+                    if (instVer != exactVer) return false;
+                }
+                else if (p.StartsWith("~") && Version.TryParse(NormalizeVersion(p[1..]), out var tildeVer))
+                {
+                    if (instVer.Major != tildeVer.Major || instVer.Minor != tildeVer.Minor) return false;
+                }
+                else if (Version.TryParse(NormalizeVersion(p), out var simpleVer))
+                {
+                    if (instVer != simpleVer) return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private static string NormalizeVersion(string v)
+    {
+        var trimmed = v.Trim();
+        var dash = trimmed.IndexOf('-');
+        if (dash > 0) trimmed = trimmed[..dash];
+        var parts = trimmed.Split('.');
+        if (parts.Length == 2) return $"{parts[0]}.{parts[1]}.0";
+        if (parts.Length >= 3) return $"{parts[0]}.{parts[1]}.{parts[2]}";
+        return trimmed;
     }
 }
