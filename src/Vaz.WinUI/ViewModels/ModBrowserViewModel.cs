@@ -43,6 +43,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
     private readonly IModInstallService _modInstall;
     private readonly ActiveInstanceService _activeInstance;
     private CancellationTokenSource? _searchCts;
+    private CancellationTokenSource? _installCts;
     private int _offset;
 
     public ObservableCollection<SearchHitRow> Results { get; } = new();
@@ -264,6 +265,10 @@ public sealed partial class ModBrowserViewModel : ObservableObject
             return;
         }
 
+        _installCts?.Cancel();
+        _installCts = new CancellationTokenSource();
+        var ct = _installCts.Token;
+
         try
         {
             IsBusy = true;
@@ -292,7 +297,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
             });
 
             var result = await _modInstall.InstallFromModrinthAsync(
-                inst.Id, row.Slug, versionId: null, resolveDependencies: true, progress: progress);
+                inst.Id, row.Slug, versionId: null, resolveDependencies: true, progress: progress, ct: ct);
 
             ProgressPercent = 100;
             StatusMessage = result.Success
@@ -305,6 +310,11 @@ public sealed partial class ModBrowserViewModel : ObservableObject
                 ErrorMessage = result.Warning!;
             }
         }
+        catch (OperationCanceledException)
+        {
+            ProgressPercent = 0;
+            StatusMessage = "Đã hủy tải.";
+        }
         catch (Exception ex)
         {
             HasError = true;
@@ -316,6 +326,12 @@ public sealed partial class ModBrowserViewModel : ObservableObject
             IsBusy = false;
             NotifyBusyChanged();
         }
+    }
+
+    [RelayCommand]
+    public void CancelInstall()
+    {
+        _installCts?.Cancel();
     }
 
     [RelayCommand]

@@ -6,6 +6,7 @@ using System.Text.Json.Serialization.Metadata;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Vazer.Core.Json;
+using Vazer.Core.Mods;
 
 namespace Vazer.Core.Modrinth;
 
@@ -70,17 +71,34 @@ public sealed class ModrinthClient : IModrinthClient
 
     public async Task<Stream> DownloadAsync(string fileUrl, CancellationToken ct = default)
     {
+        if (!ModInstallService.IsAllowedDownloadUrl(fileUrl))
+        {
+            throw new InvalidOperationException($"Blocked download from untrusted host: '{fileUrl}'. Only 'https://cdn.modrinth.com' is allowed.");
+        }
+
         var client = _httpClientFactory.CreateClient(DownloadClientName);
         client.DefaultRequestHeaders.UserAgent.ParseAdd(_options.ModrinthUserAgent);
-        // Buffer vào MemoryStream để response được dispose ngay tại đây.
-        // Stream mạng trả thẳng ra ngoài sẽ giữ HttpResponseMessage sống theo,
-        // caller không có cách nào dispose response đó.
-        using var response = await client.GetAsync(fileUrl, HttpCompletionOption.ResponseHeadersRead, ct);
-        response.EnsureSuccessStatusCode();
-        var buffered = new MemoryStream();
-        await response.Content.CopyToAsync(buffered, ct);
-        buffered.Position = 0;
-        return buffered;
+
+        var response = await client.GetAsync(fileUrl, HttpCompletionOption.ResponseHeadersRead, ct);
+        try
+        {
+            response.EnsureSuccessStatusCode();
+
+            // Kiểm tra redirect không trỏ ra ngoài cdn.modrinth.com
+            var finalUri = response.RequestMessage?.RequestUri?.ToString();
+            if (!string.IsNullOrEmpty(finalUri) && !ModInstallService.IsAllowedDownloadUrl(finalUri))
+            {
+                throw new InvalidOperationException($"Redirected to unauthorized host: '{finalUri}'. Only 'https://cdn.modrinth.com' is allowed.");
+            }
+
+            var netStream = await response.Content.ReadAsStreamAsync(ct);
+            return new Http.NetworkResponseStream(response, netStream);
+        }
+        catch
+        {
+            response.Dispose();
+            throw;
+        }
     }
 
     public async Task<IReadOnlyDictionary<string, ProjectVersion>> GetVersionsFromHashesAsync(

@@ -174,72 +174,74 @@ public class ModInstallService : IModInstallService
         var partialPath = Path.Combine(modsDir, targetFilename + ".partial");
         var finalPath = Path.Combine(modsDir, targetFilename);
 
-        await using (var downloadStream = await _modrinthClient.DownloadAsync(file.Url, ct))
-        {
-            await _fileDownloader.CopyStreamAsync(
-                downloadStream,
-                partialPath,
-                file.Size > 0 ? file.Size : null,
-                $"Downloading {file.Filename}",
-                progress,
-                ct);
-        }
-
         string? sha512Hex = null;
-        if (!string.IsNullOrWhiteSpace(file.Hashes?.Sha512))
+        try
         {
-            sha512Hex = await ComputeSha512HexAsync(partialPath, ct);
-            if (!string.Equals(sha512Hex, file.Hashes.Sha512.Trim(), StringComparison.OrdinalIgnoreCase))
+            await using (var downloadStream = await _modrinthClient.DownloadAsync(file.Url, ct))
             {
-                if (File.Exists(partialPath))
-                {
-                    File.Delete(partialPath);
-                }
-                throw new InvalidOperationException($"SHA512 mismatch for {file.Filename}");
+                await _fileDownloader.CopyStreamAsync(
+                    downloadStream,
+                    partialPath,
+                    file.Size > 0 ? file.Size : null,
+                    $"Downloading {file.Filename}",
+                    progress,
+                    ct);
             }
-        }
 
-        // DL-guard: nếu cùng nội dung (sha512 trùng) đã nằm trong mods.json → không cài lại
-        if (!string.IsNullOrEmpty(sha512Hex) &&
-            manifest.Mods.Any(m =>
-                m != existingMod &&
-                string.Equals(m.Sha512, sha512Hex, StringComparison.OrdinalIgnoreCase)))
+            if (!string.IsNullOrWhiteSpace(file.Hashes?.Sha512))
+            {
+                sha512Hex = await ComputeSha512HexAsync(partialPath, ct);
+                if (!string.Equals(sha512Hex, file.Hashes.Sha512.Trim(), StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException($"SHA512 mismatch for {file.Filename}");
+                }
+            }
+
+            // DL-guard: nếu cùng nội dung (sha512 trùng) đã nằm trong mods.json → không cài lại
+            if (!string.IsNullOrEmpty(sha512Hex) &&
+                manifest.Mods.Any(m =>
+                    m != existingMod &&
+                    string.Equals(m.Sha512, sha512Hex, StringComparison.OrdinalIgnoreCase)))
+            {
+                var duplicateName = manifest.Mods
+                    .First(m => string.Equals(m.Sha512, sha512Hex, StringComparison.OrdinalIgnoreCase)).FileName;
+                return new InstallModResult
+                {
+                    Success = true,
+                    Warning = $"Duplicate skipped: identical file already installed as '{duplicateName}'.",
+                    ModName = !string.IsNullOrEmpty(project.Title) ? project.Title : projectSlug,
+                    FileName = duplicateName,
+                    VersionId = version.Id,
+                    InstalledDependencies = Array.Empty<string>()
+                };
+            }
+
+            if (existingMod != null)
+            {
+                var oldPath = Path.Combine(modsDir, existingMod.FileName);
+                if (File.Exists(oldPath) && !string.Equals(oldPath, finalPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    File.Delete(oldPath);
+                }
+
+                var oldAlt = existingMod.FileName.EndsWith(".disabled", StringComparison.OrdinalIgnoreCase)
+                    ? Path.Combine(modsDir, existingMod.FileName[..^".disabled".Length])
+                    : Path.Combine(modsDir, existingMod.FileName + ".disabled");
+                if (File.Exists(oldAlt) && !string.Equals(oldAlt, finalPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    File.Delete(oldAlt);
+                }
+            }
+
+            File.Move(partialPath, finalPath, overwrite: true);
+        }
+        finally
         {
             if (File.Exists(partialPath))
             {
-                File.Delete(partialPath);
-            }
-            var duplicateName = manifest.Mods
-                .First(m => string.Equals(m.Sha512, sha512Hex, StringComparison.OrdinalIgnoreCase)).FileName;
-            return new InstallModResult
-            {
-                Success = true,
-                Warning = $"Duplicate skipped: identical file already installed as '{duplicateName}'.",
-                ModName = !string.IsNullOrEmpty(project.Title) ? project.Title : projectSlug,
-                FileName = duplicateName,
-                VersionId = version.Id,
-                InstalledDependencies = Array.Empty<string>()
-            };
-        }
-
-        if (existingMod != null)
-        {
-            var oldPath = Path.Combine(modsDir, existingMod.FileName);
-            if (File.Exists(oldPath) && !string.Equals(oldPath, finalPath, StringComparison.OrdinalIgnoreCase))
-            {
-                File.Delete(oldPath);
-            }
-
-            var oldAlt = existingMod.FileName.EndsWith(".disabled", StringComparison.OrdinalIgnoreCase)
-                ? Path.Combine(modsDir, existingMod.FileName[..^".disabled".Length])
-                : Path.Combine(modsDir, existingMod.FileName + ".disabled");
-            if (File.Exists(oldAlt) && !string.Equals(oldAlt, finalPath, StringComparison.OrdinalIgnoreCase))
-            {
-                File.Delete(oldAlt);
+                try { File.Delete(partialPath); } catch { /* ignore */ }
             }
         }
-
-        File.Move(partialPath, finalPath, overwrite: true);
 
         var newMod = new InstalledMod
         {

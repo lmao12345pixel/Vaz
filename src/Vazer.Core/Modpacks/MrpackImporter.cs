@@ -121,6 +121,11 @@ public sealed class MrpackImporter : IMrpackImporter
                 }
 
                 var downloadUrl = file.Downloads[0];
+                if (!Mods.ModInstallService.IsAllowedDownloadUrl(downloadUrl))
+                {
+                    throw new InvalidOperationException($"Blocked download from untrusted host in mrpack: '{downloadUrl}'. Only 'https://cdn.modrinth.com' is allowed.");
+                }
+
                 var partialPath = targetPath + ".partial";
                 var targetDir = Path.GetDirectoryName(targetPath);
                 if (!string.IsNullOrEmpty(targetDir))
@@ -128,35 +133,45 @@ public sealed class MrpackImporter : IMrpackImporter
                     Directory.CreateDirectory(targetDir);
                 }
 
-                await _fileDownloader.DownloadFileAsync(
-                    downloadUrl,
-                    partialPath,
-                    new FileDownloadOptions { HttpClientName = DownloadClientName },
-                    progress: null,
-                    ct);
-
-                if (!string.IsNullOrWhiteSpace(file.Hashes?.Sha512))
+                try
                 {
-                    using var sha512 = SHA512.Create();
-                    byte[] hashBytes;
-                    await using (var fs = File.OpenRead(partialPath))
+                    await _fileDownloader.DownloadFileAsync(
+                        downloadUrl,
+                        partialPath,
+                        new FileDownloadOptions
+                        {
+                            HttpClientName = DownloadClientName,
+                            ValidateResponseUri = uri => uri != null && Mods.ModInstallService.IsAllowedDownloadUrl(uri.ToString())
+                        },
+                        progress: null,
+                        ct);
+
+                    if (!string.IsNullOrWhiteSpace(file.Hashes?.Sha512))
                     {
-                        hashBytes = await sha512.ComputeHashAsync(fs, ct);
+                        using var sha512 = SHA512.Create();
+                        byte[] hashBytes;
+                        await using (var fs = File.OpenRead(partialPath))
+                        {
+                            hashBytes = await sha512.ComputeHashAsync(fs, ct);
+                        }
+
+                        var hashHex = Convert.ToHexString(hashBytes);
+                        if (!string.Equals(hashHex, file.Hashes.Sha512.Trim(), StringComparison.OrdinalIgnoreCase))
+                        {
+                            throw new InvalidOperationException($"Checksum mismatch: SHA512 mismatch for {file.Path}");
+                        }
                     }
 
-                    var hashHex = Convert.ToHexString(hashBytes);
-                    if (!string.Equals(hashHex, file.Hashes.Sha512.Trim(), StringComparison.OrdinalIgnoreCase))
+                    File.Move(partialPath, targetPath, overwrite: true);
+                    downloadedFiles.Add(file);
+                }
+                finally
+                {
+                    if (File.Exists(partialPath))
                     {
-                        if (File.Exists(partialPath))
-                        {
-                            File.Delete(partialPath);
-                        }
-                        throw new InvalidOperationException($"Checksum mismatch: SHA512 mismatch for {file.Path}");
+                        try { File.Delete(partialPath); } catch { /* ignore */ }
                     }
                 }
-
-                File.Move(partialPath, targetPath, overwrite: true);
-                downloadedFiles.Add(file);
 
                 progress?.Report(new InstallProgress
                 {

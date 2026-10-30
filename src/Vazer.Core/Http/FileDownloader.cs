@@ -40,6 +40,12 @@ public sealed record FileDownloadOptions
     /// Tùy biến request trước khi gửi (ví dụ OptiFine cần Referrer + User-Agent).
     /// </summary>
     public Action<HttpRequestMessage>? ConfigureRequest { get; init; }
+
+    /// <summary>
+    /// Kiểm tra URI cuối cùng của response (chống open redirect sang host độc hại).
+    /// Trả về false sẽ ném InvalidOperationException và hủy tải.
+    /// </summary>
+    public Func<Uri?, bool>? ValidateResponseUri { get; init; }
 }
 
 /// <summary>
@@ -112,6 +118,11 @@ public sealed class FileDownloader : IFileDownloader
 
         using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
         response.EnsureSuccessStatusCode();
+
+        if (options.ValidateResponseUri != null && !options.ValidateResponseUri(response.RequestMessage?.RequestUri))
+        {
+            throw new InvalidOperationException($"Redirected to unauthorized host: {response.RequestMessage?.RequestUri}");
+        }
 
         var totalBytes = response.Content.Headers.ContentLength ?? options.KnownTotalBytes ?? -1;
         await using var responseStream = await response.Content.ReadAsStreamAsync(ct);

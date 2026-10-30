@@ -53,12 +53,21 @@
                 Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
                 Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}"
                 Style="{StaticResource CaptionTextBlockStyle}" />
-            <ProgressBar
-                Height="4"
-                Maximum="100"
-                IsIndeterminate="False"
-                Value="{x:Bind ViewModel.ProgressPercent, Mode=OneWay}"
-                Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
+            <Grid Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolToVis}}">
+                <ProgressBar
+                    Height="4"
+                    Maximum="100"
+                    IsIndeterminate="False"
+                    Value="{x:Bind ViewModel.ProgressPercent, Mode=OneWay}"
+                    VerticalAlignment="Center"
+                    Margin="0,0,70,0" />
+                <Button
+                    Content="Hủy"
+                    Command="{x:Bind ViewModel.CancelInstallCommand}"
+                    HorizontalAlignment="Right"
+                    Padding="12,2"
+                    FontSize="12" />
+            </Grid>
         </StackPanel>
 
         <!-- 4. Results list -->
