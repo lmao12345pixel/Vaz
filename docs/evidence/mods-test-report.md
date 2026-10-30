@@ -47,13 +47,35 @@ Cách chạy: `powershell scripts/test-modrinth-hash.ps1` → lấy file đầu 
 - ER-1 mất mạng / ER-2 timeout 30s / ER-3 HTTP 429 / ER-4 HTTP 5xx | UNVERIFIED (không chủ động ghi hỏng mạng hoặc 429 — không được phép ransom server; code đã có retry 3 + Retry-After; sẽ verify bằng unit test mock HTTP với FakeHttpMessageHandler)
 - DP-1 debounce/gõ nhanh (request cũ không ghi đè mới) — sẽ verify bằng unit test với nhiều lần searchAsync lần lượt
 - PH-2 load more, PH-3 sort | cần chạy qua WinUI App runtime (automation) — PENDING Bước 4
-- DL-1 progress/cancel, DL-2 .partial → rename, DL-3 sha512 sai → xóa temp, DL-4 path traversal, DL-5 cdn.modrinth.com allowlist, DL-6 không ghi đè + không tải trùng | PENDING Bước 2/3 (unit + runtime UI)
-- DEP-1 dependencies, DEP-2 release default | code có (InstallFromModrinthAsync resolveDependencies) — cần unit test + runtime
-- LD-xx toàn bộ | PENDING Bước 3/4
-- UPD-1 cập nhật hàng loạt bằng hash | PENDING Bước 2 (thêm `POST /version_files` client + ModInstallService check bulk)
+- DL-1 progress/cancel, DL-2 .partial → rename, DL-3 sha512 sai → xóa temp | runtime UI còn UNVERIFIED (logic .partial + sha512 đã có, test cũ checksum-mismatch pass)
+- DL-4 path traversal, DL-5 cdn.modrinth.com allowlist, DL-6 trùng hash | ĐÃ FIX + unit test — xem §4b
+- DEP-1 dependencies, DEP-2 release default | code có (InstallFromModrinthAsync resolveDependencies) — test cũ dep/alpha/beta pass; runtime UI UNVERIFIED
+- LD-04/05/06/08 logic | ĐÃ FIX (JarMetadataReader + ImportJarFilesAsync) — xem §4b; LD-07, LD-09 runtime UI UNVERIFIED
+- UPD-1 cập nhật hàng loạt bằng hash | ĐÃ FIX (POST /version_files + CheckUpdatesByHashAsync) — xem §4b
+
+## 4b. FIXED sau Bước 2/3 (30/10/2026) — code + unit test tự động
+
+`dotnet test Vaz.sln` sau fix: **269/269 PASS** (baseline 238 + 31 mới), 0 stuck/0 skip/0 fail.
+
+| Mã | Đã sửa gì | Bằng chứng |
+|---|---|---|
+| DL-4 | `ModInstallService`: `SanitizeModFileName` từ chối tên file API chứa `..`/path/ ký tự điều khiển → throw "unsafe filename from API", không download; `SanitizeModFileName`/`IsSafeModFileName` internal static | `ModDownloadGuardTests.cs` — traversal/pathed/Kontrol → null; Install unsafe-filename → throw + `DownloadAsync` Times.Never |
+| DL-5 | `IsAllowedDownloadUrl`: chỉ https://cdn.modrinth.com (host case-insensitive); URL khác → throw trước khi tải | `ModDownloadGuardTests.cs` — cdn TRUE; http/other-host/relative → FALSE; Install non-cdn → throw "*not allowed*" + never download |
+| DL-6 (trùng) | Trùng sha512 trong manifest → "Duplicate skipped", xóa `.partial`, không cài lại; `Sha512` của bản thật được lưu vào manifest (sha512 tính ra từ file hoặc từ API); name collision → `-1`/`-2` không ghi đè (đã có trước, vẫn PASS 24 test cũ) | install flow trong `ModInstallService.cs`; test cũ happy/collision vẫn pass (269 total) |
+| LD-04/05/06 | `JarMetadataReader` mới: đọc fabric.mod.json/quilt.mod.json/META-INF/mods.toml/neoforge.mods.toml từ zip (đã cache key name+mtime+size); corrupt → null (không crash); WinUI thêm LoadWarning cho từng mod khi jar hỏng/ko metadata/loader mismatch | `JarMetadataReaderTests.cs` 9 case (zip thật: fabric/quilt/forge/neoforge/corrupt/no-meta/stream) |
+| LD-08 | `ImportJarFilesAsync` mới: per-file try/catch (1 file hỏng khỏi bỏ dụng), copy → `.tmp-import` → sha512, tên trùng → `-1`/`-2` (không ghi đè), trùng hash → bỏ qua có tổng kết, manifest ghi atomic | code `InstanceDetailViewModel.cs`; runtime UI còn UNVERIFIED |
+| UPD-1 | `IModrinthClient.GetVersionsFromHashesAsync` (POST /version_files) + `ModInstallService.CheckUpdatesByHashAsync` (chunk 100, hash từ manifest hoặc băm file trên đĩa, so Id/VersionNumber) + `InstanceDetailViewModel.CheckUpdatesAsync` dùng bulk | `ModInstallBulkUpdateTests.cs` 8 case: resolved thêm mới → HasUpdate; same Id/VersionNumber → false; hash mới không resolve → fallback; Source=custom loại; hash-disk từ file; 150 mods → đúng 2 CHUNK; hash trùng → gửi distinct |
+| Synthetic URL | Xóa `SourceUrl = https://github.com/vazer/{slug}` + nút "Mã nguồn" giả; `Version` row hiện truly VersionId thay "1.0.0" | XAML/VM diff; sẽ chụp runtime ở B4 |
+
+### Test tự động mới (Bước 3) — theo file
+
+- `tests/Vazer.Core.Tests/JarMetadataReaderTests.cs` — 9 case (zip thật dựng bằng ZipArchive)
+- `tests/Vazer.Core.Tests/ModDownloadGuardTests.cs` — 14 case (4 URL round + 3 Theory + 4 sanitize + 1 safe + 2 install блок)
+- `tests/Vazer.Core.Tests/ModInstallBulkUpdateTests.cs` — 8 case (mock `POST /version_files`)
+- Tổng mới: **31**; `dotnet test Vaz.sln` → Okay: Passed 269, Failed 0, Skipped 0 (run 30/10/2026, Duration 2s)
 
 ## 5. Báo cáo tỷ số (cập nhật dần)
 
 - PASS: SM-01..14 (14), HA-01..04 (4)
-- FIXED: (append sau Bước 2)
-- UNVERIFIED: ER-1..4, DP-1 (chờ unit test), PH-2..3/DL-x/LD-x/UPD-1 (chờ runtime/fix)
+- FIXED: DL-4, DL-5, DL-6-trùng, LD-04/05/06 (logic层), LD-08, UPD-1, synthetic-url (chi tiết §4b)
+- UNVERIFIED: ER-1..4 (mock/playwright cần), DP-1, PH-2..3, DL-1..3 (progress/cancel/partial cần runtime UI), LD-07..09 runtime UI, DEP runtime UI

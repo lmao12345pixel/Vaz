@@ -24,6 +24,8 @@ namespace Vazer.Core.Json;
 [JsonSerializable(typeof(MrpackIndex))]
 [JsonSerializable(typeof(MrpackFile))]
 [JsonSerializable(typeof(MrpackEnv))]
+[JsonSerializable(typeof(VersionFilesRequest))]
+[JsonSerializable(typeof(Dictionary<string, ProjectVersion>))]
 [JsonSerializable(typeof(SearchResult))]
 [JsonSerializable(typeof(SearchHit))]
 [JsonSerializable(typeof(ModrinthProject))]

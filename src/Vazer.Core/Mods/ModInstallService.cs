@@ -127,6 +127,20 @@ public class ModInstallService : IModInstallService
 
         var file = version.Files.FirstOrDefault(f => f.Primary) ?? version.Files[0];
 
+        // DL-guard: chỉ tải từ CDN chính thức và tên file phải an toàn
+        if (!IsAllowedDownloadUrl(file.Url))
+        {
+            throw new InvalidOperationException(
+                $"Refusing download: URL host is not allowed (only https://cdn.modrinth.com): {file.Url}");
+        }
+
+        var safeFilename = SanitizeModFileName(file.Filename);
+        if (!string.Equals(safeFilename, file.Filename, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"Refusing download: unsafe filename from API '{file.Filename}'");
+        }
+
         var modsDir = Path.Combine(instance.Path, "mods");
         Directory.CreateDirectory(modsDir);
 
@@ -171,17 +185,11 @@ public class ModInstallService : IModInstallService
                 ct);
         }
 
+        string? sha512Hex = null;
         if (!string.IsNullOrWhiteSpace(file.Hashes?.Sha512))
         {
-            using var sha512 = SHA512.Create();
-            byte[] hashBytes;
-            await using (var fs = File.OpenRead(partialPath))
-            {
-                hashBytes = await sha512.ComputeHashAsync(fs, ct);
-            }
-
-            var hashHex = Convert.ToHexString(hashBytes);
-            if (!string.Equals(hashHex, file.Hashes.Sha512.Trim(), StringComparison.OrdinalIgnoreCase))
+            sha512Hex = await ComputeSha512HexAsync(partialPath, ct);
+            if (!string.Equals(sha512Hex, file.Hashes.Sha512.Trim(), StringComparison.OrdinalIgnoreCase))
             {
                 if (File.Exists(partialPath))
                 {
@@ -189,6 +197,29 @@ public class ModInstallService : IModInstallService
                 }
                 throw new InvalidOperationException($"SHA512 mismatch for {file.Filename}");
             }
+        }
+
+        // DL-guard: nếu cùng nội dung (sha512 trùng) đã nằm trong mods.json → không cài lại
+        if (!string.IsNullOrEmpty(sha512Hex) &&
+            manifest.Mods.Any(m =>
+                m != existingMod &&
+                string.Equals(m.Sha512, sha512Hex, StringComparison.OrdinalIgnoreCase)))
+        {
+            if (File.Exists(partialPath))
+            {
+                File.Delete(partialPath);
+            }
+            var duplicateName = manifest.Mods
+                .First(m => string.Equals(m.Sha512, sha512Hex, StringComparison.OrdinalIgnoreCase)).FileName;
+            return new InstallModResult
+            {
+                Success = true,
+                Warning = $"Duplicate skipped: identical file already installed as '{duplicateName}'.",
+                ModName = !string.IsNullOrEmpty(project.Title) ? project.Title : projectSlug,
+                FileName = duplicateName,
+                VersionId = version.Id,
+                InstalledDependencies = Array.Empty<string>()
+            };
         }
 
         if (existingMod != null)
@@ -218,7 +249,7 @@ public class ModInstallService : IModInstallService
             Source = "modrinth",
             Enabled = isEnabled,
             InstalledAt = DateTimeOffset.UtcNow,
-            Sha512 = file.Hashes?.Sha512
+            Sha512 = sha512Hex ?? file.Hashes?.Sha512
         };
 
         manifest.Mods.RemoveAll(m =>
@@ -547,5 +578,130 @@ public class ModInstallService : IModInstallService
         var json = JsonSerializer.Serialize(manifest, VazJsonContext.CamelCase.ModsManifest);
         await File.WriteAllTextAsync(tmpPath, json, ct);
         File.Move(tmpPath, manifestPath, overwrite: true);
+    }
+
+    /// <summary>Chỉ cho phép tải file https từ CDN chính thức của Modrinth.</summary>
+    internal static bool IsAllowedDownloadUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return false;
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return false;
+        if (!string.Equals(uri.Scheme, "https", StringComparison.OrdinalIgnoreCase)) return false;
+        return string.Equals(uri.Host, "cdn.modrinth.com", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Trả về true nếu tên file từ API an toàn (chỉ là tên file, không chứa đường dẫn / traversal).</summary>
+    internal static bool IsSafeModFileName(string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(fileName)) return false;
+        var name = fileName.Trim();
+        if (Path.GetFileName(name) != name) return false;
+        if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) return false;
+        return !name.Contains("..", StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Làm sạch tên file: trả về đúng tên nếu an toàn, hoặc null nếu có dấu hiệu path traversal / đường dẫn.
+    /// Chặn: ký tự ', \, .., đường dẫn tuyệt đối, ký tự điều khiển.
+    /// </summary>
+    internal static string? SanitizeModFileName(string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(fileName)) return null;
+        var name = fileName.Trim();
+        if (Path.GetFileName(name) != name) return null; // contains / or \ or rooted path or '..' segments
+        if (name.Contains("..", StringComparison.Ordinal)) return null;
+        if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) return null;
+        foreach (var ch in name)
+        {
+            if (char.IsControl(ch)) return null;
+        }
+        return name;
+    }
+
+    private static async Task<string> ComputeSha512HexAsync(string filePath, CancellationToken ct)
+    {
+        using var sha512 = SHA512.Create();
+        await using var fs = File.OpenRead(filePath);
+        var hashBytes = await sha512.ComputeHashAsync(fs, ct);
+        return Convert.ToHexString(hashBytes);
+    }
+
+    public async Task<UpdateCheckResult> CheckUpdatesByHashAsync(
+        string instanceId,
+        int chunkSize = 100,
+        CancellationToken ct = default)
+    {
+        var instance = await _instanceManager.GetAsync(instanceId, ct)
+            ?? throw new InvalidOperationException($"Instance not found: {instanceId}");
+
+        var manifest = await ReadManifestAsync(instance.Path, ct);
+        var updates = new List<ModUpdateInfo>();
+        var modsDir = Path.Combine(instance.Path, "mods");
+
+        // 1) Xây hash cho thực thể modrinth: ưu tiên hash trong manifest; nếu thiếu thì băm file trên đĩa.
+        var hashByMod = new Dictionary<int, string>();
+        for (int i = 0; i < manifest.Mods.Count; i++)
+        {
+            var mod = manifest.Mods[i];
+            if (!string.Equals(mod.Source, "modrinth", StringComparison.OrdinalIgnoreCase)) continue;
+
+            if (!string.IsNullOrWhiteSpace(mod.Sha512))
+            {
+                hashByMod[i] = mod.Sha512!.Trim().ToLowerInvariant();
+                continue;
+            }
+
+            var filePath = Path.Combine(modsDir, mod.FileName);
+            if (!File.Exists(filePath)) continue;
+            try
+            {
+                hashByMod[i] = (await ComputeSha512HexAsync(filePath, ct)).ToLowerInvariant();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not hash {File} for bulk update check", filePath);
+            }
+        }
+
+        // 2) POST /version_files theo lô (server giới hạn ≤ 100 hashes/lần gọi).
+        var resolved = new Dictionary<string, ProjectVersion>();
+        var allHashes = hashByMod.Values.Distinct().ToList();
+        for (int offset = 0; offset < allHashes.Count; offset += chunkSize)
+        {
+            var chunk = allHashes.Skip(offset).Take(chunkSize);
+            foreach (var (hash, version) in await _modrinthClient.GetVersionsFromHashesAsync(chunk, ct))
+            {
+                resolved[hash] = version;
+            }
+        }
+
+        // 3) So sánh phiên bản trả về với phiên bản đã cài.
+        foreach (var (index, hash) in hashByMod)
+        {
+            var mod = manifest.Mods[index];
+            if (resolved.TryGetValue(hash, out var latest))
+            {
+                bool hasUpdate = !string.Equals(latest.Id, mod.VersionId, StringComparison.OrdinalIgnoreCase)
+                                 && !string.Equals(latest.VersionNumber, mod.VersionId, StringComparison.OrdinalIgnoreCase);
+                updates.Add(new ModUpdateInfo
+                {
+                    CurrentMod = mod,
+                    LatestVersionId = latest.Id,
+                    LatestVersionNumber = latest.VersionNumber,
+                    HasUpdate = hasUpdate
+                });
+            }
+            else
+            {
+                updates.Add(new ModUpdateInfo
+                {
+                    CurrentMod = mod,
+                    LatestVersionId = mod.VersionId,
+                    LatestVersionNumber = "",
+                    HasUpdate = false
+                });
+            }
+        }
+
+        return new UpdateCheckResult { Updates = updates };
     }
 }

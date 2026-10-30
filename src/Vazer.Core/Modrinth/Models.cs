@@ -3,6 +3,16 @@ using System.Text.Json.Serialization;
 
 namespace Vazer.Core.Modrinth;
 
+/// <summary>Bản đồ hash → phiên bản trả về từ POST /version_files; key ngoài là chuỗi hash.</summary>
+public sealed record VersionFilesRequest
+{
+    [JsonPropertyName("hashes")]
+    public string[] Hashes { get; init; } = Array.Empty<string>();
+
+    [JsonPropertyName("algorithm")]
+    public string Algorithm { get; init; } = "sha512";
+}
+
 public sealed record SearchQuery
 {
     public string? Query { get; init; }

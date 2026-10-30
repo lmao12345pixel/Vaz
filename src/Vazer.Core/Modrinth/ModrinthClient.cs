@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Net;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using Microsoft.Extensions.Logging;
@@ -80,6 +81,34 @@ public sealed class ModrinthClient : IModrinthClient
         await response.Content.CopyToAsync(buffered, ct);
         buffered.Position = 0;
         return buffered;
+    }
+
+    public async Task<IReadOnlyDictionary<string, ProjectVersion>> GetVersionsFromHashesAsync(
+        IEnumerable<string> sha512Hashes, CancellationToken ct = default)
+    {
+        var hashes = (sha512Hashes ?? Enumerable.Empty<string>())
+            .Where(h => !string.IsNullOrWhiteSpace(h))
+            .Select(h => h.Trim().ToLowerInvariant())
+            .Distinct()
+            .ToArray();
+        if (hashes.Length == 0)
+        {
+            return new Dictionary<string, ProjectVersion>();
+        }
+
+        var client = _httpClientFactory.CreateClient(ApiClientName);
+        client.DefaultRequestHeaders.UserAgent.ParseAdd(_options.ModrinthUserAgent);
+
+        var request = new VersionFilesRequest { Hashes = hashes, Algorithm = "sha512" };
+        var json = JsonSerializer.Serialize(request, VazJsonContext.Plain.VersionFilesRequest);
+        using var content = new StringContent(json, Encoding.UTF8, "application/json");
+        using var response = await client.PostAsync($"{BaseUrl}/version_files", content, ct);
+        response.EnsureSuccessStatusCode();
+
+        var body = await response.Content.ReadAsStringAsync(ct);
+        var map = JsonSerializer.Deserialize(body, VazJsonContext.Plain.DictionaryStringProjectVersion)
+                  ?? new Dictionary<string, ProjectVersion>();
+        return map;
     }
 
     private async Task<T> GetCachedAsync<T>(string url, JsonTypeInfo<T> typeInfo, CancellationToken ct)

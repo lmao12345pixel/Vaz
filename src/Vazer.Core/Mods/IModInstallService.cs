@@ -20,6 +20,13 @@ public interface IModInstallService
 
     Task<UpdateCheckResult> CheckUpdatesAsync(string instanceId, CancellationToken ct = default);
 
+    /// <summary>
+    /// Kiểm tra cập nhật hàng loạt theo sha512 (POST /version_files của Modrinth),
+    /// không gọi API từng mod. Chỉ áp dụng cho mod có Source="modrinth".
+    /// </summary>
+    Task<UpdateCheckResult> CheckUpdatesByHashAsync(
+        string instanceId, int chunkSize = 100, CancellationToken ct = default);
+
     Task<int> UpdateAllAsync(string instanceId, IProgress<InstallProgress>? progress = null, CancellationToken ct = default);
 
     Task<InstallModResult> InstallPerformancePackAsync(string instanceId, IProgress<InstallProgress>? progress = null, CancellationToken ct = default);

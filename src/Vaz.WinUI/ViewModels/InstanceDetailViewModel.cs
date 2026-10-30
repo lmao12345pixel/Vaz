@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using System.Security.Cryptography;
 using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -30,7 +31,7 @@ public sealed partial class InstalledModRow : ObservableObject
 
     public string FileName => Mod.FileName;
     public string? VersionId => string.IsNullOrEmpty(Mod.VersionId) ? null : Mod.VersionId;
-    public string Version => VersionId ?? "1.0.0";
+    public string Version => VersionId ?? "Không rõ";
     public string UpdateBadge => HasUpdate ? "↑ update" : string.Empty;
     public string WarningBadge => HasMissingDependencies ? "Thiếu dependency" : string.Empty;
 
@@ -38,13 +39,16 @@ public sealed partial class InstalledModRow : ObservableObject
     public string DisplayName { get; set; } = string.Empty;
     public string Author { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
+    public string LoadWarning { get; set; } = string.Empty;
+
+    public bool HasLoadWarning => !string.IsNullOrEmpty(LoadWarning);
+    public string LoadWarningText => HasLoadWarning ? "⚠ " + LoadWarning : string.Empty;
     public string Category { get; set; } = "other";
     public string CategoryLabel { get; set; } = "Khác";
     public string Loader { get; set; } = "Fabric";
     public string MinecraftVersion { get; set; } = "1.21.1";
     public string IconUri { get; set; } = "ms-appx:///Assets/mods/default.png";
     public string ProjectUrl { get; set; } = string.Empty;
-    public string SourceUrl { get; set; } = string.Empty;
 
     public List<ModDependencyStatusItem> Dependencies { get; set; } = new();
 
@@ -67,6 +71,9 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
 {
     private static readonly System.Text.UTF8Encoding Utf8NoBom = new(false);
     private static readonly JsonSerializerOptions CamelCaseJsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true };
+
+    // Cache metadata jar theo (tên file, ngày sửa, size) — tránh đọc lại zip mỗi lần Load
+    private readonly Dictionary<(string Name, DateTime LastWriteUtc, long Length), JarMetadata?> _jarMetaCache = new();
     private readonly IInstanceManager _instanceManager;
     private readonly IModInstallService _modInstall;
     private readonly IMrpackImporter _mrpackImporter;
@@ -199,19 +206,33 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
                         foreach (var jf in jarFiles)
                         {
                             var fn = Path.GetFileName(jf);
-                            if (!manifest.Mods.Any(m => string.Equals(m.FileName, fn, StringComparison.OrdinalIgnoreCase)))
+                            if (manifest.Mods.Any(m => string.Equals(m.FileName, fn, StringComparison.OrdinalIgnoreCase)))
                             {
-                                manifest.Mods.Add(new InstalledMod
-                                {
-                                    FileName = fn,
-                                    ProjectId = ModCatalogData.GetSlug(fn, null),
-                                    VersionId = "1.0.0",
-                                    Source = "custom",
-                                    Enabled = true,
-                                    InstalledAt = DateTimeOffset.UtcNow
-                                });
-                                manifestChanged = true;
+                                continue;
                             }
+
+                            // Đọc metadata thật trong jar (LD: jar lạ phải hiện đúng id/version,
+                            // không nhét version giả "1.0.0")
+                            JarMetadata? meta;
+                            try
+                            {
+                                meta = ReadJarMetadataCached(jf);
+                            }
+                            catch
+                            {
+                                meta = null; // jar hỏng — không crash
+                            }
+
+                            manifest.Mods.Add(new InstalledMod
+                            {
+                                FileName = fn,
+                                ProjectId = string.IsNullOrWhiteSpace(meta?.ModId) ? fn : meta.ModId,
+                                VersionId = string.IsNullOrWhiteSpace(meta?.Version) ? "unknown" : meta.Version,
+                                Source = "custom",
+                                Enabled = true,
+                                InstalledAt = DateTimeOffset.UtcNow
+                            });
+                            manifestChanged = true;
                         }
 
                         if (manifestChanged)
@@ -243,9 +264,57 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
                         Loader = Current.LoaderType,
                         MinecraftVersion = Current.MinecraftVersion,
                         IconUri = proj?.Icon ?? "ms-appx:///Assets/mods/default.png",
-                        ProjectUrl = $"https://modrinth.com/mod/{slug}",
-                        SourceUrl = $"https://github.com/vazer/{slug}"
+                        // Liên kết thật chỉ khi biết nguồn (Modrinth hoặc catalog);
+                        // không tạo URL giả cho mod lạ
+                        ProjectUrl = proj != null ||
+                                     string.Equals(mod.Source, "modrinth", StringComparison.OrdinalIgnoreCase)
+                            ? $"https://modrinth.com/mod/{slug}"
+                            : string.Empty
                     };
+
+                    // Mod ngoài catalog: đọc metadata thật từ jar (cache theo tên+ngày sửa+size)
+                    // để hiển thị đúng và cảnh báo riêng từng mod lỗi
+                    if (proj == null)
+                    {
+                        var jarPath = Path.Combine(Current.Path, "mods", mod.FileName);
+                        if (File.Exists(jarPath))
+                        {
+                            JarMetadata? meta;
+                            try
+                            {
+                                meta = ReadJarMetadataCached(jarPath);
+                            }
+                            catch
+                            {
+                                meta = null;
+                            }
+
+                            if (meta != null)
+                            {
+                                row.DisplayName = meta.Name;
+                                if (meta.Authors.Count > 0)
+                                {
+                                    row.Author = string.Join(", ", meta.Authors);
+                                }
+                                if (!string.IsNullOrEmpty(meta.Description))
+                                {
+                                    row.Description = meta.Description;
+                                }
+                                if (!string.IsNullOrWhiteSpace(meta.Loader) &&
+                                    !string.Equals(meta.Loader, Current.LoaderType, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    row.LoadWarning =
+                                        $"Loader của jar là '{meta.Loader}' nhưng instance đang dùng '{Current.LoaderType}'.";
+                                }
+                            }
+                            else
+                            {
+                                row.LoadWarning =
+                                    "Jar hỏng hoặc không có metadata nhận dạng được (fabric.mod.json / quilt.mod.json / mods.toml / neoforge.mods.toml).";
+                            }
+                        }
+                    }
+
                     Mods.Add(row);
                 }
 
@@ -678,25 +747,131 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
 
             var modsDir = Path.Combine(Current.Path, "mods");
             Directory.CreateDirectory(modsDir);
-            var importedCount = 0;
+
+            var importedList = new List<string>();
+            var warnings = new List<string>();
+
+            // Đọc manifest hiện tại để so trùng theo sha512 + ghi entry mới
+            var manifestPath = Path.Combine(Current.Path, "mods.json");
+            ModsManifest manifest = new();
+            if (File.Exists(manifestPath))
+            {
+                try
+                {
+                    manifest = JsonSerializer.Deserialize<ModsManifest>(await File.ReadAllTextAsync(manifestPath), CamelCaseJsonOptions) ?? new();
+                }
+                catch { }
+            }
+            var manifestChanged = false;
 
             foreach (var path in filePaths)
             {
                 if (!File.Exists(path) || !path.EndsWith(".jar", StringComparison.OrdinalIgnoreCase)) continue;
 
-                var dest = Path.Combine(modsDir, Path.GetFileName(path));
-                File.Copy(path, dest, overwrite: true);
-                importedCount++;
+                try
+                {
+                    var fileName = Path.GetFileName(path);
+                    var tmpPath = Path.Combine(modsDir, fileName + ".tmp-import");
+                    File.Copy(path, tmpPath, overwrite: true);
+
+                    // Băm nội dung file nguồn (qua file tạm) để chặn cài trùng theo hash
+                    string shaHex;
+                    try
+                    {
+                        shaHex = await ComputeSha512HexAsync(tmpPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        File.Delete(tmpPath);
+                        warnings.Add($"{fileName}: không đọc được file ({ex.Message}).");
+                        continue;
+                    }
+
+                    var dup = manifest.Mods.FirstOrDefault(m =>
+                        string.Equals(m.Source, "modrinth", StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals(m.Sha512, shaHex, StringComparison.OrdinalIgnoreCase));
+                    // Cả mod custom đã import trước đó (đã lưu sha512) cũng tính là trùng
+                    dup ??= manifest.Mods.FirstOrDefault(m =>
+                        !string.Equals(m.Source, "modrinth", StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals(m.Sha512, shaHex, StringComparison.OrdinalIgnoreCase));
+
+                    if (dup != null)
+                    {
+                        File.Delete(tmpPath);
+                        warnings.Add($"{fileName}: trùng nội dung với mod đã cài '{dup.FileName}', bỏ qua.");
+                        continue;
+                    }
+
+                    // Không ghi đè file trùng tên: nếu khác nội dung → thêm -1, -2...
+                    string finalPath = Path.Combine(modsDir, fileName);
+                    string finalName = fileName;
+                    if (File.Exists(finalPath))
+                    {
+                        var stem = Path.GetFileNameWithoutExtension(fileName);
+                        var ext = Path.GetExtension(fileName);
+                        var suffix = 1;
+                        while (File.Exists(Path.Combine(modsDir, $"{stem}-{suffix}{ext}")))
+                        {
+                            suffix++;
+                        }
+                        finalName = $"{stem}-{suffix}{ext}";
+                        finalPath = Path.Combine(modsDir, finalName);
+                    }
+
+                    File.Move(tmpPath, finalPath, overwrite: false);
+
+                    // Metadata thật từ trong jar (nếu đọc được — jar hỏng vẫn được copy
+                    // vì user chủ động thêm, nhưng sẽ bị cảnh báo ở tab Mods)
+                    JarMetadata? meta = null;
+                    try { meta = JarMetadataReader.Read(finalPath); } catch { }
+
+                    manifest.Mods.Add(new InstalledMod
+                    {
+                        FileName = finalName,
+                        ProjectId = string.IsNullOrWhiteSpace(meta?.ModId) ? Path.GetFileNameWithoutExtension(finalName) : meta.ModId,
+                        VersionId = string.IsNullOrWhiteSpace(meta?.Version) ? "unknown" : meta.Version,
+                        Source = "custom",
+                        Enabled = true,
+                        InstalledAt = DateTimeOffset.UtcNow,
+                        Sha512 = shaHex
+                    });
+                    manifestChanged = true;
+                    importedList.Add(finalName);
+
+                    if (meta != null &&
+                        !string.IsNullOrWhiteSpace(meta.Loader) &&
+                        !string.Equals(meta.Loader, Current.LoaderType, StringComparison.OrdinalIgnoreCase))
+                    {
+                        warnings.Add($"{finalName}: jar là {meta.Loader} nhưng instance dùng {Current.LoaderType}.");
+                    }
+                }
+                catch (Exception ex) // mỗi file lỗi không làm sập cả lô
+                {
+                    warnings.Add($"{Path.GetFileName(path)}: {ex.Message}.");
+                }
             }
 
-            if (importedCount > 0)
+            if (manifestChanged)
             {
-                StatusMessage = $"Đã thêm {importedCount} file .jar thành công.";
+                var tmpJson = Path.Combine(Current.Path, "mods.json.tmp");
+                var outJson = JsonSerializer.Serialize(manifest, CamelCaseJsonOptions);
+                await File.WriteAllTextAsync(tmpJson, outJson, Utf8NoBom);
+                File.Move(tmpJson, manifestPath, overwrite: true);
+            }
+
+            if (importedList.Count > 0)
+            {
+                var suffix2 = warnings.Count > 0
+                    ? $" Cảnh báo: {string.Join(" ", warnings.Take(3))}"
+                    : string.Empty;
+                StatusMessage = $"Đã thêm {importedList.Count} file .jar thành công.{suffix2}";
                 await LoadAsync();
             }
             else
             {
-                StatusMessage = "Không có file .jar hợp lệ nào được chọn.";
+                StatusMessage = warnings.Count > 0
+                    ? $"Không thêm được file .jar nào. {string.Join(" ", warnings.Take(3))}"
+                    : "Không có file .jar hợp lệ nào được chọn.";
             }
         }
         catch (Exception ex)
@@ -711,6 +886,38 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         }
     }
 
+    private JarMetadata? ReadJarMetadataCached(string jarPath)
+    {
+        var info = new FileInfo(jarPath);
+        if (!info.Exists) return null;
+        var key = (Name: info.Name, LastWriteUtc: info.LastWriteTimeUtc, Length: info.Length);
+        if (_jarMetaCache.TryGetValue(key, out var cached))
+        {
+            return cached;
+        }
+
+        JarMetadata? meta;
+        try
+        {
+            meta = JarMetadataReader.Read(jarPath);
+        }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException)
+        {
+            meta = null; // jar hỏng / bị khóa — không crash
+        }
+
+        _jarMetaCache[key] = meta;
+        return meta;
+    }
+
+    private static async Task<string> ComputeSha512HexAsync(string filePath)
+    {
+        await using var fs = File.OpenRead(filePath);
+        using var sha512 = SHA512.Create();
+        var bytes = await sha512.ComputeHashAsync(fs);
+        return Convert.ToHexString(bytes);
+    }
+
     [RelayCommand]
     public async Task CheckUpdatesAsync()
     {
@@ -722,14 +929,17 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
             NotifyBusyChanged();
             HasError = false;
 
-            var result = await _modInstall.CheckUpdatesAsync(Current.Id);
+            // UPD-01: tra cứu hàng loạt theo sha512 (POST /version_files) —
+            // không gọi API từng mod như trước
+            var result = await _modInstall.CheckUpdatesByHashAsync(Current.Id);
 
             foreach (var row in Mods)
             {
-                row.HasUpdate = result.Updates.Any(u => u.CurrentMod.FileName == row.Mod.FileName);
+                row.HasUpdate = result.Updates.Any(u =>
+                    u.CurrentMod.FileName == row.Mod.FileName && u.HasUpdate);
             }
 
-            UpdateCount = result.Updates.Count;
+            UpdateCount = result.Updates.Count(u => u.HasUpdate);
             StatusMessage = UpdateCount == 0 ? "Mọi mod đã là bản mới nhất." : $"{UpdateCount} mod có bản mới.";
             OnPropertyChanged(string.Empty); // refresh UpdateBadge trong list
         }

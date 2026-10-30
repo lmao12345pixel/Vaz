@@ -26,8 +26,11 @@
 - B0-mota | ĐÃ LÀM | mục 0 ở trên + explore ses_e72f1e79dffez80VvN4Aipqnfh
 - SM (search real API) | ĐÃ LÀM | 14/14 HTTP 200 — `docs/evidence/mods-test-report.md` §2, log `.agent/mods-test-raw.txt`
 - HA (hash lookup real API) | ĐÃ LÀM | `POST /version_files` real jar → resolved=1, version_number đúng; fake hash → `{}`; sha512 tải == API — `mods-test-report.md` §3, log `.agent/mods-hash-raw.txt`
-- B2-fix-traversal | PENDING | chặn `..` + khóa host cdn.modrinth.com trong ModInstallService
-- B2-fix-bulkupdate | PENDING | thêm `POST /version_files` vào ModrinthClient + CheckUpdates dùng Bulk
-- B2-fix-jarmeta | PENDING | parse fabric.mod.json / mods.toml / neoforge.mods.toml từ jar khi import & hiển thị
-- B4-evidence | PENDING | chụp app 1025x533 + 960x530
-- UNVERIFIED-429/timeout | UNVERIFIED | không chủ độngTrigger 429; code có retry 3, chờ Retry-After
+- B2-fix-traversal | ĐÃ LÀM | `ModInstallService`: `IsAllowedDownloadUrl` (chỉ https://cdn.modrinth.com) chặn trước download; `SanitizeModFileName` từ chối tên file API chứa traversal/path/control → throw + không tải; unit test `ModDownloadGuardTests.cs` (14 case) — fusion-fixed trong group 2
+- B2-fix-bulkupdate | ĐÃ LÀM | `IModrinthClient.GetVersionsFromHashesAsync` (POST /version_files, Model `VersionFilesRequest`, JSON context thêm serializable types); `ModInstallService.CheckUpdatesByHashAsync` (chunk ≤100/hash, hash từ manifest hoặc băm đĩa, so Id/VersionNumber); WinUI `CheckUpdatesAsync` gọi bulk; unit test `ModInstallBulkUpdateTests.cs` (8 case, mock POST)
+- B2-fix-jarmeta | ĐÃ LÀM | `JarMetadataReader` (fabric/quilt JSON + mods.toml/neoforge.mods.toml, corrupt → null); WinUI: auto-discovery đọc metadata khi LoadAsync, import .jar điền ProjectId/VersionId/Sha512, hiển thị + cảnh báo loader mismatch/jar hỏng (LoadWarning), row Version dùng metadata thay "1.0.0" giả; unit test `JarMetadataReaderTests.cs` (9 case zip thật)
+- B2-dup-skip | ĐÃ LÀM | Modrinth install: trùng sha512 trong manifest → bỏ qua (Warning "Duplicate skipped…"), xóa .partial; import .jar: trùng hash/nội dung → bỏ qua có tổng kết; name collision → -1/-2, không ghi đè
+- B2-synthetic-url | ĐÃ LÀM | bỏ `SourceUrl = https://github.com/vazer/{slug}` + link "Mã nguồn" giả trong XAML; ProjectUrl chỉ hiện khi Source=modrinth/có catalog entry
+- B3-tests | ĐÃ LÀM | 31 test mới: JarMetadataReaderTests 9 · ModDownloadGuardTests 14 · ModInstallBulkUpdateTests 8; `dotnet test Vaz.sln` = 269/269 PASS (đã là 238) — 0 skip 0 fail
+- B4-evidence | PENDING | chụp app 1025x533 + 960x530 + 125%/150% scale nếu được
+- UNVERIFIED-429/timeout | UNVERIFIED | chưa chủ động trigger 429; code có retry 3 + Retry-After; sẽ verify mock HTTP nếu còn thời gian

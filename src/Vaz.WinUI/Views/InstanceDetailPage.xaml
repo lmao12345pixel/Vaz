@@ -589,6 +589,15 @@
                                         LineHeight="18"
                                         Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
 
+                                    <!-- Per-mod load warning (jar hỏng / sai loader / trùng nội dung) -->
+                                    <TextBlock
+                                        Text="{x:Bind ViewModel.SelectedModForInspector.LoadWarningText, Mode=OneWay}"
+                                        TextWrapping="Wrap"
+                                        FontSize="12"
+                                        LineHeight="16"
+                                        Foreground="#F59E0B"
+                                        Visibility="{x:Bind ViewModel.SelectedModForInspector.HasLoadWarning, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
+
                                     <!-- File Name -->
                                     <Border
                                         Background="{ThemeResource SubtleFillColorSecondaryBrush}"
@@ -679,9 +688,6 @@
                                         <HyperlinkButton
                                             Content="Modrinth"
                                             NavigateUri="{x:Bind ViewModel.SelectedModForInspector.ProjectUrl, Mode=OneWay}" />
-                                        <HyperlinkButton
-                                            Content="Mã nguồn (Source)"
-                                            NavigateUri="{x:Bind ViewModel.SelectedModForInspector.SourceUrl, Mode=OneWay}" />
                                     </StackPanel>
                                 </StackPanel>
                             </ScrollViewer>
