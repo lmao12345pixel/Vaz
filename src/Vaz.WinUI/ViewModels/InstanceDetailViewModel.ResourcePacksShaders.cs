@@ -151,35 +151,12 @@ public sealed partial class InstanceDetailViewModel
     public async Task InstallShaderLoaderAsync()
     {
         await Task.CompletedTask;
-        if (Current != null)
-        {
-            var (version, url, fileName) = Vazer.Core.Graphics.ShaderLoaderResolver.ResolveIrisVersion(Current.MinecraftVersion ?? "1.21.1", Current.LoaderType ?? "fabric");
-            var modsDir = Path.Combine(Current.Path, "mods");
-            Directory.CreateDirectory(modsDir);
-            var destPath = Path.Combine(modsDir, fileName);
-            if (!File.Exists(destPath))
-            {
-                try { File.WriteAllText(destPath, "# Iris Shader Loader jar placeholder"); } catch { }
-            }
-
-            var irisMod = new InstalledModRow
-            {
-                Mod = new Vazer.Core.Mods.InstalledMod { FileName = fileName },
-                DisplayName = $"Iris Shaders ({version})",
-                Slug = "iris",
-                Author = "Iris Team",
-                Description = "Shader loader tối ưu hiệu năng cho Fabric.",
-                Loader = "Fabric",
-                MinecraftVersion = "1.21.1",
-                Enabled = true
-            };
-            Mods.Add(irisMod);
-        }
-
-        HasShaderLoader = true;
-        ShaderLoaderStatus = "Sẵn sàng hoạt động (Iris Shaders)";
-        ShaderLoaderBannerText = "Đã phát hiện shader loader tương thích. Shaders sẽ hoạt động bình thường trong game.";
-        StatusMessage = "Đã cài đặt Iris Shaders thành công.";
+        // Bỏ hoàn toàn code ghi file placeholder theo chỉ đạo.
+        // Chờ quyết định của Product Owner:
+        // [CHỌN: (a) làm tải thật từ cdn.modrinth.com kèm xác thực SHA-512 / (b) đổi nút thành "Mở trang tải Iris", chuyển 1-click sang backlog].
+        HasShaderLoader = false;
+        ShaderLoaderStatus = "Chưa cài đặt Shader Loader (Iris / OptiFine)";
+        StatusMessage = "Chức năng cài đặt tự động đang chờ quyết định kiến trúc tải file.";
     }
 
     private void LoadResourcePacks()
