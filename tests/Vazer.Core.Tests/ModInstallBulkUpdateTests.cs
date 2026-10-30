@@ -43,10 +43,13 @@ public sealed class ModInstallBulkUpdateTests : IDisposable
         _requestedHashes = new List<string>();
 
         _modrinthMock = new Mock<IModrinthClient>();
-        _modrinthMock.Setup(m => m.GetVersionsFromHashesAsync(
-                It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
-            .Callback((IEnumerable<string> hashes, CancellationToken _) => _requestedHashes.AddRange(hashes))
-            .ReturnsAsync((IEnumerable<string> hashes, CancellationToken _) =>
+        _modrinthMock.Setup(m => m.GetLatestVersionsFromHashesAsync(
+                It.IsAny<IEnumerable<string>>(),
+                It.IsAny<IEnumerable<string>?>(),
+                It.IsAny<IEnumerable<string>?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback((IEnumerable<string> hashes, IEnumerable<string>? _, IEnumerable<string>? _, CancellationToken _) => _requestedHashes.AddRange(hashes))
+            .ReturnsAsync((IEnumerable<string> hashes, IEnumerable<string>? _, IEnumerable<string>? _, CancellationToken _) =>
                 hashes.Where(h => _hashMap.ContainsKey(h))
                       .ToDictionary(h => h, h => _hashMap[h]));
 
@@ -77,7 +80,7 @@ public sealed class ModInstallBulkUpdateTests : IDisposable
     {
         var sha = Sha(new byte[] { 1, 1, 1 });
         await WriteManifestAsync(new ModsManifest { Mods = new List<InstalledMod> { Mod("m1.jar", "v1", sha) } });
-        _hashMap[sha] = Ver("v2", "1.1.0");
+        _hashMap[sha] = Ver("v2", "1.1.0", "newer-hash-512");
 
         var result = await _service.CheckUpdatesByHashAsync("test-inst");
 
@@ -87,7 +90,11 @@ public sealed class ModInstallBulkUpdateTests : IDisposable
         result.Updates[0].LatestVersionId.Should().Be("v2");
         result.Updates[0].LatestVersionNumber.Should().Be("1.1.0");
         _modrinthMock.Verify(
-            m => m.GetVersionsFromHashesAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()),
+            m => m.GetLatestVersionsFromHashesAsync(
+                It.IsAny<IEnumerable<string>>(),
+                It.IsAny<IEnumerable<string>?>(),
+                It.IsAny<IEnumerable<string>?>(),
+                It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -96,7 +103,7 @@ public sealed class ModInstallBulkUpdateTests : IDisposable
     {
         var sha = Sha(new byte[] { 2, 2, 2 });
         await WriteManifestAsync(new ModsManifest { Mods = new List<InstalledMod> { Mod("m2.jar", "v1", sha) } });
-        _hashMap[sha] = Ver("v1", "1.0.0");
+        _hashMap[sha] = Ver("v1", "1.0.0", sha);
 
         var result = await _service.CheckUpdatesByHashAsync("test-inst");
 
@@ -109,7 +116,7 @@ public sealed class ModInstallBulkUpdateTests : IDisposable
     {
         var sha = Sha(new byte[] { 3, 3, 3 });
         await WriteManifestAsync(new ModsManifest { Mods = new List<InstalledMod> { Mod("m3.jar", "1.0.0", sha) } });
-        _hashMap[sha] = Ver("xyz", "1.0.0");
+        _hashMap[sha] = Ver("xyz", "1.0.0", sha);
 
         var result = await _service.CheckUpdatesByHashAsync("test-inst");
 
@@ -131,22 +138,30 @@ public sealed class ModInstallBulkUpdateTests : IDisposable
     }
 
     [Fact]
-    public async Task CustomSourceMods_ExcludedFromBulkCheck()
+    public async Task CustomSourceMods_IncludedInBulkCheck_AndUpgradedWhenMatched()
     {
-        var sha = Sha(new byte[] { 5, 5, 5 });
+        var shaModrinth = Sha(new byte[] { 5, 5, 5 });
+        var shaCustom = Sha(new byte[] { 6, 6, 6 });
         await WriteManifestAsync(new ModsManifest
         {
             Mods = new List<InstalledMod>
             {
-                Mod("from-modrinth.jar", "v1", sha),
-                Mod("custom-manual.jar", "1.0.0", Sha(new byte[] { 6, 6, 6 })) with { Source = "custom" }
+                Mod("from-modrinth.jar", "v1", shaModrinth),
+                Mod("custom-manual.jar", "1.0.0", shaCustom) with { Source = "custom", ProjectId = "" }
             }
         });
+        _hashMap[shaCustom] = Ver("v-custom-latest", "1.2.0", "custom-newer-hash") with { ProjectId = "matched-proj" };
 
         var result = await _service.CheckUpdatesByHashAsync("test-inst");
 
-        result.Updates.Should().ContainSingle(u => u.CurrentMod.FileName == "from-modrinth.jar");
-        _requestedHashes.Should().ContainSingle().Which.Should().Be(sha);
+        result.Updates.Should().HaveCount(2);
+        _requestedHashes.Should().Contain(shaModrinth);
+        _requestedHashes.Should().Contain(shaCustom);
+
+        var customUpdate = result.Updates.Single(u => u.CurrentMod.FileName == "custom-manual.jar");
+        customUpdate.CurrentMod.Source.Should().Be("modrinth");
+        customUpdate.CurrentMod.ProjectId.Should().Be("matched-proj");
+        customUpdate.HasUpdate.Should().BeTrue();
     }
 
     [Fact]
@@ -159,7 +174,7 @@ public sealed class ModInstallBulkUpdateTests : IDisposable
 
         var installed = Mod("ondisk.jar", "v1", "") with { Sha512 = null };
         await WriteManifestAsync(new ModsManifest { Mods = new List<InstalledMod> { installed } });
-        _hashMap[sha] = Ver("v2", "2.0.0");
+        _hashMap[sha] = Ver("v2", "2.0.0", "newer-disk-hash");
 
         var result = await _service.CheckUpdatesByHashAsync("test-inst");
 
@@ -185,7 +200,11 @@ public sealed class ModInstallBulkUpdateTests : IDisposable
 
         result.Updates.Should().HaveCount(150);
         _modrinthMock.Verify(
-            m => m.GetVersionsFromHashesAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()),
+            m => m.GetLatestVersionsFromHashesAsync(
+                It.IsAny<IEnumerable<string>>(),
+                It.IsAny<IEnumerable<string>?>(),
+                It.IsAny<IEnumerable<string>?>(),
+                It.IsAny<CancellationToken>()),
             Times.Exactly(2));
         _requestedHashes.Should().HaveCount(150);
         _requestedHashes.Should().OnlyHaveUniqueItems();
@@ -220,16 +239,19 @@ public sealed class ModInstallBulkUpdateTests : IDisposable
         };
     }
 
-    private static ProjectVersion Ver(string id, string versionNumber)
+    private static ProjectVersion Ver(string id, string versionNumber, string? fileSha512 = null)
     {
         return new ProjectVersion
         {
             Id = id,
             VersionNumber = versionNumber,
             VersionType = "release",
+            ProjectId = "test-project",
             DatePublished = DateTimeOffset.UtcNow,
             Dependencies = Array.Empty<VersionDependency>(),
-            Files = Array.Empty<VersionFile>()
+            Files = string.IsNullOrEmpty(fileSha512)
+                ? []
+                : [new VersionFile { Hashes = new FileHashes { Sha512 = fileSha512 } }]
         };
     }
 

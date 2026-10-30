@@ -10,6 +10,7 @@ Add-Type @"
 using System;
 using System.Runtime.InteropServices;
 public static class Win32 {
+  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
   [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
   [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
   [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
@@ -21,6 +22,8 @@ $proc = Get-Process -Name 'Vaz.WinUI' -ErrorAction Stop | Where-Object { $_.Main
 if (-not $proc) { throw 'Vaz.WinUI window not found' }
 $hwnd = $proc.MainWindowHandle
 
+[Win32]::ShowWindow($hwnd, 9) | Out-Null # SW_RESTORE
+Start-Sleep -Milliseconds 400
 [Win32]::SetForegroundWindow($hwnd) | Out-Null
 Start-Sleep -Milliseconds 400
 # SWP_NOZORDER=0x4, SWP_SHOWWINDOW=0x40

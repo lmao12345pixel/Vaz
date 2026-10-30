@@ -111,6 +111,49 @@ public sealed class ModrinthClient : IModrinthClient
         return map;
     }
 
+    public async Task<IReadOnlyDictionary<string, ProjectVersion>> GetLatestVersionsFromHashesAsync(
+        IEnumerable<string> sha512Hashes,
+        IEnumerable<string>? loaders = null,
+        IEnumerable<string>? gameVersions = null,
+        CancellationToken ct = default)
+    {
+        var hashes = (sha512Hashes ?? Enumerable.Empty<string>())
+            .Where(h => !string.IsNullOrWhiteSpace(h))
+            .Select(h => h.Trim().ToLowerInvariant())
+            .Distinct()
+            .ToArray();
+        if (hashes.Length == 0)
+        {
+            return new Dictionary<string, ProjectVersion>();
+        }
+
+        var client = _httpClientFactory.CreateClient(ApiClientName);
+        client.DefaultRequestHeaders.UserAgent.ParseAdd(_options.ModrinthUserAgent);
+
+        var request = new VersionFilesUpdateRequest
+        {
+            Hashes = hashes,
+            Algorithm = "sha512",
+            Loaders = (loaders ?? Enumerable.Empty<string>())
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Distinct()
+                .ToArray(),
+            GameVersions = (gameVersions ?? Enumerable.Empty<string>())
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Distinct()
+                .ToArray()
+        };
+        var json = JsonSerializer.Serialize(request, VazJsonContext.Plain.VersionFilesUpdateRequest);
+        using var content = new StringContent(json, Encoding.UTF8, "application/json");
+        using var response = await client.PostAsync($"{BaseUrl}/version_files/update", content, ct);
+        response.EnsureSuccessStatusCode();
+
+        var body = await response.Content.ReadAsStringAsync(ct);
+        var map = JsonSerializer.Deserialize(body, VazJsonContext.Plain.DictionaryStringProjectVersion)
+                  ?? new Dictionary<string, ProjectVersion>();
+        return map;
+    }
+
     private async Task<T> GetCachedAsync<T>(string url, JsonTypeInfo<T> typeInfo, CancellationToken ct)
     {
         if (_cache.TryGetValue(url, out var cached) && cached.expiry > DateTimeOffset.UtcNow)

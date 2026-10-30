@@ -13,6 +13,22 @@ public sealed record VersionFilesRequest
     public string Algorithm { get; init; } = "sha512";
 }
 
+/// <summary>Yêu cầu tra cứu bản mới nhất theo hash và tương thích loader/MC từ POST /version_files/update.</summary>
+public sealed record VersionFilesUpdateRequest
+{
+    [JsonPropertyName("hashes")]
+    public string[] Hashes { get; init; } = Array.Empty<string>();
+
+    [JsonPropertyName("algorithm")]
+    public string Algorithm { get; init; } = "sha512";
+
+    [JsonPropertyName("loaders")]
+    public string[] Loaders { get; init; } = Array.Empty<string>();
+
+    [JsonPropertyName("game_versions")]
+    public string[] GameVersions { get; init; } = Array.Empty<string>();
+}
+
 public sealed record SearchQuery
 {
     public string? Query { get; init; }

@@ -637,13 +637,12 @@ public class ModInstallService : IModInstallService
         var updates = new List<ModUpdateInfo>();
         var modsDir = Path.Combine(instance.Path, "mods");
 
-        // 1) Xây hash cho thực thể modrinth: ưu tiên hash trong manifest; nếu thiếu thì băm file trên đĩa.
+        // 1) Xây hash cho mọi mod: ưu tiên hash trong manifest; nếu thiếu thì băm file trên đĩa.
+        // Hỗ trợ cả mod Modrinth lẫn mod custom (nếu hash khớp Modrinth thì coi là mod Modrinth).
         var hashByMod = new Dictionary<int, string>();
         for (int i = 0; i < manifest.Mods.Count; i++)
         {
             var mod = manifest.Mods[i];
-            if (!string.Equals(mod.Source, "modrinth", StringComparison.OrdinalIgnoreCase)) continue;
-
             if (!string.IsNullOrWhiteSpace(mod.Sha512))
             {
                 hashByMod[i] = mod.Sha512!.Trim().ToLowerInvariant();
@@ -662,26 +661,64 @@ public class ModInstallService : IModInstallService
             }
         }
 
-        // 2) POST /version_files theo lô (server giới hạn ≤ 100 hashes/lần gọi).
+        var loaders = !string.IsNullOrWhiteSpace(instance.LoaderType)
+            ? new[] { instance.LoaderType.ToLowerInvariant() }
+            : Array.Empty<string>();
+        var gameVersions = !string.IsNullOrWhiteSpace(instance.MinecraftVersion)
+            ? new[] { instance.MinecraftVersion }
+            : Array.Empty<string>();
+
+        // 2) POST /version_files/update theo lô (server giới hạn ≤ 100 hashes/lần gọi).
         var resolved = new Dictionary<string, ProjectVersion>();
         var allHashes = hashByMod.Values.Distinct().ToList();
         for (int offset = 0; offset < allHashes.Count; offset += chunkSize)
         {
             var chunk = allHashes.Skip(offset).Take(chunkSize);
-            foreach (var (hash, version) in await _modrinthClient.GetVersionsFromHashesAsync(chunk, ct))
+            foreach (var (hash, version) in await _modrinthClient.GetLatestVersionsFromHashesAsync(chunk, loaders, gameVersions, ct))
             {
                 resolved[hash] = version;
             }
         }
 
-        // 3) So sánh phiên bản trả về với phiên bản đã cài.
+        // 3) So sánh phiên bản trả về với phiên bản đã cài; cập nhật manifest nếu nhận diện được custom mod hoặc băm mới.
+        bool manifestChanged = false;
         foreach (var (index, hash) in hashByMod)
         {
             var mod = manifest.Mods[index];
+            bool modChanged = false;
+
+            if (string.IsNullOrWhiteSpace(mod.Sha512))
+            {
+                mod = mod with { Sha512 = hash };
+                modChanged = true;
+            }
+
             if (resolved.TryGetValue(hash, out var latest))
             {
-                bool hasUpdate = !string.Equals(latest.Id, mod.VersionId, StringComparison.OrdinalIgnoreCase)
-                                 && !string.Equals(latest.VersionNumber, mod.VersionId, StringComparison.OrdinalIgnoreCase);
+                if (string.Equals(mod.Source, "custom", StringComparison.OrdinalIgnoreCase))
+                {
+                    mod = mod with
+                    {
+                        Source = "modrinth",
+                        ProjectId = string.IsNullOrEmpty(mod.ProjectId) ? latest.ProjectId : mod.ProjectId
+                    };
+                    modChanged = true;
+                }
+
+                bool hasUpdate;
+                if (latest.Files != null && latest.Files.Length > 0)
+                {
+                    bool fileMatchesLatest = latest.Files.Any(f =>
+                        f.Hashes?.Sha512 != null &&
+                        string.Equals(f.Hashes.Sha512, hash, StringComparison.OrdinalIgnoreCase));
+                    hasUpdate = !fileMatchesLatest;
+                }
+                else
+                {
+                    hasUpdate = !string.Equals(latest.Id, mod.VersionId, StringComparison.OrdinalIgnoreCase)
+                             && !string.Equals(latest.VersionNumber, mod.VersionId, StringComparison.OrdinalIgnoreCase);
+                }
+
                 updates.Add(new ModUpdateInfo
                 {
                     CurrentMod = mod,
@@ -699,6 +736,24 @@ public class ModInstallService : IModInstallService
                     LatestVersionNumber = "",
                     HasUpdate = false
                 });
+            }
+
+            if (modChanged)
+            {
+                manifest.Mods[index] = mod;
+                manifestChanged = true;
+            }
+        }
+
+        if (manifestChanged)
+        {
+            try
+            {
+                await WriteManifestAsync(instance.Path, manifest, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to persist enriched mod hashes/source to manifest");
             }
         }
 

@@ -129,7 +129,8 @@ public sealed partial class MainWindow : Window
         var startupPage = Environment.GetEnvironmentVariable("VAZER_STARTUP_PAGE");
         if (startupPage == "InstanceDetailPage")
         {
-            Navigate(typeof(InstanceDetailPage), "test fabric");
+            var startupInstance = Environment.GetEnvironmentVariable("VAZER_STARTUP_INSTANCE") ?? "test fabric";
+            Navigate(typeof(InstanceDetailPage), startupInstance);
         }
         else
         {
