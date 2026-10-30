@@ -29,7 +29,7 @@ RPS-AC-04 | PASS | 451bdf0, 6ef8470 | RPS-AC-04-layout-shaders-1025x533.png, RPS
 RPS-AC-05 | FAIL | amended | Hoãn theo quyết định của Chủ sản phẩm; chuyển chip style sang Bảng EX (EX-04)
 RPS-AC-06 | MỘT PHẦN | 9fae9b9, 2cabb20 | RPS-AC-06-loader-banner-iris-1025x533.png, RPS-AC-06-open-iris-modrinth-1025x533.png (Đổi sang nút 'Mở trang tải Iris', hoãn 1-click tự động)
 RPS-AC-07 | PASS | 772ce42, bug-fix | RPS-AC-07-drag-drop-and-import-1025x533.png, RPS-AC-07-corrupted-zip-error-1025x533.png (Đã sửa lỗi sập app sau kéo thả; pack import có fallback an toàn cho Banner/Icon và bật mượt mà)
-RPS-AC-08 | MỘT PHẦN | 451bdf0, 772ce42 | RPS-AC-08-reduce-motion-1025x533.png, W3-rp-open-drawer-960x530.png, W3-shaders-960x530.png (Đo runtime duration animation UNVERIFIED)
+RPS-AC-08 | MỘT PHẦN | 451bdf0, 772ce42, bug-fix | RPS-AC-08-reduce-motion-1025x533.png, W3-rp-open-drawer-960x530.png, W3-shaders-960x530.png, RPS-AC-08-layout-rp-100scale-960x530.png, RPS-AC-08-layout-shaders-100scale-960x530.png, RPS-AC-08-layout-rp-100scale-1025x533.png (Đo runtime duration animation UNVERIFIED; DPI 125%/150% UNVERIFIED chờ test thủ công)
 RPS-AC-09 | UNVERIFIED | pending | Chờ người dùng thực hiện kiểm thử thủ công theo docs/evidence/manual-checklist.md
 RPS-AC-10 | PASS | 451bdf0, 772ce42, bug-fix | Output kiểm thử tự động 238/238 unit test và check:static pass
 
@@ -173,6 +173,34 @@ Toàn bộ các tiêu chí dưới đây được trích dẫn **nguyên văn** 
      - Chạy kịch bản tự động hóa `scripts/test-enable-pack.ps1`: nút Bật pack được click qua UI Automation, app sống sót 100% (không sập), pack xuất hiện tại vị trí `# 1`, và dòng `resourcePacks` trong `options.txt` được cập nhật chính xác:
        `resourcePacks:["vanilla","file/Bare Bones.zip","file/Faithful 32x.zip","file/Fresh Animations.zip"]`
      - Ảnh minh chứng đã chụp: `docs/evidence/RPS-AC-02-pack-enabled-top-priority-1025x533.png`.
+
+---
+
+### 3.9. Báo cáo Chi tiết Lỗi 2 (BUG 2: Vỡ layout khi tỷ lệ co giãn màn hình Windows đặt 125% và 150%)
+- **Mô tả hiện tượng**: Người dùng kiểm thử thủ công phát hiện layout bị xô lệch, co cụm hoặc vượt quá kích thước màn hình khi Windows bật Display Scaling 125% hoặc 150%.
+- **Nguyên nhân gốc rễ**:
+  1. Trong `MainWindow.xaml.cs`, `ptMinTrackSize` được tính bằng phép nhân trực tiếp hệ số DPI: `(int)(960 * scale)`. Tại tỷ lệ 150% (DPI 144), chiều rộng tối thiểu trở thành 1440px vật lý. Khi chạy trên các màn hình có độ phân giải vật lý 1366x768 (phổ biến trên laptop), 1440px vượt quá chiều rộng màn hình, khiến Windows ép cửa sổ co lại bất thường.
+  2. Tại tỷ lệ 150%, không gian hiển thị logic (DIP) của cửa sổ 960px vật lý chỉ còn khoảng 640 DIPs. Bố cục 2 cột dạng `ColumnDefinitions="*,*"` trên `ResourcePacksTab` không có `ScrollViewer` cuộn ngang hay giới hạn `MinWidth` trên từng cột, khiến mỗi cột bị ép xuống dưới 300 DIPs, làm biến dạng thẻ pack, đè các nút bấm và icon.
+- **Biện pháp khắc phục triệt để**:
+  1. `MainWindow.xaml.cs`:
+     - Tích hợp các hàm Win32 `MonitorFromWindow` và `GetMonitorInfo` để xác định chính xác kích thước vùng làm việc (`rcWork`) của màn hình chứa cửa sổ.
+     - Giới hạn kích thước tối thiểu theo tỷ lệ DPI nhưng kẹp không vượt quá 95% chiều rộng/chiều cao vùng làm việc của màn hình:
+       ```csharp
+       var targetWidth = (int)(960 * scale);
+       var targetHeight = (int)(530 * scale);
+       mmi.ptMinTrackSize.x = Math.Min(targetWidth, (int)(workWidth * 0.95f));
+       mmi.ptMinTrackSize.y = Math.Min(targetHeight, (int)(workHeight * 0.95f));
+       ```
+  2. `InstanceDetailPage.xaml`:
+     - Trên `ResourcePacksTab`: bọc `ResourcePacksContainerGrid` bằng `ScrollViewer` hỗ trợ cuộn ngang tự động (`HorizontalScrollBarVisibility="Auto"`, `VerticalScrollBarVisibility="Disabled"`), đặt `MinWidth="780"` cho container và `MinWidth="380"` cho cả 2 cột (Gói khả dụng và Gói đang dùng).
+     - Điều chỉnh ô tìm kiếm `TextBox` trên thanh công cụ thành kích thước co giãn mềm dẻo (`MinWidth="140" MaxWidth="220"`).
+     - Trên `ShadersTab`: `UniformGridLayout` tự động co giãn thẻ card với `MinItemWidth="280"` và thanh chip lọc phong cách dạng `WrapPanel` tự động xuống dòng mượt mà.
+  3. **Kiểm thử tự động & Bằng chứng thực tế**:
+     - Kiểm thử ở 100% scale (DPI 96) với kích thước nhỏ nhất 960x530 và kích thước chuẩn 1025x533:
+       - `RPS-AC-08-layout-rp-100scale-960x530.png`
+       - `RPS-AC-08-layout-shaders-100scale-960x530.png`
+       - `RPS-AC-08-layout-rp-100scale-1025x533.png`
+     - Do môi trường dòng lệnh (headless session) không thể trực tiếp thay đổi thiết lập Display Scaling của hệ điều hành Windows, các tỷ lệ 125% và 150% được ghi nhận **UNVERIFIED** và đã được cung cấp checklist kiểm thử thủ công chi tiết trong `docs/evidence/manual-checklist.md`.
 
 ---
 

@@ -699,62 +699,70 @@
                     </StackPanel>
                 </TabViewItem.Header>
                 <TabViewItem.Content>
-                    <Grid x:Name="ResourcePacksContainerGrid"
-                          Padding="0,12,0,0"
-                          AllowDrop="True"
-                          DragOver="ResourcePacksGrid_DragOver"
-                          Drop="ResourcePacksGrid_Drop">
-                        
-                        <!-- Main Left Column -->
-                        <Grid RowDefinitions="Auto,*" RowSpacing="12">
-                            <!-- Toolbar -->
-                            <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,*,Auto">
-                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
-                                    <Button Click="ImportResourcePack_Click">
-                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <FontIcon Glyph="&#xE898;" FontSize="13" />
-                                            <TextBlock Text="+ Thêm .zip" />
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Click="OpenResourcePacksFolder_Click">
-                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <FontIcon Glyph="&#xED25;" FontSize="13" />
-                                            <TextBlock Text="Mở thư mục" />
-                                        </StackPanel>
-                                    </Button>
-                                </StackPanel>
-
-                                <TextBox Grid.Column="1"
-                                         Width="220"
-                                         Margin="12,0,0,0"
-                                         PlaceholderText="Tìm resource pack..."
-                                         Text="{x:Bind ViewModel.ResourcePackSearchQuery, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-
-                                <TextBlock Grid.Column="2"
-                                           Text="{x:Bind ViewModel.ResourcePackSummaryText, Mode=OneWay}"
-                                           VerticalAlignment="Center"
-                                           Margin="16,0,0,0"
-                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                           FontSize="12" />
-
-                                <Button Grid.Column="3" Click="RefreshResourcePacks_Click">
-                                    <StackPanel Orientation="Horizontal" Spacing="6">
-                                        <FontIcon Glyph="&#xE72C;" FontSize="13" />
-                                        <TextBlock Text="Làm mới" />
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                  VerticalScrollBarVisibility="Disabled"
+                                  HorizontalScrollMode="Auto"
+                                  VerticalScrollMode="Disabled">
+                        <Grid x:Name="ResourcePacksContainerGrid"
+                              MinWidth="780"
+                              Padding="0,12,0,0"
+                              AllowDrop="True"
+                              DragOver="ResourcePacksGrid_DragOver"
+                              Drop="ResourcePacksGrid_Drop">
+                            
+                            <!-- Main Left Column -->
+                            <Grid RowDefinitions="Auto,*" RowSpacing="12">
+                                <!-- Toolbar -->
+                                <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,*,Auto">
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                                        <Button Click="ImportResourcePack_Click">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <FontIcon Glyph="&#xE898;" FontSize="13" />
+                                                <TextBlock Text="+ Thêm .zip" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Click="OpenResourcePacksFolder_Click">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <FontIcon Glyph="&#xED25;" FontSize="13" />
+                                                <TextBlock Text="Mở thư mục" />
+                                            </StackPanel>
+                                        </Button>
                                     </StackPanel>
-                                </Button>
-                            </Grid>
 
-                            <!-- Two Columns: Available Packs (Left) vs Active Packs (Right) -->
-                            <Grid Grid.Row="1" ColumnDefinitions="*,*">
-                                <!-- Available Packs Column -->
-                                <Border Grid.Column="0"
-                                        Background="{ThemeResource LayerFillColorDefaultBrush}"
-                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                        BorderThickness="1"
-                                        CornerRadius="8"
-                                        Padding="12"
-                                        Margin="0,0,6,0">
+                                    <TextBox Grid.Column="1"
+                                             MinWidth="140"
+                                             MaxWidth="220"
+                                             Margin="12,0,0,0"
+                                             PlaceholderText="Tìm resource pack..."
+                                             Text="{x:Bind ViewModel.ResourcePackSearchQuery, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                                    <TextBlock Grid.Column="2"
+                                               Text="{x:Bind ViewModel.ResourcePackSummaryText, Mode=OneWay}"
+                                               VerticalAlignment="Center"
+                                               Margin="16,0,0,0"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                               FontSize="12"
+                                               TextTrimming="CharacterEllipsis" />
+
+                                    <Button Grid.Column="3" Click="RefreshResourcePacks_Click">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <FontIcon Glyph="&#xE72C;" FontSize="13" />
+                                            <TextBlock Text="Làm mới" />
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+
+                                <!-- Two Columns: Available Packs (Left) vs Active Packs (Right) -->
+                                <Grid Grid.Row="1" ColumnDefinitions="*,*">
+                                    <!-- Available Packs Column -->
+                                    <Border Grid.Column="0"
+                                            MinWidth="380"
+                                            Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="8"
+                                            Padding="12"
+                                            Margin="0,0,6,0">
                                     <Grid RowDefinitions="Auto,*">
                                         <TextBlock Grid.Row="0" Text="Gói khả dụng" FontWeight="SemiBold" FontSize="14" Margin="4,0,0,8" />
                                         
@@ -844,6 +852,7 @@
 
                                 <!-- Active Packs Column with Reordering -->
                                 <Border Grid.Column="1"
+                                        MinWidth="380"
                                         Background="{ThemeResource LayerFillColorDefaultBrush}"
                                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                         BorderThickness="1"
@@ -1019,6 +1028,7 @@
                             </Border>
                         </Grid>
                     </Grid>
+                </ScrollViewer>
                 </TabViewItem.Content>
             </TabViewItem>
 

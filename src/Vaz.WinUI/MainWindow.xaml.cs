@@ -38,6 +38,24 @@ public sealed partial class MainWindow : Window
         public POINT ptMaxTrackSize;
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT
+    {
+        public int left;
+        public int top;
+        public int right;
+        public int bottom;
+    }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+    private struct MONITORINFO
+    {
+        public int cbSize;
+        public RECT rcMonitor;
+        public RECT rcWork;
+        public int dwFlags;
+    }
+
     private delegate IntPtr SUBCLASSPROC(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam, UIntPtr uIdSubclass, IntPtr dwRefData);
 
     [DllImport("comctl32.dll", SetLastError = true)]
@@ -48,6 +66,12 @@ public sealed partial class MainWindow : Window
 
     [DllImport("user32.dll")]
     private static extern uint GetDpiForWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromWindow(IntPtr hWnd, uint dwFlags);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
 
     private readonly SUBCLASSPROC? _subclassProc;
 
@@ -201,8 +225,32 @@ public sealed partial class MainWindow : Window
             var dpi = GetDpiForWindow(hWnd);
             var scale = dpi > 0 ? (float)dpi / 96.0f : 1.0f;
             var mmi = Marshal.PtrToStructure<MINMAXINFO>(lParam);
-            mmi.ptMinTrackSize.x = (int)(960 * scale);
-            mmi.ptMinTrackSize.y = (int)(530 * scale);
+
+            int targetWidth = (int)(960 * scale);
+            int targetHeight = (int)(530 * scale);
+
+            // Clamp against monitor work area so window min size never exceeds physical screen (e.g. 1366x768 at 150%)
+            var hMon = MonitorFromWindow(hWnd, 2 /* MONITOR_DEFAULTTONEAREST */);
+            if (hMon != IntPtr.Zero)
+            {
+                var mi = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
+                if (GetMonitorInfo(hMon, ref mi))
+                {
+                    int workWidth = mi.rcWork.right - mi.rcWork.left;
+                    int workHeight = mi.rcWork.bottom - mi.rcWork.top;
+                    if (workWidth > 0 && targetWidth > workWidth)
+                    {
+                        targetWidth = workWidth;
+                    }
+                    if (workHeight > 0 && targetHeight > workHeight)
+                    {
+                        targetHeight = workHeight;
+                    }
+                }
+            }
+
+            mmi.ptMinTrackSize.x = targetWidth;
+            mmi.ptMinTrackSize.y = targetHeight;
             Marshal.StructureToPtr(mmi, lParam, true);
             return IntPtr.Zero;
         }
