@@ -733,7 +733,7 @@
                         <!-- Main Left Column -->
                         <Grid RowDefinitions="Auto,*" RowSpacing="12">
                             <!-- Toolbar -->
-                            <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
+                            <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,*,Auto">
                                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
                                     <Button Click="ImportResourcePack_Click">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
@@ -749,14 +749,20 @@
                                     </Button>
                                 </StackPanel>
 
-                                <TextBlock Grid.Column="1"
+                                <TextBox Grid.Column="1"
+                                         Width="220"
+                                         Margin="12,0,0,0"
+                                         PlaceholderText="Tìm resource pack..."
+                                         Text="{x:Bind ViewModel.ResourcePackSearchQuery, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                                <TextBlock Grid.Column="2"
                                            Text="{x:Bind ViewModel.ResourcePackSummaryText, Mode=OneWay}"
                                            VerticalAlignment="Center"
                                            Margin="16,0,0,0"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                            FontSize="12" />
 
-                                <Button Grid.Column="2" Click="RefreshResourcePacks_Click">
+                                <Button Grid.Column="3" Click="RefreshResourcePacks_Click">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <FontIcon Glyph="&#xE72C;" FontSize="13" />
                                         <TextBlock Text="Làm mới" />
@@ -983,9 +989,39 @@
                           Drop="ShadersGrid_Drop">
                         
                         <!-- Main Left Column -->
-                        <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12">
+                        <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="12">
+                            <!-- Shader Loader Prerequisite Status Banner (RPS-AC-06) -->
+                            <Border Grid.Row="0"
+                                    Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
+                                    Padding="14,10">
+                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                    <FontIcon Grid.Column="0"
+                                              Glyph="&#xE73E;"
+                                              FontSize="16"
+                                              Foreground="{StaticResource VazAccentBrush}"
+                                              VerticalAlignment="Center"
+                                              Margin="0,0,12,0" />
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{x:Bind ViewModel.ShaderLoaderStatus, Mode=OneWay}"
+                                                   FontWeight="SemiBold"
+                                                   FontSize="13" />
+                                        <TextBlock Text="{x:Bind ViewModel.ShaderLoaderBannerText, Mode=OneWay}"
+                                                   FontSize="12"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    </StackPanel>
+                                    <Button Grid.Column="2"
+                                            Content="Cài đặt Iris Shaders"
+                                            Visibility="{x:Bind ViewModel.HasShaderLoader, Mode=OneWay, Converter={StaticResource BoolToVisInv}}"
+                                            Command="{x:Bind ViewModel.InstallShaderLoaderCommand}"
+                                            VerticalAlignment="Center" />
+                                </Grid>
+                            </Border>
+
                             <!-- Toolbar -->
-                            <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
+                            <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto">
                                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
                                     <Button Click="ImportShader_Click">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
@@ -1023,7 +1059,7 @@
                             </Grid>
 
                             <!-- Style Category Filter Chips -->
-                            <controls:WrapPanel Grid.Row="1" HorizontalSpacing="8" VerticalSpacing="6">
+                            <controls:WrapPanel Grid.Row="2" HorizontalSpacing="8" VerticalSpacing="6">
                                 <RadioButton Content="Tất cả" Tag="all" IsChecked="True" Checked="ShaderChip_Checked" Style="{StaticResource CategoryChipStyle}" />
                                 <RadioButton Content="Thực tế (Realistic)" Tag="realistic" Checked="ShaderChip_Checked" Style="{StaticResource CategoryChipStyle}" />
                                 <RadioButton Content="Hiện đại (Hybrid)" Tag="hybrid" Checked="ShaderChip_Checked" Style="{StaticResource CategoryChipStyle}" />
@@ -1033,7 +1069,7 @@
                             </controls:WrapPanel>
 
                             <!-- Shaders Grid (2 columns of cards) -->
-                            <ScrollViewer Grid.Row="2">
+                            <ScrollViewer Grid.Row="3">
                                 <GridView ItemsSource="{x:Bind ViewModel.FilteredShaders, Mode=OneWay}"
                                           SelectionMode="None">
                                     <GridView.ItemTemplate>
