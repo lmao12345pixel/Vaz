@@ -222,6 +222,88 @@ public sealed class ModrinthClientTests : IDisposable
         _handler.Requests.Should().BeEmpty(); // Khong goi HTTP request nao
     }
 
+    // ── 9b. GetFeaturedModsAsync Tests ──
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task GetFeaturedModsAsync_WithEmptyQuery_CallsHttpWithDownloadsSort(string? emptyQuery)
+    {
+        var query = new SearchQuery { Query = emptyQuery, Limit = 20 };
+        var facets = ModrinthClient.BuildFacets(query);
+        var expectedPath = $"/v2/search?query=&limit=20&offset=0&index=downloads&facets={Uri.EscapeDataString(facets)}";
+
+        _handler.MapJson(HttpMethod.Get, expectedPath, HttpStatusCode.OK,
+            """{"hits":[{"project_id":"p1","slug":"sodium","title":"Sodium","description":"d","author":"a","downloads":1000000,"follows":100,"categories":[],"versions":[],"project_type":"mod"}],"total_hits":1,"offset":0,"limit":20}""");
+
+        var result = await _client.GetFeaturedModsAsync(query);
+
+        result.Hits.Should().HaveCount(1);
+        result.Hits[0].Slug.Should().Be("sodium");
+        result.TotalHits.Should().Be(1);
+        _handler.CallCount(HttpMethod.Get, expectedPath).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetFeaturedModsAsync_WithCustomSort_PreservesSortIndex()
+    {
+        var query = new SearchQuery { Query = null, SortIndex = "updated", Limit = 10 };
+        var facets = ModrinthClient.BuildFacets(query);
+        var expectedPath = $"/v2/search?query=&limit=10&offset=0&index=updated&facets={Uri.EscapeDataString(facets)}";
+
+        _handler.MapJson(HttpMethod.Get, expectedPath, HttpStatusCode.OK,
+            """{"hits":[],"total_hits":0,"offset":0,"limit":10}""");
+
+        var result = await _client.GetFeaturedModsAsync(query);
+
+        result.Limit.Should().Be(10);
+        _handler.CallCount(HttpMethod.Get, expectedPath).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetFeaturedModsAsync_WithFacetsAndPagination_BuildsCorrectUrl()
+    {
+        var query = new SearchQuery
+        {
+            Query = null,
+            Loaders = ["fabric"],
+            GameVersions = ["1.21.1"],
+            Limit = 20,
+            Offset = 40
+        };
+        var facets = ModrinthClient.BuildFacets(query);
+        var expectedPath = $"/v2/search?query=&limit=20&offset=40&index=downloads&facets={Uri.EscapeDataString(facets)}";
+
+        _handler.MapJson(HttpMethod.Get, expectedPath, HttpStatusCode.OK,
+            """{"hits":[],"total_hits":150,"offset":40,"limit":20}""");
+
+        var result = await _client.GetFeaturedModsAsync(query);
+
+        result.Offset.Should().Be(40);
+        result.TotalHits.Should().Be(150);
+        _handler.CallCount(HttpMethod.Get, expectedPath).Should().Be(1);
+
+        var decoded = Uri.UnescapeDataString(expectedPath);
+        decoded.Should().Contain("[\"categories:fabric\"]");
+        decoded.Should().Contain("[\"versions:1.21.1\"]");
+    }
+
+    [Fact]
+    public async Task GetFeaturedModsAsync_ClampsLimit_Between1And100()
+    {
+        var query = new SearchQuery { Query = "", Limit = 500 };
+        var facets = ModrinthClient.BuildFacets(query);
+        var expectedPath = $"/v2/search?query=&limit=100&offset=0&index=downloads&facets={Uri.EscapeDataString(facets)}";
+
+        _handler.MapJson(HttpMethod.Get, expectedPath, HttpStatusCode.OK,
+            """{"hits":[],"total_hits":0,"offset":0,"limit":100}""");
+
+        var result = await _client.GetFeaturedModsAsync(query);
+
+        _handler.CallCount(HttpMethod.Get, expectedPath).Should().Be(1);
+    }
+
     // ── 10. SM-13/14: LimitClamp_Boundaries ──
 
     [Theory]

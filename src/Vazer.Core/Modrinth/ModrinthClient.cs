@@ -58,6 +58,21 @@ public sealed class ModrinthClient : IModrinthClient
         return await GetCachedAsync(url, VazJsonContext.Plain.SearchResult, ct);
     }
 
+    public async Task<SearchResult> GetFeaturedModsAsync(SearchQuery query, CancellationToken ct = default)
+    {
+        var limit = Math.Clamp(query.Limit, 1, 100);
+        var sortIndex = !string.IsNullOrEmpty(query.SortIndex) ? query.SortIndex : "downloads";
+        var queryString = string.IsNullOrWhiteSpace(query.Query) ? "" : Uri.EscapeDataString(query.Query.Trim());
+
+        var facets = BuildFacets(query);
+        var url = $"{BaseUrl}/search?query={queryString}" +
+                  $"&limit={limit}&offset={query.Offset}" +
+                  $"&index={sortIndex}" +
+                  $"&facets={Uri.EscapeDataString(facets)}";
+
+        return await GetCachedAsync(url, VazJsonContext.Plain.SearchResult, ct);
+    }
+
     public async Task<ModrinthProject> GetProjectAsync(string slugOrId, CancellationToken ct = default)
     {
         var url = $"{BaseUrl}/project/{Uri.EscapeDataString(slugOrId)}";

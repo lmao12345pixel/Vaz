@@ -51,6 +51,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
     private CancellationTokenSource? _searchCts;
     private CancellationTokenSource? _installCts;
     private int _offset;
+    private int _currentRequestId;
 
     public ObservableCollection<SearchHitRow> Results { get; } = new();
 
@@ -108,20 +109,25 @@ public sealed partial class ModBrowserViewModel : ObservableObject
     [RelayCommand]
     public async Task SearchAsync()
     {
-        await SearchCoreAsync(reset: true, CancellationToken.None);
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        await SearchCoreAsync(reset: true, _searchCts.Token);
     }
 
     [RelayCommand]
     public async Task LoadMoreAsync()
     {
-        await SearchCoreAsync(reset: false, CancellationToken.None);
+        var ct = _searchCts?.Token ?? CancellationToken.None;
+        await SearchCoreAsync(reset: false, ct);
     }
 
     [RelayCommand]
     public async Task RetryAsync()
     {
         HasError = false;
-        await SearchCoreAsync(reset: true, CancellationToken.None);
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        await SearchCoreAsync(reset: true, _searchCts.Token);
     }
 
     /// <summary>Debounce 300ms — gọi từ SearchBar TextChanged.</summary>
@@ -149,10 +155,12 @@ public sealed partial class ModBrowserViewModel : ObservableObject
 
     private async Task SearchCoreAsync(bool reset, CancellationToken ct)
     {
-        if (IsBusy || (IsLoadingMore && !reset))
+        if (!reset && (IsBusy || IsLoadingMore))
         {
             return;
         }
+
+        var requestId = Interlocked.Increment(ref _currentRequestId);
 
         if (reset)
         {
@@ -170,6 +178,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
         try
         {
             var inst = await _activeInstance.GetCurrentAsync(ct);
+            ct.ThrowIfCancellationRequested();
 
             string[]? loaders = ResolveLoaders(inst);
             string[]? gameVersions = ResolveGameVersions(inst);
@@ -181,22 +190,46 @@ public sealed partial class ModBrowserViewModel : ObservableObject
                 _ => null
             };
 
+            bool isBrowseMode = string.IsNullOrWhiteSpace(SearchText);
+
             var query = new SearchQuery
             {
-                Query = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim(),
+                Query = isBrowseMode ? null : SearchText.Trim(),
                 Loaders = loaders,
                 GameVersions = gameVersions,
-                SortIndex = sort,
+                SortIndex = isBrowseMode ? (sort ?? "downloads") : sort,
                 Offset = reset ? 0 : _offset,
                 Limit = PageSize
             };
 
-            var result = await _modrinth.SearchAsync(query, ct);
+            SearchResult result;
+            if (isBrowseMode)
+            {
+                result = await _modrinth.GetFeaturedModsAsync(query, ct);
+            }
+            else
+            {
+                result = await _modrinth.SearchAsync(query, ct);
+            }
+
+            ct.ThrowIfCancellationRequested();
+
+            if (requestId != _currentRequestId)
+            {
+                return;
+            }
 
             var installedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             if (inst != null)
             {
                 var installedMods = await _modInstall.ListAsync(inst.Id, ct);
+                ct.ThrowIfCancellationRequested();
+
+                if (requestId != _currentRequestId)
+                {
+                    return;
+                }
+
                 foreach (var m in installedMods)
                 {
                     if (!string.IsNullOrEmpty(m.ProjectId)) installedIds.Add(m.ProjectId);
@@ -219,7 +252,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
             _offset = query.Offset + result.Hits.Length;
             HasResults = Results.Count > 0;
             StatusMessage = Results.Count == 0
-                ? "Không tìm thấy kết quả. Thử từ khóa tiếng Anh (ví dụ: sodium, iris, fabric)..."
+                ? (isBrowseMode ? "Không có mod nào phù hợp bộ lọc." : "Không tìm thấy kết quả. Thử từ khóa tiếng Anh (ví dụ: sodium, iris, fabric)...")
                 : $"{Results.Count} / {result.TotalHits} kết quả";
         }
         catch (OperationCanceledException)
@@ -228,14 +261,22 @@ public sealed partial class ModBrowserViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            HasError = true;
-            ErrorMessage = ex.Message;
+            if (requestId == _currentRequestId)
+            {
+                HasError = true;
+                ErrorMessage = ex.Message;
+            }
         }
         finally
         {
-            IsBusy = false;
-            IsLoadingMore = false;
-            NotifyBusyChanged();
+            // RÀNG BUỘC: Không dùng return để thoát khối finally.
+            // Bảo đảm chỉ request hiện hành được cập nhật trạng thái.
+            if (requestId == _currentRequestId)
+            {
+                IsBusy = false;
+                IsLoadingMore = false;
+                NotifyBusyChanged();
+            }
         }
     }
 

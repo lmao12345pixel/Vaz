@@ -386,18 +386,37 @@ public sealed class ModNetworkAndDependencyTests : IDisposable
 
         modrinthMock.Setup(m => m.GetProjectAsync("bad-hash", It.IsAny<CancellationToken>())).ReturnsAsync(proj);
         modrinthMock.Setup(m => m.GetVersionsAsync("bad-hash", "fabric", "1.21.1", It.IsAny<CancellationToken>())).ReturnsAsync([ver]);
-        modrinthMock.Setup(m => m.DownloadAsync(ver.Files[0].Url, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new MemoryStream(Encoding.UTF8.GetBytes("content-with-different-hash")));
-
+        string? createdTempFile = null;
         var initialTempFiles = Directory.GetFiles(Path.GetTempPath(), "vazer-*.tmp");
+        var rawContent = new MemoryStream(Encoding.UTF8.GetBytes("content-with-different-hash"));
+        modrinthMock.Setup(m => m.DownloadAsync(ver.Files[0].Url, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TrackingStream(rawContent, () =>
+            {
+                var current = Directory.GetFiles(Path.GetTempPath(), "vazer-*.tmp");
+                var newFiles = current.Except(initialTempFiles).ToArray();
+                foreach (var file in newFiles)
+                {
+                    try
+                    {
+                        using var fs = new FileStream(file, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+                    }
+                    catch (IOException)
+                    {
+                        createdTempFile = file;
+                        break;
+                    }
+                }
+                createdTempFile ??= newFiles.FirstOrDefault();
+            }));
+
         var svc = new ModInstallService(instMgrMock.Object, modrinthMock.Object, Options.Create(TestOptions), NullLogger<ModInstallService>.Instance);
         var act = () => svc.InstallFromModrinthAsync("inst-1", "bad-hash");
 
         await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*SHA512 mismatch*");
 
-        // Xác nhận file tạm trong temp path và file đích KHÔNG còn trên đĩa
-        var remainingTempFiles = Directory.GetFiles(Path.GetTempPath(), "vazer-*.tmp");
-        remainingTempFiles.Length.Should().Be(initialTempFiles.Length);
+        // Xác nhận file tạm do chính lượt tải này tạo ra đã được dọn sạch khỏi temp path và file đích KHÔNG còn trên đĩa
+        createdTempFile.Should().NotBeNull();
+        File.Exists(createdTempFile!).Should().BeFalse();
         File.Exists(Path.Combine(modsDir, "bad.jar")).Should().BeFalse();
     }
 
@@ -608,5 +627,71 @@ public sealed class ModNetworkAndDependencyTests : IDisposable
         public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
         public override void SetLength(long value) => throw new NotSupportedException();
         public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
+
+    private sealed class TrackingStream : Stream
+    {
+        private readonly Stream _inner;
+        private readonly Action _onFirstRead;
+        private bool _called;
+
+        public TrackingStream(Stream inner, Action onFirstRead)
+        {
+            _inner = inner;
+            _onFirstRead = onFirstRead;
+        }
+
+        public override bool CanRead => _inner.CanRead;
+        public override bool CanSeek => _inner.CanSeek;
+        public override bool CanWrite => _inner.CanWrite;
+        public override long Length => _inner.Length;
+        public override long Position { get => _inner.Position; set => _inner.Position = value; }
+        public override void Flush() => _inner.Flush();
+
+        private void Trigger()
+        {
+            if (!_called)
+            {
+                _called = true;
+                _onFirstRead();
+            }
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            Trigger();
+            return _inner.Read(buffer, offset, count);
+        }
+
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            Trigger();
+            return _inner.ReadAsync(buffer, offset, count, cancellationToken);
+        }
+
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            Trigger();
+            return _inner.ReadAsync(buffer, cancellationToken);
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) => _inner.Seek(offset, origin);
+        public override void SetLength(long value) => _inner.SetLength(value);
+        public override void Write(byte[] buffer, int offset, int count) => _inner.Write(buffer, offset, count);
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _inner.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
+        public override async ValueTask DisposeAsync()
+        {
+            await _inner.DisposeAsync();
+            await base.DisposeAsync();
+        }
     }
 }
