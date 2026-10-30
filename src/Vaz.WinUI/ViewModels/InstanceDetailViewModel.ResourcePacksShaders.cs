@@ -67,6 +67,7 @@ public sealed partial class ShaderPackRow : ObservableObject
     public string Version => Shader.Version;
     public string Size => Shader.Size;
     public string ImageUri => Shader.ImageUri;
+    public Uri? ImageUriSource => !string.IsNullOrEmpty(Shader.ImageUri) ? new Uri(Shader.ImageUri) : null;
     public string AccentColor => Shader.AccentColor;
     public System.Collections.Generic.List<string> Features => Shader.Features;
 
