@@ -44,13 +44,26 @@ public sealed partial class InstancesPage : Page
     private void Instance_Click(object sender, ItemClickEventArgs e)
     {
         if (e.ClickedItem is InstanceCardItem card)
+        {
             ViewModel.SetActiveTarget(card.Id);
+            NavigateToDetail(card.Id);
+        }
     }
 
     private void Edit_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement fe && fe.DataContext is InstanceCardItem card)
-            NavigateToDetail(card.Id);
+        if (sender is FrameworkElement fe)
+        {
+            var card = fe.DataContext as InstanceCardItem ?? (fe.Tag is string tag ? ViewModel.Instances.FirstOrDefault(i => i.Id == tag) : null);
+            if (card != null)
+            {
+                NavigateToDetail(card.Id);
+            }
+            else if (ViewModel.Instances.Count > 0)
+            {
+                NavigateToDetail(ViewModel.Instances[0].Id);
+            }
+        }
     }
 
     private void Play_Click(object sender, RoutedEventArgs e)
@@ -116,6 +129,13 @@ public sealed partial class InstancesPage : Page
 
     private void NavigateToDetail(string instanceId)
     {
+        try
+        {
+            var logPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Vazer", "nav_log.txt");
+            System.IO.File.AppendAllText(logPath, $"NavigateToDetail called for {instanceId}\n");
+        }
+        catch { }
+
         if (App.MainWindow is MainWindow mw)
         {
             mw.NavigateTo(typeof(InstanceDetailPage), instanceId);

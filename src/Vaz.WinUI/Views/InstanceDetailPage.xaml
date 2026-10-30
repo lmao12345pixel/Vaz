@@ -134,20 +134,40 @@
                 </StackPanel>
             </StackPanel>
 
-            <!-- Launch Button -->
-            <Button
-                Grid.Column="2"
-                VerticalAlignment="Center"
-                Command="{x:Bind ViewModel.LaunchCommand}"
-                IsEnabled="{x:Bind ViewModel.IsNotBusy, Mode=OneWay}"
-                Style="{StaticResource VazAccentButtonStyle}"
-                Padding="20,10"
-                CornerRadius="8">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <FontIcon Glyph="&#xE768;" FontSize="14" />
-                    <TextBlock Text="Khởi chạy" FontWeight="SemiBold" />
-                </StackPanel>
-            </Button>
+            <!-- Launch Button and Tab Switchers -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                <Button Click="ModsTabButton_Click" ToolTipService.ToolTip="Xem Mods">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon Glyph="&#xE74C;" FontSize="13" Foreground="{StaticResource VazAccentBrush}" />
+                        <TextBlock Text="Mods" />
+                    </StackPanel>
+                </Button>
+                <Button Click="ResourcePacksTabButton_Click" ToolTipService.ToolTip="Xem Resource Packs">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon Glyph="&#xE790;" FontSize="13" Foreground="{StaticResource VazAccentBrush}" />
+                        <TextBlock Text="Resource Packs" />
+                    </StackPanel>
+                </Button>
+                <Button Click="ShadersTabButton_Click" ToolTipService.ToolTip="Xem Shaders">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon Glyph="&#xE706;" FontSize="13" Foreground="{StaticResource VazAccentBrush}" />
+                        <TextBlock Text="Shaders" />
+                    </StackPanel>
+                </Button>
+                <Border Width="1" Height="20" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="2,0" />
+                <Button
+                    VerticalAlignment="Center"
+                    Command="{x:Bind ViewModel.LaunchCommand}"
+                    IsEnabled="{x:Bind ViewModel.IsNotBusy, Mode=OneWay}"
+                    Style="{StaticResource VazAccentButtonStyle}"
+                    Padding="16,8"
+                    CornerRadius="8">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE768;" FontSize="14" />
+                        <TextBlock Text="Khởi chạy" FontWeight="SemiBold" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
         </Grid>
 
         <!-- Status / error -->
@@ -169,7 +189,7 @@
         </StackPanel>
 
         <!-- Tabs -->
-        <TabView Grid.Row="2" IsAddTabButtonVisible="False" Margin="0,8,0,0">
+        <TabView x:Name="DetailTabView" Grid.Row="2" IsAddTabButtonVisible="False" Margin="0,8,0,0">
             <TabViewItem IsClosable="False">
                 <TabViewItem.Header>
                     <StackPanel Orientation="Horizontal" Spacing="8">
@@ -694,6 +714,476 @@
                     </Grid>
                 </TabViewItem.Content>
             </TabViewItem>
+
+            <!-- TAB 2: RESOURCE PACKS -->
+            <TabViewItem x:Name="ResourcePacksTab" IsClosable="False">
+                <TabViewItem.Header>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE790;" FontSize="14" Foreground="{StaticResource VazAccentBrush}" />
+                        <TextBlock Text="Resource Packs" FontWeight="Medium" />
+                    </StackPanel>
+                </TabViewItem.Header>
+                <TabViewItem.Content>
+                    <Grid x:Name="ResourcePacksContainerGrid"
+                          Padding="0,12,0,0"
+                          AllowDrop="True"
+                          DragOver="ResourcePacksGrid_DragOver"
+                          Drop="ResourcePacksGrid_Drop">
+                        
+                        <!-- Main Left Column -->
+                        <Grid RowDefinitions="Auto,*" RowSpacing="12">
+                            <!-- Toolbar -->
+                            <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                                    <Button Click="ImportResourcePack_Click">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <FontIcon Glyph="&#xE898;" FontSize="13" />
+                                            <TextBlock Text="+ Thêm .zip" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Click="OpenResourcePacksFolder_Click">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <FontIcon Glyph="&#xED25;" FontSize="13" />
+                                            <TextBlock Text="Mở thư mục" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+
+                                <TextBlock Grid.Column="1"
+                                           Text="{x:Bind ViewModel.ResourcePackSummaryText, Mode=OneWay}"
+                                           VerticalAlignment="Center"
+                                           Margin="16,0,0,0"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           FontSize="12" />
+
+                                <Button Grid.Column="2" Click="RefreshResourcePacks_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <FontIcon Glyph="&#xE72C;" FontSize="13" />
+                                        <TextBlock Text="Làm mới" />
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+
+                            <!-- Two Columns: Available Packs (Left) vs Active Packs (Right) -->
+                            <Grid Grid.Row="1" ColumnDefinitions="*,*">
+                                <!-- Available Packs Column -->
+                                <Border Grid.Column="0"
+                                        Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="12"
+                                        Margin="0,0,6,0">
+                                    <Grid RowDefinitions="Auto,*">
+                                        <TextBlock Grid.Row="0" Text="Gói khả dụng (Available)" FontWeight="SemiBold" FontSize="14" Margin="4,0,0,8" />
+                                        
+                                        <ListView Grid.Row="1"
+                                                  ItemsSource="{x:Bind ViewModel.AvailableResourcePacks, Mode=OneWay}"
+                                                  SelectionMode="None">
+                                            <ListView.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:ResourcePackRow">
+                                                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                            BorderThickness="1"
+                                                            CornerRadius="8"
+                                                            Padding="10"
+                                                            Margin="0,4,0,4"
+                                                            Tapped="PackCard_Tapped">
+                                                        <Grid ColumnDefinitions="48,*,Auto">
+                                                            <!-- Icon -->
+                                                            <Border Grid.Column="0" Width="44" Height="44" CornerRadius="6" Background="{ThemeResource LayerFillColorAltBrush}">
+                                                                <Image Source="{x:Bind IconUri}" Stretch="UniformToFill" />
+                                                            </Border>
+
+                                                            <!-- Info -->
+                                                            <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Spacing="2">
+                                                                <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" FontSize="13" TextTrimming="CharacterEllipsis" />
+                                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                    <Border Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="4" Padding="4,1">
+                                                                        <TextBlock Text="{x:Bind Resolution}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                                    </Border>
+                                                                    <Border Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="4" Padding="4,1">
+                                                                        <TextBlock Text="{x:Bind Size}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                                    </Border>
+                                                                </StackPanel>
+                                                            </StackPanel>
+
+                                                            <!-- Actions -->
+                                                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                                <Button ToolTipService.ToolTip="Xem chi tiết"
+                                                                        Click="PackInspector_Click"
+                                                                        Padding="6,4">
+                                                                    <FontIcon Glyph="&#xE946;" FontSize="12" />
+                                                                </Button>
+                                                                <Button ToolTipService.ToolTip="Bật gói này"
+                                                                        Click="PackEnable_Click"
+                                                                        Style="{StaticResource VazAccentButtonStyle}"
+                                                                        Padding="8,4">
+                                                                    <FontIcon Glyph="&#xE76C;" FontSize="12" />
+                                                                </Button>
+                                                            </StackPanel>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ListView.ItemTemplate>
+                                        </ListView>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Active Packs Column with Reordering -->
+                                <Border Grid.Column="1"
+                                        Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="12"
+                                        Margin="6,0,0,0">
+                                    <Grid RowDefinitions="Auto,*">
+                                        <TextBlock Grid.Row="0" Text="Gói đang dùng (Ưu tiên từ trên xuống)" FontWeight="SemiBold" FontSize="14" Margin="4,0,0,8" />
+
+                                        <ListView Grid.Row="1"
+                                                  ItemsSource="{x:Bind ViewModel.ActiveResourcePacks, Mode=OneWay}"
+                                                  SelectionMode="None">
+                                            <ListView.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:ResourcePackRow">
+                                                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                            BorderThickness="1"
+                                                            CornerRadius="8"
+                                                            Padding="10"
+                                                            Margin="0,4,0,4"
+                                                            Tapped="PackCard_Tapped">
+                                                        <Grid ColumnDefinitions="48,*,Auto">
+                                                            <!-- Icon -->
+                                                            <Border Grid.Column="0" Width="44" Height="44" CornerRadius="6" Background="{ThemeResource LayerFillColorAltBrush}">
+                                                                <Image Source="{x:Bind IconUri}" Stretch="UniformToFill" />
+                                                            </Border>
+
+                                                            <!-- Info -->
+                                                            <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Spacing="2">
+                                                                <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" FontSize="13" TextTrimming="CharacterEllipsis" />
+                                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                    <Border Background="{StaticResource VazAccentSubtleBrush}" CornerRadius="4" Padding="4,1">
+                                                                        <TextBlock Text="{x:Bind PriorityBadge}" FontSize="11" Foreground="{StaticResource VazAccentBrush}" FontWeight="SemiBold" />
+                                                                    </Border>
+                                                                    <Border Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="4" Padding="4,1">
+                                                                        <TextBlock Text="{x:Bind Resolution}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                                    </Border>
+                                                                </StackPanel>
+                                                            </StackPanel>
+
+                                                            <!-- Reordering Up/Down & Disable -->
+                                                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                                <Button ToolTipService.ToolTip="Tăng mức ưu tiên"
+                                                                        Click="PackMoveUp_Click"
+                                                                        Padding="6,4">
+                                                                    <FontIcon Glyph="&#xE70E;" FontSize="12" />
+                                                                </Button>
+                                                                <Button ToolTipService.ToolTip="Giảm mức ưu tiên"
+                                                                        Click="PackMoveDown_Click"
+                                                                        Padding="6,4">
+                                                                    <FontIcon Glyph="&#xE70D;" FontSize="12" />
+                                                                </Button>
+                                                                <Button ToolTipService.ToolTip="Xem chi tiết"
+                                                                        Click="PackInspector_Click"
+                                                                        Padding="6,4">
+                                                                    <FontIcon Glyph="&#xE946;" FontSize="12" />
+                                                                </Button>
+                                                                <Button ToolTipService.ToolTip="Tắt gói này"
+                                                                        Click="PackDisable_Click"
+                                                                        Padding="6,4">
+                                                                    <FontIcon Glyph="&#xE711;" FontSize="12" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                                                                </Button>
+                                                            </StackPanel>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ListView.ItemTemplate>
+                                        </ListView>
+                                    </Grid>
+                                </Border>
+                            </Grid>
+                        </Grid>
+
+                        <!-- Resource Pack Inspector Drawer Overlay -->
+                        <Grid Visibility="{x:Bind ViewModel.IsPackInspectorOpen, Mode=OneWay, Converter={StaticResource BoolToVis}}"
+                              Canvas.ZIndex="100">
+                            <!-- Scrim for light dismiss -->
+                            <Border Background="#40000000" Tapped="ClosePackInspector_Click" />
+
+                            <!-- Resource Pack Inspector Drawer -->
+                            <Border Width="380"
+                                    HorizontalAlignment="Right"
+                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1,0,0,0"
+                                    CornerRadius="8,0,0,8">
+                                <ScrollViewer Padding="16">
+                                    <StackPanel Spacing="16">
+                                        <!-- Header Banner/Icon -->
+                                        <Grid>
+                                            <Border Height="120" CornerRadius="6" Background="{ThemeResource LayerFillColorAltBrush}">
+                                                <Image Source="{x:Bind ViewModel.SelectedPackForInspector.BannerUri, Mode=OneWay}" Stretch="UniformToFill" />
+                                            </Border>
+                                            <Button HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8" Click="ClosePackInspector_Click" Padding="6,4">
+                                                <FontIcon Glyph="&#xE711;" FontSize="12" />
+                                            </Button>
+                                        </Grid>
+
+                                        <!-- Pack Name & Author -->
+                                        <StackPanel Spacing="4">
+                                            <TextBlock Text="{x:Bind ViewModel.SelectedPackForInspector.Name, Mode=OneWay}" FontSize="18" FontWeight="SemiBold" />
+                                            <TextBlock Text="{x:Bind ViewModel.SelectedPackForInspector.Author, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+
+                                        <!-- Badges -->
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <Border Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="4" Padding="6,2">
+                                                <TextBlock Text="{x:Bind ViewModel.SelectedPackForInspector.Resolution, Mode=OneWay}" FontSize="11" />
+                                            </Border>
+                                            <Border Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="4" Padding="6,2">
+                                                <TextBlock Text="{x:Bind ViewModel.SelectedPackForInspector.Size, Mode=OneWay}" FontSize="11" />
+                                            </Border>
+                                            <Border Background="{StaticResource VazAccentSubtleBrush}" CornerRadius="4" Padding="6,2">
+                                                <TextBlock Text="{x:Bind ViewModel.SelectedPackForInspector.Version, Mode=OneWay}" FontSize="11" Foreground="{StaticResource VazAccentBrush}" />
+                                            </Border>
+                                        </StackPanel>
+
+                                        <!-- Description -->
+                                        <TextBlock Text="{x:Bind ViewModel.SelectedPackForInspector.Description, Mode=OneWay}" TextWrapping="Wrap" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                                        <!-- Compatibility Status -->
+                                        <Border Background="{ThemeResource LayerFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Padding="12">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <FontIcon Glyph="&#xE73E;" FontSize="14" Foreground="{StaticResource VazAccentBrush}" />
+                                                <TextBlock Text="Tương thích hoàn toàn với Minecraft 1.21.x" FontSize="12" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </Border>
+                        </Grid>
+                    </Grid>
+                </TabViewItem.Content>
+            </TabViewItem>
+
+            <!-- TAB 3: SHADER PACKS -->
+            <TabViewItem x:Name="ShadersTab" IsClosable="False">
+                <TabViewItem.Header>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE706;" FontSize="14" Foreground="{StaticResource VazAccentBrush}" />
+                        <TextBlock Text="Shaders" FontWeight="Medium" />
+                    </StackPanel>
+                </TabViewItem.Header>
+                <TabViewItem.Content>
+                    <Grid x:Name="ShadersContainerGrid"
+                          Padding="0,12,0,0"
+                          AllowDrop="True"
+                          DragOver="ShadersGrid_DragOver"
+                          Drop="ShadersGrid_Drop">
+                        
+                        <!-- Main Left Column -->
+                        <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12">
+                            <!-- Toolbar -->
+                            <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                                    <Button Click="ImportShader_Click">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <FontIcon Glyph="&#xE898;" FontSize="13" />
+                                            <TextBlock Text="+ Thêm .zip" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Click="OpenShadersFolder_Click">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <FontIcon Glyph="&#xED25;" FontSize="13" />
+                                            <TextBlock Text="Mở thư mục" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Click="DeactivateShaders_Click">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <FontIcon Glyph="&#xE711;" FontSize="13" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                                            <TextBlock Text="Tắt shader (Vanilla)" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+
+                                <TextBlock Grid.Column="1"
+                                           Text="{x:Bind ViewModel.ShaderSummaryText, Mode=OneWay}"
+                                           VerticalAlignment="Center"
+                                           Margin="16,0,0,0"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           FontSize="12" />
+
+                                <Button Grid.Column="2" Click="RefreshShaders_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <FontIcon Glyph="&#xE72C;" FontSize="13" />
+                                        <TextBlock Text="Làm mới" />
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+
+                            <!-- Style Category Filter Chips -->
+                            <controls:WrapPanel Grid.Row="1" HorizontalSpacing="8" VerticalSpacing="6">
+                                <RadioButton Content="Tất cả" Tag="all" IsChecked="True" Checked="ShaderChip_Checked" Style="{StaticResource CategoryChipStyle}" />
+                                <RadioButton Content="Thực tế (Realistic)" Tag="realistic" Checked="ShaderChip_Checked" Style="{StaticResource CategoryChipStyle}" />
+                                <RadioButton Content="Hiện đại (Hybrid)" Tag="hybrid" Checked="ShaderChip_Checked" Style="{StaticResource CategoryChipStyle}" />
+                                <RadioButton Content="Điện ảnh (Cinematic)" Tag="cinematic" Checked="ShaderChip_Checked" Style="{StaticResource CategoryChipStyle}" />
+                                <RadioButton Content="Fantasy" Tag="fantasy" Checked="ShaderChip_Checked" Style="{StaticResource CategoryChipStyle}" />
+                                <RadioButton Content="Hiệu năng (Performance)" Tag="performance" Checked="ShaderChip_Checked" Style="{StaticResource CategoryChipStyle}" />
+                            </controls:WrapPanel>
+
+                            <!-- Shaders Grid (2 columns of cards) -->
+                            <ScrollViewer Grid.Row="2">
+                                <GridView ItemsSource="{x:Bind ViewModel.FilteredShaders, Mode=OneWay}"
+                                          SelectionMode="None">
+                                    <GridView.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:ShaderPackRow">
+                                            <Border Width="380"
+                                                    Height="220"
+                                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="10"
+                                                    Margin="0,0,12,12">
+                                                <Grid RowDefinitions="120,*">
+                                                    <!-- Banner Image with Active Badge -->
+                                                    <Grid Grid.Row="0">
+                                                        <Border CornerRadius="10,10,0,0">
+                                                            <Image Source="{x:Bind ImageUri}" Stretch="UniformToFill" />
+                                                        </Border>
+                                                        
+                                                        <!-- Active Pill Overlay -->
+                                                        <Border Visibility="{x:Bind IsActive, Mode=OneWay, Converter={StaticResource BoolToVis}}"
+                                                                HorizontalAlignment="Left"
+                                                                VerticalAlignment="Top"
+                                                                Margin="10"
+                                                                Background="{StaticResource VazAccentBrush}"
+                                                                CornerRadius="4"
+                                                                Padding="8,3">
+                                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                <FontIcon Glyph="&#xE73E;" FontSize="11" Foreground="White" />
+                                                                <TextBlock Text="ĐANG KÍCH HOẠT" FontSize="11" FontWeight="Bold" Foreground="White" />
+                                                            </StackPanel>
+                                                        </Border>
+                                                        
+                                                        <!-- Style Badge -->
+                                                        <Border HorizontalAlignment="Right"
+                                                                VerticalAlignment="Top"
+                                                                Margin="10"
+                                                                Background="#80000000"
+                                                                CornerRadius="4"
+                                                                Padding="6,2">
+                                                            <TextBlock Text="{x:Bind StyleLabel}" FontSize="11" Foreground="White" />
+                                                        </Border>
+                                                    </Grid>
+
+                                                    <!-- Details & Action Buttons -->
+                                                    <Grid Grid.Row="1" Padding="12,8,12,8" ColumnDefinitions="*,Auto">
+                                                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
+                                                            <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Text="{x:Bind Author}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                        </StackPanel>
+
+                                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                            <Button ToolTipService.ToolTip="Xem chi tiết"
+                                                                    Click="ShaderInspector_Click"
+                                                                    Padding="6,4">
+                                                                <FontIcon Glyph="&#xE946;" FontSize="12" />
+                                                            </Button>
+                                                            
+                                                            <Button ToolTipService.ToolTip="Kích hoạt shader này"
+                                                                    Click="ActivateShader_Click"
+                                                                    Visibility="{x:Bind IsActive, Mode=OneWay, Converter={StaticResource BoolToVisInv}}"
+                                                                    Style="{StaticResource VazAccentButtonStyle}"
+                                                                    Padding="12,5">
+                                                                <TextBlock Text="Kích hoạt" FontSize="12" />
+                                                            </Button>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </GridView.ItemTemplate>
+                                </GridView>
+                            </ScrollViewer>
+                        </Grid>
+
+                        <!-- Shader Inspector Drawer Overlay -->
+                        <Grid Visibility="{x:Bind ViewModel.IsShaderInspectorOpen, Mode=OneWay, Converter={StaticResource BoolToVis}}"
+                              Canvas.ZIndex="100">
+                            <!-- Scrim for light dismiss -->
+                            <Border Background="#40000000" Tapped="CloseShaderInspector_Click" />
+
+                            <!-- Shader Inspector Drawer -->
+                            <Border Width="380"
+                                    HorizontalAlignment="Right"
+                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1,0,0,0"
+                                    CornerRadius="8,0,0,8">
+                                <ScrollViewer Padding="16">
+                                    <StackPanel Spacing="16">
+                                        <!-- Banner Image -->
+                                        <Grid>
+                                            <Border Height="140" CornerRadius="6" Background="{ThemeResource LayerFillColorAltBrush}">
+                                                <Image Source="{x:Bind ViewModel.SelectedShaderForInspector.ImageUri, Mode=OneWay}" Stretch="UniformToFill" />
+                                            </Border>
+                                            <Button HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8" Click="CloseShaderInspector_Click" Padding="6,4">
+                                                <FontIcon Glyph="&#xE711;" FontSize="12" />
+                                            </Button>
+                                        </Grid>
+
+                                        <!-- Name & Author -->
+                                        <StackPanel Spacing="4">
+                                            <TextBlock Text="{x:Bind ViewModel.SelectedShaderForInspector.Name, Mode=OneWay}" FontSize="18" FontWeight="SemiBold" />
+                                            <TextBlock Text="{x:Bind ViewModel.SelectedShaderForInspector.Author, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+
+                                        <!-- Badges -->
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <Border Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="4" Padding="6,2">
+                                                <TextBlock Text="{x:Bind ViewModel.SelectedShaderForInspector.StyleLabel, Mode=OneWay}" FontSize="11" />
+                                            </Border>
+                                            <Border Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="4" Padding="6,2">
+                                                <TextBlock Text="{x:Bind ViewModel.SelectedShaderForInspector.Version, Mode=OneWay}" FontSize="11" />
+                                            </Border>
+                                            <Border Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="4" Padding="6,2">
+                                                <TextBlock Text="{x:Bind ViewModel.SelectedShaderForInspector.Size, Mode=OneWay}" FontSize="11" />
+                                            </Border>
+                                        </StackPanel>
+
+                                        <!-- Description -->
+                                        <TextBlock Text="{x:Bind ViewModel.SelectedShaderForInspector.Description, Mode=OneWay}" TextWrapping="Wrap" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                                        <!-- Features List -->
+                                        <StackPanel Spacing="6">
+                                            <TextBlock Text="Tính năng nổi bật:" FontWeight="SemiBold" FontSize="13" />
+                                            <ItemsControl ItemsSource="{x:Bind ViewModel.SelectedShaderForInspector.Features, Mode=OneWay}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2,0,2">
+                                                            <FontIcon Glyph="&#xE73E;" FontSize="12" Foreground="{StaticResource VazAccentBrush}" />
+                                                            <TextBlock Text="{Binding}" FontSize="12" />
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+
+                                        <!-- Action Button -->
+                                        <Button Content="Kích hoạt Shader này"
+                                                Click="ActivateInspectorShader_Click"
+                                                Style="{StaticResource VazAccentButtonStyle}"
+                                                HorizontalAlignment="Stretch"
+                                                Padding="0,8" />
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </Border>
+                        </Grid>
+                    </Grid>
+                </TabViewItem.Content>
+            </TabViewItem>
+
             <TabViewItem IsClosable="False">
                 <TabViewItem.Header>
                     <StackPanel Orientation="Horizontal" Spacing="8">

@@ -24,6 +24,11 @@ public sealed partial class MainWindow : Window
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
+        try
+        {
+            AppWindow.Resize(new Windows.Graphics.SizeInt32(1100, 700));
+        }
+        catch { }
 
         // SET-AC-04: theme/accent đã nạp trong App.OnLaunched; gắn shell + áp màu TRƯỚC
         // khi navigate để trang Instances đầu tiên render đúng theme (kể cả nav pane + dock).
@@ -73,7 +78,7 @@ public sealed partial class MainWindow : Window
         {
             NavView.SelectedItem = accountsItem;
         }
-        else if (ContentFrame.CurrentSourcePageType != typeof(AccountPage))
+        if (ContentFrame.CurrentSourcePageType != typeof(AccountPage))
         {
             Navigate(typeof(AccountPage));
         }
@@ -84,9 +89,9 @@ public sealed partial class MainWindow : Window
         NavigateToAccounts();
     }
 
-    private void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
+    private void NavView_ItemInvoked(NavigationView sender, NavigationViewItemInvokedEventArgs args)
     {
-        if (args.SelectedItem is NavigationViewItem item && item.Tag is string tag)
+        if (args.InvokedItemContainer is NavigationViewItem item && item.Tag is string tag)
         {
             var pageType = tag switch
             {
@@ -122,6 +127,13 @@ public sealed partial class MainWindow : Window
 
     private void Navigate(Type pageType, object? parameter = null)
     {
+        try
+        {
+            var logPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Vazer", "nav_log.txt");
+            System.IO.File.AppendAllText(logPath, $"MainWindow Navigate: pageType={pageType.Name}, parameter={parameter}, stack={new System.Diagnostics.StackTrace(1, true)}\n");
+        }
+        catch { }
+
         NavigationTransitionInfo transition = AppThemeManager.IsReduceMotion
             ? new SuppressNavigationTransitionInfo()
             : new EntranceNavigationTransitionInfo();

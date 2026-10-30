@@ -63,7 +63,7 @@
             IsSettingsVisible="False"
             PaneDisplayMode="Left"
             OpenPaneLength="220"
-            SelectionChanged="NavView_SelectionChanged">
+            ItemInvoked="NavView_ItemInvoked">
 
             <NavigationView.MenuItems>
                 <NavigationViewItem Content="Instances" Tag="instances" IsSelected="True">

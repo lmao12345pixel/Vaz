@@ -254,6 +254,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
 
                 StartLogWatcher(Current.Path);
                 await LoadGameOptionsAsync();
+                InitializeResourcePacksAndShaders();
             }
             else
             {

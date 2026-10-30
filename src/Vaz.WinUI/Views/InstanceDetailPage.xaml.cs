@@ -15,6 +15,8 @@ namespace Vaz.WinUI.Views;
 public sealed partial class InstanceDetailPage : Page
 {
     public InstanceDetailViewModel ViewModel { get; }
+    private UIElement? _lastPackInspectorTrigger;
+    private UIElement? _lastShaderInspectorTrigger;
 
     public InstanceDetailPage()
     {
@@ -63,6 +65,13 @@ public sealed partial class InstanceDetailPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
+        try
+        {
+            var logPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Vazer", "nav_log.txt");
+            System.IO.File.AppendAllText(logPath, $"InstanceDetailPage OnNavigatedTo: parameter={e.Parameter}\n");
+        }
+        catch { }
+
         if (e.Parameter is string instanceId)
         {
             var active = ((App)Application.Current).Services
@@ -80,6 +89,96 @@ public sealed partial class InstanceDetailPage : Page
         {
             _ = ViewModel.LoadCommand.ExecuteAsync(null);
         }
+
+        DetailTabView.SelectionChanged -= DetailTabView_SelectionChanged;
+        DetailTabView.SelectionChanged += DetailTabView_SelectionChanged;
+
+        // Auto focus tab view for keyboard shortcuts
+        DetailTabView.Focus(FocusState.Programmatic);
+
+        // Đảm bảo click vào tab hoặc nút switcher đổi được SelectedItem
+        DetailTabView.TabItemsChanged += (s, e) =>
+        {
+            if (DetailTabView.SelectedIndex < 0 && DetailTabView.TabItems.Count > 0)
+                DetailTabView.SelectedIndex = 0;
+        };
+    }
+
+    private void DetailTabView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        try
+        {
+            var logPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Vazer", "nav_log.txt");
+            System.IO.File.AppendAllText(logPath, $"DetailTabView_SelectionChanged: SelectedIndex={DetailTabView.SelectedIndex}\n");
+        }
+        catch { }
+
+        // Khi chuyển tab, đóng các inspector tương ứng
+        if (ViewModel != null)
+        {
+            if (DetailTabView.SelectedIndex != 0 && ViewModel.IsInspectorOpen)
+                ViewModel.CloseInspector();
+            if (DetailTabView.SelectedIndex != 1 && ViewModel.IsPackInspectorOpen)
+                ViewModel.ClosePackInspector();
+            if (DetailTabView.SelectedIndex != 2 && ViewModel.IsShaderInspectorOpen)
+                ViewModel.CloseShaderInspector();
+        }
+    }
+
+    private void ModsTabButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var logPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Vazer", "nav_log.txt");
+            System.IO.File.AppendAllText(logPath, "ModsTabButton_Click\n");
+        }
+        catch { }
+
+        if (DetailTabView.TabItems.Count > 0)
+        {
+            DetailTabView.SelectedItem = DetailTabView.TabItems[0];
+            DetailTabView.SelectedIndex = 0;
+        }
+    }
+
+    private void ResourcePacksTabButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var logPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Vazer", "nav_log.txt");
+            System.IO.File.AppendAllText(logPath, "ResourcePacksTabButton_Click\n");
+        }
+        catch { }
+
+        if (ResourcePacksTab != null)
+        {
+            DetailTabView.SelectedItem = ResourcePacksTab;
+        }
+        else if (DetailTabView.TabItems.Count > 1)
+        {
+            DetailTabView.SelectedItem = DetailTabView.TabItems[1];
+        }
+        DetailTabView.SelectedIndex = 1;
+    }
+
+    private void ShadersTabButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var logPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Vazer", "nav_log.txt");
+            System.IO.File.AppendAllText(logPath, "ShadersTabButton_Click\n");
+        }
+        catch { }
+
+        if (ShadersTab != null)
+        {
+            DetailTabView.SelectedItem = ShadersTab;
+        }
+        else if (DetailTabView.TabItems.Count > 2)
+        {
+            DetailTabView.SelectedItem = DetailTabView.TabItems[2];
+        }
+        DetailTabView.SelectedIndex = 2;
     }
 
     private void ModEnabled_Toggled(object sender, RoutedEventArgs e)
@@ -243,9 +342,39 @@ public sealed partial class InstanceDetailPage : Page
 
     private void Page_KeyDown(object sender, KeyRoutedEventArgs e)
     {
-        if (e.Key == Windows.System.VirtualKey.Escape && ViewModel.IsInspectorOpen)
+        if (e.Key == Windows.System.VirtualKey.Escape)
         {
-            ViewModel.CloseInspectorCommand.Execute(null);
+            if (ViewModel.IsInspectorOpen)
+            {
+                ViewModel.CloseInspectorCommand.Execute(null);
+                e.Handled = true;
+            }
+            else if (ViewModel.IsPackInspectorOpen)
+            {
+                ViewModel.ClosePackInspectorCommand.Execute(null);
+                _lastPackInspectorTrigger?.Focus(FocusState.Programmatic);
+                e.Handled = true;
+            }
+            else if (ViewModel.IsShaderInspectorOpen)
+            {
+                ViewModel.CloseShaderInspectorCommand.Execute(null);
+                _lastShaderInspectorTrigger?.Focus(FocusState.Programmatic);
+                e.Handled = true;
+            }
+        }
+        else if (e.Key == Windows.System.VirtualKey.F2)
+        {
+            DetailTabView.SelectedIndex = 1; // Tab Resource Packs
+            e.Handled = true;
+        }
+        else if (e.Key == Windows.System.VirtualKey.F3)
+        {
+            DetailTabView.SelectedIndex = 2; // Tab Shaders
+            e.Handled = true;
+        }
+        else if (e.Key == Windows.System.VirtualKey.F1)
+        {
+            DetailTabView.SelectedIndex = 0; // Tab Mods
             e.Handled = true;
         }
     }
@@ -328,6 +457,216 @@ public sealed partial class InstanceDetailPage : Page
             if (paths.Count > 0)
             {
                 await ViewModel.ImportJarFilesAsync(paths);
+            }
+        }
+    }
+
+    // --- Resource Packs Handlers ---
+
+    private async void ImportResourcePack_Click(object sender, RoutedEventArgs e)
+    {
+        var picker = FilePickerHelper.CreateOpenPicker(App.MainWindow, ".zip");
+        var file = await picker.PickSingleFileAsync();
+        if (file != null)
+        {
+            await ViewModel.ImportResourcePackFilesAsync(new[] { file.Path });
+        }
+    }
+
+    private void OpenResourcePacksFolder_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrEmpty(ViewModel?.Current?.Path)) return;
+        var folder = System.IO.Path.Combine(ViewModel.Current.Path, "resourcepacks");
+        System.IO.Directory.CreateDirectory(folder);
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = folder,
+            UseShellExecute = true
+        });
+    }
+
+    private void RefreshResourcePacks_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.InitializeResourcePacksAndShaders();
+    }
+
+    private void PackInspector_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement elem && elem.DataContext is ResourcePackRow row)
+        {
+            _lastPackInspectorTrigger = elem;
+            ViewModel.OpenPackInspector(row);
+        }
+    }
+
+    private void PackCard_Tapped(object sender, Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
+    {
+        if (sender is FrameworkElement elem && elem.DataContext is ResourcePackRow row)
+        {
+            _lastPackInspectorTrigger = elem;
+            ViewModel.OpenPackInspector(row);
+        }
+    }
+
+    private void ClosePackInspector_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.ClosePackInspectorCommand.Execute(null);
+        _lastPackInspectorTrigger?.Focus(FocusState.Programmatic);
+    }
+
+    private void PackEnable_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement elem && elem.DataContext is ResourcePackRow row)
+        {
+            row.Enabled = true;
+        }
+    }
+
+    private void PackDisable_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement elem && elem.DataContext is ResourcePackRow row)
+        {
+            row.Enabled = false;
+        }
+    }
+
+    private void PackMoveUp_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement elem && elem.DataContext is ResourcePackRow row)
+        {
+            ViewModel.MovePackUp(row);
+        }
+    }
+
+    private void PackMoveDown_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement elem && elem.DataContext is ResourcePackRow row)
+        {
+            ViewModel.MovePackDown(row);
+        }
+    }
+
+    private void ResourcePacksGrid_DragOver(object sender, DragEventArgs e)
+    {
+        e.AcceptedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
+        e.DragUIOverride.Caption = "Thêm gói tài nguyên (.zip)";
+        e.DragUIOverride.IsCaptionVisible = true;
+        e.DragUIOverride.IsContentVisible = true;
+    }
+
+    private async void ResourcePacksGrid_Drop(object sender, DragEventArgs e)
+    {
+        if (e.DataView.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems))
+        {
+            var items = await e.DataView.GetStorageItemsAsync();
+            var paths = items
+                .OfType<Windows.Storage.IStorageFile>()
+                .Where(f => f.FileType.Equals(".zip", StringComparison.OrdinalIgnoreCase))
+                .Select(f => f.Path)
+                .ToList();
+
+            if (paths.Count > 0)
+            {
+                await ViewModel.ImportResourcePackFilesAsync(paths);
+            }
+        }
+    }
+
+    // --- Shaders Handlers ---
+
+    private async void ImportShader_Click(object sender, RoutedEventArgs e)
+    {
+        var picker = FilePickerHelper.CreateOpenPicker(App.MainWindow, ".zip");
+        var file = await picker.PickSingleFileAsync();
+        if (file != null)
+        {
+            await ViewModel.ImportShaderFilesAsync(new[] { file.Path });
+        }
+    }
+
+    private void OpenShadersFolder_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrEmpty(ViewModel?.Current?.Path)) return;
+        var folder = System.IO.Path.Combine(ViewModel.Current.Path, "shaderpacks");
+        System.IO.Directory.CreateDirectory(folder);
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = folder,
+            UseShellExecute = true
+        });
+    }
+
+    private void DeactivateShaders_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.DeactivateShaders();
+    }
+
+    private void RefreshShaders_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.InitializeResourcePacksAndShaders();
+    }
+
+    private void ShaderChip_Checked(object sender, RoutedEventArgs e)
+    {
+        if (sender is RadioButton rb && rb.Tag is string filter)
+        {
+            ViewModel?.SelectShaderFilter(filter);
+        }
+    }
+
+    private void ShaderInspector_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement elem && elem.DataContext is ShaderPackRow row)
+        {
+            _lastShaderInspectorTrigger = elem;
+            ViewModel.OpenShaderInspector(row);
+        }
+    }
+
+    private void CloseShaderInspector_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.CloseShaderInspectorCommand.Execute(null);
+        _lastShaderInspectorTrigger?.Focus(FocusState.Programmatic);
+    }
+
+    private void ActivateShader_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement elem && elem.DataContext is ShaderPackRow row)
+        {
+            ViewModel.ActivateShader(row);
+        }
+    }
+
+    private void ActivateInspectorShader_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.SelectedShaderForInspector != null)
+        {
+            ViewModel.ActivateShader(ViewModel.SelectedShaderForInspector);
+        }
+    }
+
+    private void ShadersGrid_DragOver(object sender, DragEventArgs e)
+    {
+        e.AcceptedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
+        e.DragUIOverride.Caption = "Thêm shader pack (.zip)";
+        e.DragUIOverride.IsCaptionVisible = true;
+        e.DragUIOverride.IsContentVisible = true;
+    }
+
+    private async void ShadersGrid_Drop(object sender, DragEventArgs e)
+    {
+        if (e.DataView.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems))
+        {
+            var items = await e.DataView.GetStorageItemsAsync();
+            var paths = items
+                .OfType<Windows.Storage.IStorageFile>()
+                .Where(f => f.FileType.Equals(".zip", StringComparison.OrdinalIgnoreCase))
+                .Select(f => f.Path)
+                .ToList();
+
+            if (paths.Count > 0)
+            {
+                await ViewModel.ImportShaderFilesAsync(paths);
             }
         }
     }

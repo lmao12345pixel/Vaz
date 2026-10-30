@@ -196,6 +196,7 @@
                                 </Button>
                                 <Button
                                     Grid.Column="1"
+                                    Tag="{x:Bind Id}"
                                     DataContext="{x:Bind}"
                                     Click="Edit_Click"
                                     ToolTipService.ToolTip="Cài đặt &amp; Quản lý Mods"

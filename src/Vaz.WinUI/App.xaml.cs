@@ -64,6 +64,16 @@ public partial class App : Application
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
+        UnhandledException += (s, e) =>
+        {
+            try
+            {
+                var errPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Vazer", "crash.txt");
+                File.WriteAllText(errPath, $"{e.Message}\n{e.Exception}\n{e.Exception?.StackTrace}");
+            }
+            catch { }
+        };
+
         Dispatcher = DispatcherQueue.GetForCurrentThread();
 
         // SET-AC-04: nạp settings trước khi tạo MainWindow để theme/accent đã lưu được áp
