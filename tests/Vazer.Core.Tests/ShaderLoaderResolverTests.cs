@@ -61,4 +61,13 @@ public sealed class ShaderLoaderResolverTests
         var result = ShaderLoaderResolver.MatchesSearchQuery(name, author, query);
         result.Should().Be(expected);
     }
+
+    [Theory]
+    [InlineData("1.21.1", 34)]
+    [InlineData("1.20.6", 32)]
+    [InlineData("1.20.1", 15)]
+    public void GetExpectedPackFormat_ReturnsExpectedStandardFormat(string mcVersion, int expected)
+    {
+        ShaderLoaderResolver.GetExpectedPackFormat(mcVersion).Should().Be(expected);
+    }
 }

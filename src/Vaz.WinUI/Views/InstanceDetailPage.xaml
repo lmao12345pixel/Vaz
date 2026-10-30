@@ -828,11 +828,13 @@
                                                             <!-- Actions -->
                                                             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                                                                 <Button ToolTipService.ToolTip="Xem chi tiết"
+                                                                        AutomationProperties.Name="Xem chi tiết"
                                                                         Click="PackInspector_Click"
                                                                         Padding="6,4">
                                                                     <FontIcon Glyph="&#xE946;" FontSize="12" />
                                                                 </Button>
                                                                 <Button ToolTipService.ToolTip="Bật gói này"
+                                                                        AutomationProperties.Name="Bật gói này"
                                                                         Click="PackEnable_Click"
                                                                         Style="{StaticResource VazAccentButtonStyle}"
                                                                         Padding="8,4">
@@ -916,18 +918,21 @@
                                                             <!-- Reordering Up/Down & Action Overflow -->
                                                             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                                                                 <Button ToolTipService.ToolTip="Tăng mức ưu tiên"
+                                                                        AutomationProperties.Name="Tăng mức ưu tiên"
                                                                         Click="PackMoveUp_Click"
                                                                         IsEnabled="{x:Bind CanMoveUp, Mode=OneWay}"
                                                                         Padding="6,4">
                                                                     <FontIcon Glyph="&#xE70E;" FontSize="12" />
                                                                 </Button>
                                                                 <Button ToolTipService.ToolTip="Giảm mức ưu tiên"
+                                                                        AutomationProperties.Name="Giảm mức ưu tiên"
                                                                         Click="PackMoveDown_Click"
                                                                         IsEnabled="{x:Bind CanMoveDown, Mode=OneWay}"
                                                                         Padding="6,4">
                                                                     <FontIcon Glyph="&#xE70D;" FontSize="12" />
                                                                 </Button>
                                                                 <Button ToolTipService.ToolTip="Tùy chọn khác"
+                                                                        AutomationProperties.Name="Tùy chọn khác"
                                                                         Padding="6,4">
                                                                     <FontIcon Glyph="&#xE712;" FontSize="12" />
                                                                     <Button.Flyout>

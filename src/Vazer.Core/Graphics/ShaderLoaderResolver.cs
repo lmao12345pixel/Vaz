@@ -50,6 +50,17 @@ public static class ShaderLoaderResolver
     }
 
     /// <summary>
+    /// Lấy PackFormat chuẩn mong đợi cho phiên bản Minecraft.
+    /// </summary>
+    public static int GetExpectedPackFormat(string mcVersion)
+    {
+        if (mcVersion.StartsWith("1.21")) return 34;
+        if (mcVersion.StartsWith("1.20.5") || mcVersion.StartsWith("1.20.6")) return 32;
+        if (mcVersion.StartsWith("1.20")) return 15;
+        return 34;
+    }
+
+    /// <summary>
     /// Xác định phiên bản Iris tương thích dựa trên phiên bản Minecraft và Mod Loader (Fabric / NeoForge).
     /// </summary>
     public static (string Version, string DownloadUrl, string FileName) ResolveIrisVersion(string mcVersion, string loaderType)

@@ -394,6 +394,30 @@ public sealed partial class InstanceDetailPage : Page
             _ = ViewModel.ImportResourcePackFilesAsync(new[] { tempInvalidZip });
             e.Handled = true;
         }
+        else if (e.Key == Windows.System.VirtualKey.F5)
+        {
+            foreach (var p in ViewModel.ResourcePacks) p.Enabled = false;
+            ViewModel.RefreshResourcePackLists();
+            e.Handled = true;
+        }
+        else if (e.Key == Windows.System.VirtualKey.Up && Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(Windows.System.VirtualKey.Menu).HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down))
+        {
+            var target = ViewModel.SelectedResourcePack ?? ViewModel.ActiveResourcePacks.FirstOrDefault();
+            if (target != null && ViewModel.ActiveResourcePacks.Contains(target))
+            {
+                ViewModel.MovePackUp(target);
+                e.Handled = true;
+            }
+        }
+        else if (e.Key == Windows.System.VirtualKey.Down && Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(Windows.System.VirtualKey.Menu).HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down))
+        {
+            var target = ViewModel.SelectedResourcePack ?? ViewModel.ActiveResourcePacks.FirstOrDefault();
+            if (target != null && ViewModel.ActiveResourcePacks.Contains(target))
+            {
+                ViewModel.MovePackDown(target);
+                e.Handled = true;
+            }
+        }
     }
 
     private void ModInspector_Click(object sender, RoutedEventArgs e)

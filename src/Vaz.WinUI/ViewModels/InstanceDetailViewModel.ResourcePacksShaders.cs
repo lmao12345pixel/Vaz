@@ -308,36 +308,71 @@ public sealed partial class InstanceDetailViewModel
             if (File.Exists(fp) && (fp.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) || fp.EndsWith(".jar", StringComparison.OrdinalIgnoreCase)))
             {
                 var fn = Path.GetFileName(fp);
+                int packFormat = -1;
+                string packDesc = "Gói tài nguyên người dùng thêm vào.";
+
                 if (fp.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
                 {
                     try
                     {
                         using var archive = System.IO.Compression.ZipFile.OpenRead(fp);
-                        _ = archive.Entries.Count;
+                        var mcmeta = archive.GetEntry("pack.mcmeta");
+                        if (mcmeta == null)
+                        {
+                            errorCount++;
+                            StatusMessage = $"Lỗi tệp: '{fn}' không phải là Resource Pack hợp lệ (thiếu pack.mcmeta).";
+                            continue;
+                        }
+
+                        using var stream = mcmeta.Open();
+                        using var doc = System.Text.Json.JsonDocument.Parse(stream);
+                        if (doc.RootElement.TryGetProperty("pack", out var packObj))
+                        {
+                            if (packObj.TryGetProperty("pack_format", out var formatProp) && formatProp.TryGetInt32(out var fmt))
+                            {
+                                packFormat = fmt;
+                            }
+                            if (packObj.TryGetProperty("description", out var descProp))
+                            {
+                                packDesc = descProp.ValueKind == System.Text.Json.JsonValueKind.String ? descProp.GetString() ?? packDesc : descProp.ToString();
+                            }
+                        }
+
+                        if (packFormat <= 0)
+                        {
+                            errorCount++;
+                            StatusMessage = $"Lỗi tệp: '{fn}' có pack.mcmeta không chứa pack_format hợp lệ.";
+                            continue;
+                        }
                     }
                     catch
                     {
                         errorCount++;
-                        StatusMessage = $"Lỗi tệp: '{fn}' bị hỏng hoặc không phải tệp ZIP hợp lệ.";
+                        StatusMessage = $"Lỗi tệp: '{fn}' bị hỏng hoặc không thể đọc cấu trúc ZIP/JSON.";
                         continue;
                     }
                 }
 
+                // Chỉ sao chép sau khi đã kiểm tra tính hợp lệ thành công
                 var dest = Path.Combine(rpDir, fn);
                 File.Copy(fp, dest, overwrite: true);
+
+                int currentExpected = Vazer.Core.Graphics.ShaderLoaderResolver.GetExpectedPackFormat(Current.MinecraftVersion ?? "1.21.1");
+                bool isCompat = packFormat <= 0 || Vazer.Core.Graphics.ShaderLoaderResolver.IsPackFormatCompatible(packFormat, Current.MinecraftVersion ?? "1.21.1");
 
                 var newItem = new ResourcePackItem
                 {
                     Id = Path.GetFileNameWithoutExtension(fn).ToLowerInvariant(),
                     Name = Path.GetFileNameWithoutExtension(fn),
                     Author = "Tùy biến",
-                    Description = "Gói tài nguyên người dùng thêm vào.",
+                    Description = packDesc,
                     Resolution = "16x",
                     Size = $"{new FileInfo(dest).Length / 1024 / 1024} MB",
-                    Version = "1.21.1",
+                    Version = Current.MinecraftVersion ?? "1.21.1",
+                    PackFormat = packFormat > 0 ? packFormat : currentExpected,
                     IconUri = "ms-appx:///Assets/resourcepacks/faithful-icon.png",
                     Enabled = false,
-                    IsCompatible = true
+                    IsCompatible = isCompat
                 };
                 ResourcePacks.Add(new ResourcePackRow(newItem));
                 count++;
@@ -351,7 +386,7 @@ public sealed partial class InstanceDetailViewModel
         }
         else if (errorCount > 0)
         {
-            // StatusMessage already set
+            // StatusMessage already set with specific error
         }
     }
 
@@ -449,11 +484,34 @@ public sealed partial class InstanceDetailViewModel
         Directory.CreateDirectory(shDir);
 
         int count = 0;
+        int errorCount = 0;
         foreach (var fp in filePaths)
         {
             if (File.Exists(fp) && fp.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
             {
                 var fn = Path.GetFileName(fp);
+                try
+                {
+                    using var archive = System.IO.Compression.ZipFile.OpenRead(fp);
+                    bool hasShaders = archive.Entries.Any(e =>
+                        e.FullName.StartsWith("shaders/", StringComparison.OrdinalIgnoreCase) ||
+                        e.FullName.Contains("/shaders/"));
+
+                    if (!hasShaders)
+                    {
+                        errorCount++;
+                        StatusMessage = $"Lỗi tệp: '{fn}' không phải là Shader Pack hợp lệ (thiếu thư mục shaders/).";
+                        continue;
+                    }
+                }
+                catch
+                {
+                    errorCount++;
+                    StatusMessage = $"Lỗi tệp: '{fn}' bị hỏng hoặc không phải tệp ZIP hợp lệ.";
+                    continue;
+                }
+
+                // Chỉ copy sau khi validate thành công
                 var dest = Path.Combine(shDir, fn);
                 File.Copy(fp, dest, overwrite: true);
 
@@ -480,6 +538,10 @@ public sealed partial class InstanceDetailViewModel
         {
             ApplyShaderFilter();
             StatusMessage = $"Đã nhập {count} shader pack thành công.";
+        }
+        else if (errorCount > 0)
+        {
+            // StatusMessage already set
         }
     }
 }
