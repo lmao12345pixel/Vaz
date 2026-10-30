@@ -773,7 +773,7 @@
                                                         <Grid ColumnDefinitions="48,*,Auto">
                                                             <!-- Icon -->
                                                             <Border Grid.Column="0" Width="44" Height="44" CornerRadius="6" Background="{ThemeResource LayerFillColorAltBrush}">
-                                                                <Image Source="{x:Bind IconUri}" Stretch="UniformToFill" />
+                                                                <Image Source="{x:Bind IconImageSource, Mode=OneWay}" Stretch="UniformToFill" />
                                                             </Border>
 
                                                             <!-- Info -->
@@ -869,7 +869,7 @@
                                                         <Grid ColumnDefinitions="48,*,Auto">
                                                             <!-- Icon -->
                                                             <Border Grid.Column="0" Width="44" Height="44" CornerRadius="6" Background="{ThemeResource LayerFillColorAltBrush}">
-                                                                <Image Source="{x:Bind IconUri}" Stretch="UniformToFill" />
+                                                                <Image Source="{x:Bind IconImageSource, Mode=OneWay}" Stretch="UniformToFill" />
                                                             </Border>
 
                                                             <!-- Info -->
@@ -978,7 +978,7 @@
                                         <!-- Header Banner/Icon -->
                                         <Grid>
                                             <Border Height="120" CornerRadius="6" Background="{ThemeResource LayerFillColorAltBrush}">
-                                                <Image Source="{x:Bind ViewModel.SelectedPackForInspector.BannerUri, Mode=OneWay}" Stretch="UniformToFill" />
+                                                <Image Source="{x:Bind ViewModel.SelectedPackForInspector.BannerImageSource, Mode=OneWay}" Stretch="UniformToFill" />
                                             </Border>
                                             <Button HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8" Click="ClosePackInspector_Click" Padding="6,4">
                                                 <FontIcon Glyph="&#xE711;" FontSize="12" />

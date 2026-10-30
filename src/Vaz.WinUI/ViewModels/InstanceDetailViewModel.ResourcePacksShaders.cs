@@ -20,6 +20,7 @@ public sealed partial class ResourcePackRow : ObservableObject
 
     public string Id => Pack.Id;
     public string Name => Pack.Name;
+    public string FileName => !string.IsNullOrEmpty(Pack.FileName) ? Pack.FileName : (Name + ".zip");
     public string Author => Pack.Author;
     public string Description => Pack.Description;
     public string Resolution => Pack.Resolution;
@@ -28,6 +29,39 @@ public sealed partial class ResourcePackRow : ObservableObject
     public int PackFormat => Pack.PackFormat;
     public string IconUri => Pack.IconUri;
     public string BannerUri => Pack.BannerUri;
+    public bool HasBanner => !string.IsNullOrWhiteSpace(BannerUri);
+    public Microsoft.UI.Xaml.Media.ImageSource? BannerImageSource
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(BannerUri)) return null;
+            try
+            {
+                if (Uri.TryCreate(BannerUri, UriKind.RelativeOrAbsolute, out var uri))
+                {
+                    return new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(uri);
+                }
+            }
+            catch { }
+            return null;
+        }
+    }
+    public Microsoft.UI.Xaml.Media.ImageSource? IconImageSource
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(IconUri)) return null;
+            try
+            {
+                if (Uri.TryCreate(IconUri, UriKind.RelativeOrAbsolute, out var uri))
+                {
+                    return new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(uri);
+                }
+            }
+            catch { }
+            return null;
+        }
+    }
     public bool IsCompatible => Pack.IsCompatible && (PackFormat == 34 || PackFormat <= 0);
     public bool IsIncompatible => !IsCompatible;
     public string CompatibilityText => IsCompatible ? "Tương thích 1.21.1" : $"Sai phiên bản (Format {PackFormat})";
@@ -183,16 +217,84 @@ public sealed partial class InstanceDetailViewModel
         var defaults = ResourcePackShaderData.DefaultResourcePacks;
 
         var instancePath = Current?.Path;
+        System.Collections.Generic.List<string>? activeOptionsPacks = null;
         if (!string.IsNullOrEmpty(instancePath))
         {
             var rpDir = Path.Combine(instancePath, "resourcepacks");
             Directory.CreateDirectory(rpDir);
+
+            var optionsPath = Path.Combine(instancePath, "options.txt");
+            if (File.Exists(optionsPath))
+            {
+                activeOptionsPacks = Vazer.Core.GameOptions.ResourcePackOptionsHelper.ReadActivePacksFromOptionsFile(optionsPath);
+            }
         }
 
         foreach (var p in defaults)
         {
             var row = new ResourcePackRow(p);
             ResourcePacks.Add(row);
+        }
+
+        // Đọc thêm file zip từ thư mục resourcepacks của instance nếu có
+        if (!string.IsNullOrEmpty(instancePath))
+        {
+            var rpDir = Path.Combine(instancePath, "resourcepacks");
+            if (Directory.Exists(rpDir))
+            {
+                var zipFiles = Directory.GetFiles(rpDir, "*.zip");
+                foreach (var zip in zipFiles)
+                {
+                    var fName = Path.GetFileName(zip);
+                    if (!ResourcePacks.Any(rp => string.Equals(rp.FileName, fName, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        var customItem = new ResourcePackItem
+                        {
+                            Id = Path.GetFileNameWithoutExtension(fName).ToLowerInvariant(),
+                            Name = Path.GetFileNameWithoutExtension(fName),
+                            FileName = fName,
+                            Author = "Tùy biến",
+                            Description = "Gói tài nguyên từ thư mục resourcepacks.",
+                            Resolution = "32x",
+                            Size = $"{new FileInfo(zip).Length / 1024 / 1024:N1} MB",
+                            Version = Current?.MinecraftVersion ?? "1.21.1",
+                            PackFormat = 34,
+                            IconUri = "ms-appx:///Assets/resourcepacks/faithful-icon.png",
+                            BannerUri = "ms-appx:///Assets/resourcepacks/faithful-banner.png",
+                            Enabled = false,
+                            Priority = 99,
+                            IsCompatible = true
+                        };
+                        ResourcePacks.Add(new ResourcePackRow(customItem));
+                    }
+                }
+            }
+        }
+
+        // Khôi phục thứ tự và trạng thái từ options.txt nếu có
+        if (activeOptionsPacks != null && activeOptionsPacks.Count > 0)
+        {
+            foreach (var r in ResourcePacks)
+            {
+                r.Enabled = false;
+                r.Priority = 99;
+            }
+
+            for (int i = 0; i < activeOptionsPacks.Count; i++)
+            {
+                var optPack = activeOptionsPacks[i];
+                var found = ResourcePacks.FirstOrDefault(rp =>
+                    string.Equals(rp.FileName, optPack, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(Path.GetFileName(rp.FileName), Path.GetFileName(optPack), StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(rp.Name, optPack, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(rp.Name, Path.GetFileNameWithoutExtension(optPack), StringComparison.OrdinalIgnoreCase));
+
+                if (found != null)
+                {
+                    found.Enabled = true;
+                    found.Priority = i;
+                }
+            }
         }
 
         RefreshResourcePackLists();
@@ -231,6 +333,20 @@ public sealed partial class InstanceDetailViewModel
         OnPropertyChanged(nameof(AvailableEmptyTitle));
         OnPropertyChanged(nameof(AvailableEmptySubtitle));
         PackSummaryText = $"Đang bật {ActiveResourcePacks.Count} gói tài nguyên (ưu tiên từ trên xuống)";
+
+        SyncOptionsTxt();
+    }
+
+    private void SyncOptionsTxt()
+    {
+        if (Current == null || string.IsNullOrEmpty(Current.Path)) return;
+        var optionsPath = Path.Combine(Current.Path, "options.txt");
+        var activePacks = ActiveResourcePacks.Select(p => !string.IsNullOrEmpty(p.FileName) ? p.FileName : p.Name).ToList();
+        try
+        {
+            Vazer.Core.GameOptions.ResourcePackOptionsHelper.SyncToOptionsFile(optionsPath, activePacks);
+        }
+        catch { }
     }
 
     public string AvailableEmptyTitle => string.IsNullOrWhiteSpace(ResourcePackSearchQuery)
@@ -244,8 +360,13 @@ public sealed partial class InstanceDetailViewModel
     [RelayCommand]
     public void EnablePack(ResourcePackRow pack)
     {
+        // Khi bật gói mới, đặt lên ưu tiên cao nhất (# 1, Priority 0)
+        foreach (var p in ResourcePacks.Where(x => x.Enabled && x != pack))
+        {
+            p.Priority += 1;
+        }
         pack.Enabled = true;
-        pack.Priority = ActiveResourcePacks.Count;
+        pack.Priority = 0;
         RefreshResourcePackLists();
     }
 
@@ -370,13 +491,15 @@ public sealed partial class InstanceDetailViewModel
                 {
                     Id = Path.GetFileNameWithoutExtension(fn).ToLowerInvariant(),
                     Name = Path.GetFileNameWithoutExtension(fn),
+                    FileName = fn,
                     Author = "Tùy biến",
                     Description = packDesc,
                     Resolution = "16x",
-                    Size = $"{new FileInfo(dest).Length / 1024 / 1024} MB",
+                    Size = $"{new FileInfo(dest).Length / 1024 / 1024:N1} MB",
                     Version = Current.MinecraftVersion ?? "1.21.1",
                     PackFormat = packFormat > 0 ? packFormat : currentExpected,
                     IconUri = "ms-appx:///Assets/resourcepacks/faithful-icon.png",
+                    BannerUri = "ms-appx:///Assets/resourcepacks/faithful-banner.png",
                     Enabled = false,
                     IsCompatible = isCompat
                 };

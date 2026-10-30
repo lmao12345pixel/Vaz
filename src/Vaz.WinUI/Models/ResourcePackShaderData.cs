@@ -8,6 +8,7 @@ public sealed class ResourcePackItem
     public string Id { get; set; } = string.Empty;
     public string Slug { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
+    public string FileName { get; set; } = string.Empty;
     public string Author { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public string Resolution { get; set; } = "32x";
@@ -45,6 +46,7 @@ public static class ResourcePackShaderData
             Id = "faithful-32x",
             Slug = "faithful-32x",
             Name = "Faithful 32x",
+            FileName = "Faithful 32x.zip",
             Author = "Faithful Team",
             Description = "Giữ trọn vẹn phong cách nguyên bản của Minecraft nhưng nhân đôi độ phân giải lên 32x sắc nét.",
             Resolution = "32x",
@@ -62,6 +64,7 @@ public static class ResourcePackShaderData
             Id = "bare-bones",
             Slug = "bare-bones",
             Name = "Bare Bones",
+            FileName = "Bare Bones.zip",
             Author = "RobotPantaloons",
             Description = "Đơn giản hóa vân bề mặt Minecraft theo phong cách trailer chính thức của Mojang.",
             Resolution = "16x",
@@ -79,6 +82,7 @@ public static class ResourcePackShaderData
             Id = "stay-true",
             Slug = "stay-true",
             Name = "Stay True",
+            FileName = "Stay True.zip",
             Author = "HaiScribe",
             Description = "Tối ưu và làm mới texture vanilla: kết nối lá cây mượt mà, biến thể khối và hoa cỏ sinh động.",
             Resolution = "16x",
@@ -96,6 +100,7 @@ public static class ResourcePackShaderData
             Id = "fresh-animations",
             Slug = "fresh-animations",
             Name = "Fresh Animations",
+            FileName = "Fresh Animations.zip",
             Author = "FreshLX",
             Description = "Làm mới toàn bộ chuyển động của sinh vật Minecraft, biểu cảm tự nhiên và uyển chuyển hơn.",
             Resolution = "16x",
@@ -113,6 +118,7 @@ public static class ResourcePackShaderData
             Id = "dokucraft-light-legacy",
             Slug = "dokucraft-light-legacy",
             Name = "Dokucraft Light (MC 1.20)",
+            FileName = "Dokucraft Light (MC 1.20).zip",
             Author = "Doku & Community",
             Description = "Gói tài nguyên phong cách RPG thời Trung Cổ dành cho Minecraft 1.20 cũ, chưa nâng cấp lên 1.21.",
             Resolution = "32x",

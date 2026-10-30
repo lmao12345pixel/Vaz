@@ -560,6 +560,17 @@ public sealed partial class InstanceDetailPage : Page
 
     private void PackCard_Tapped(object sender, Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
     {
+        // Bỏ qua sự kiện Tap nếu nguồn xuất phát từ một nút bấm (Button, Toggle, ...)
+        var cur = e.OriginalSource as Microsoft.UI.Xaml.DependencyObject;
+        while (cur != null && !ReferenceEquals(cur, sender))
+        {
+            if (cur is Microsoft.UI.Xaml.Controls.Primitives.ButtonBase)
+            {
+                return;
+            }
+            cur = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(cur);
+        }
+
         if (sender is FrameworkElement elem && elem.DataContext is ResourcePackRow row)
         {
             _lastPackInspectorTrigger = elem;
@@ -577,8 +588,7 @@ public sealed partial class InstanceDetailPage : Page
     {
         if (sender is FrameworkElement elem && elem.DataContext is ResourcePackRow row)
         {
-            row.Enabled = true;
-            ViewModel.RefreshResourcePackLists();
+            ViewModel.EnablePack(row);
         }
     }
 
@@ -586,8 +596,7 @@ public sealed partial class InstanceDetailPage : Page
     {
         if (sender is FrameworkElement elem && elem.DataContext is ResourcePackRow row)
         {
-            row.Enabled = false;
-            ViewModel.RefreshResourcePackLists();
+            ViewModel.DisablePack(row);
         }
     }
 

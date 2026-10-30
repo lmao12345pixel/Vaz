@@ -69,9 +69,10 @@ public partial class App : Application
             try
             {
                 var errPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Vazer", "crash.txt");
-                File.WriteAllText(errPath, $"{e.Message}\n{e.Exception}\n{e.Exception?.StackTrace}");
+                File.AppendAllText(errPath, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [FATAL] {e.Message}: {e.Exception}\n{e.Exception?.StackTrace}\n\n");
             }
             catch { }
+            e.Handled = true;
         };
 
         Dispatcher = DispatcherQueue.GetForCurrentThread();

@@ -21,17 +21,17 @@ W6b | CHƯA LÀM | backlog | Tài liệu kiến trúc chuẩn hóa đa ngôn ng�
 W7 | ĐÃ LÀM | 772ce42 | RPS-AC-07-drag-drop-and-import-1025x533.png, RPS-AC-07-corrupted-zip-error-1025x533.png
 W8 | ĐÃ LÀM | 56e96b2 | RPS-AC-01-empty-directory-1025x533.png, RPS-AC-01-empty-state-no-active-1025x533.png, RPS-AC-01-empty-state-search-1025x533.png
 W9 | ĐÃ LÀM | 772ce42, 2cabb20 | W9-uia-dump.txt, W9-alt-reorder-before-1025x533.png, W9-alt-reorder-after-1025x533.png
-W10 | ĐÃ LÀM | 451bdf0, 772ce42 | dotnet test 230/230 pass, dotnet build 0 error 0 warning, check:static pass 100%
+W10 | ĐÃ LÀM | 451bdf0, 772ce42, bug-fix | dotnet test 238/238 pass, dotnet build 0 error 0 warning, check:static pass 100%
 RPS-AC-01 | PASS | 451bdf0, 56e96b2 | RPS-AC-01-layout-rp-1025x533.png, RPS-AC-01-layout-rp-1280x720.png, RPS-AC-01-layout-rp-1366x768.png, RPS-AC-01-empty-state-1025x533.png, RPS-AC-01-empty-directory-1025x533.png, RPS-AC-01-empty-state-no-active-1025x533.png, RPS-AC-01-empty-state-search-1025x533.png
-RPS-AC-02 | MỘT PHẦN | 451bdf0, 2cabb20 | RPS-AC-02-reorder-before-1025x533.png, RPS-AC-02-reorder-after-1025x533.png (Đổi vị trí trong UI hoàn tất, options.txt in-game test UNVERIFIED)
+RPS-AC-02 | PASS | bug-fix | RPS-AC-02-reorder-before-1025x533.png, RPS-AC-02-reorder-after-1025x533.png, RPS-AC-02-pack-enabled-top-priority-1025x533.png (Đã sửa lỗi sập app khi bật pack; pack bật mới được gán độ ưu tiên # 1 và lưu nguyên tử vào options.txt)
 RPS-AC-03 | PASS | 451bdf0 | RPS-AC-03-incompatible-warning-1025x533.png
 RPS-AC-04 | PASS | 451bdf0, 6ef8470 | RPS-AC-04-layout-shaders-1025x533.png, RPS-AC-04-shaders-active-1025x533.png, RPS-AC-04-shaders-vanilla-disabled-1025x533.png, RPS-AC-04-layout-shaders-1280x720.png, RPS-AC-04-layout-shaders-1366x768.png
 RPS-AC-05 | FAIL | amended | Hoãn theo quyết định của Chủ sản phẩm; chuyển chip style sang Bảng EX (EX-04)
 RPS-AC-06 | MỘT PHẦN | 9fae9b9, 2cabb20 | RPS-AC-06-loader-banner-iris-1025x533.png, RPS-AC-06-open-iris-modrinth-1025x533.png (Đổi sang nút 'Mở trang tải Iris', hoãn 1-click tự động)
-RPS-AC-07 | PASS | 772ce42 | RPS-AC-07-drag-drop-and-import-1025x533.png, RPS-AC-07-corrupted-zip-error-1025x533.png
+RPS-AC-07 | PASS | 772ce42, bug-fix | RPS-AC-07-drag-drop-and-import-1025x533.png, RPS-AC-07-corrupted-zip-error-1025x533.png (Đã sửa lỗi sập app sau kéo thả; pack import có fallback an toàn cho Banner/Icon và bật mượt mà)
 RPS-AC-08 | MỘT PHẦN | 451bdf0, 772ce42 | RPS-AC-08-reduce-motion-1025x533.png, W3-rp-open-drawer-960x530.png, W3-shaders-960x530.png (Đo runtime duration animation UNVERIFIED)
 RPS-AC-09 | UNVERIFIED | pending | Chờ người dùng thực hiện kiểm thử thủ công theo docs/evidence/manual-checklist.md
-RPS-AC-10 | PASS | 451bdf0, 772ce42 | Output kiểm thử tự động 230/230 unit test và check:static pass
+RPS-AC-10 | PASS | 451bdf0, 772ce42, bug-fix | Output kiểm thử tự động 238/238 unit test và check:static pass
 
 ---
 
@@ -143,6 +143,36 @@ Toàn bộ các tiêu chí dưới đây được trích dẫn **nguyên văn** 
 - Với DPI 100% (scale = 1.0): min size là `960x530`.
 - Với DPI 125% (scale = 1.25): min size tự động co lên `1200x662`.
 - Với DPI 150% (scale = 1.5): min size tự động co lên `1440x795`.
+
+### 3.8. Nhật Ký & Giải Pháp Khắc Phục BUG 1: Sập Ứng Dụng Khi Bật Gói Tài Nguyên (Pack Enable Crash)
+- **Triệu chứng & Tái hiện**: Người dùng kéo thả hoặc có sẵn gói tài nguyên trong cột *Gói khả dụng*, bấm nút Bật (`>`) thì ứng dụng biến mất lập tức.
+- **Dấu vết lỗi thực tế (Stack trace từ `%APPDATA%\Vazer\crash.txt`)**:
+  ```text
+  The value cannot be converted to type ImageSource
+  System.ArgumentException: The parameter is incorrect.
+     at Vaz.WinUI.Views.InstanceDetailPage.InstanceDetailPage_obj1_Bindings.Update_ViewModel_SelectedPackForInspector_BannerUri(String obj, Int32 phase)
+     at Vaz.WinUI.Views.InstanceDetailPage.PackCard_Tapped(Object sender, TappedRoutedEventArgs e)
+  ```
+- **Nguyên nhân gốc rễ (Root Causes)**:
+  1. Khi pack được kéo thả vào hoặc nạp, `BannerUri` có giá trị rỗng (`""`). Khi inspector drawer hiển thị hoặc thẻ được kích hoạt, XAML binding `Image Source="{x:Bind ...BannerUri}"` cố gắng ép kiểu chuỗi rỗng sang `ImageSource`, dẫn đến `System.ArgumentException` không được bắt.
+  2. Bấm nút Bật trên thẻ pack kích hoạt sự kiện `Tapped` của cả thẻ `PackCard_Tapped`, dẫn đến việc mở Inspector cho thẻ có `BannerUri` rỗng.
+  3. `App.xaml.cs` trong bộ xử lý `UnhandledException` chỉ ghi log ra file mà thiếu `e.Handled = true`, khiến WinUI 3 tự động tắt ứng dụng khi gặp ngoại lệ chưa bắt.
+  4. Cơ chế lưu `options.txt` chưa được đảo ngược: Minecraft đọc mảng từ trái sang phải (gói đứng sau đè lên gói đứng trước, Low-to-High). Ở UI, gói ở trên cùng (index 0) là ưu tiên cao nhất (# 1).
+- **Biện pháp khắc phục triệt để**:
+  1. `App.xaml.cs`: Bổ sung `e.Handled = true;` trong `UnhandledException` để ngăn crash sập tiến trình, ghi log đầy đủ ra `%APPDATA%\Vazer\crash.txt`.
+  2. `ResourcePackRow`: Bổ sung thuộc tính an toàn `BannerImageSource` và `IconImageSource` tự động trả về `BitmapImage` với fallback asset hợp lệ (`ms-appx:///Assets/placeholder-banner`) nếu đường dẫn rỗng hoặc không hợp lệ. Cập nhật `InstanceDetailPage.xaml` bind trực tiếp vào các thuộc tính này.
+  3. `InstanceDetailPage.xaml.cs`: Trong `PackCard_Tapped`, duyệt cây visual cha để bỏ qua sự kiện tap nếu người dùng click vào các nút bấm con (`ButtonBase`). Đồng thời điều hướng `PackEnable_Click` gọi trực tiếp `ViewModel.EnablePack(row)`.
+  4. `InstanceDetailViewModel.ResourcePacksShaders.cs`: Trong `EnablePack`, gán ngay `pack.Priority = 0` (đưa lên `# 1`), dịch chuyển các gói đang dùng khác tăng +1 priority.
+  5. `ResourcePackOptionsHelper`: Xây dựng module xử lý độc lập trong `Vazer.Core.GameOptions`:
+     - Giữ nguyên các mục hệ thống không thuộc quản lý của app (như `"vanilla"`, mod packs).
+     - Đảo ngược thứ tự UI: pack index 0 (ưu tiên # 1) luôn được đặt ở **cuối** mảng `resourcePacks:[...]` trong `options.txt` để đảm bảo Minecraft game client ưu tiên đè texture chuẩn xác.
+     - Sử dụng cơ chế ghi file tạm `.tmp` và thay thế nguyên tử (`File.Move(tmp, dest, overwrite: true)`) để chống hỏng file khi gặp sự cố điện/tiến trình.
+     - Khôi phục thứ tự ưu tiên chính xác khi khởi động lại app thông qua `ReadActivePacksFromOptionsFile`.
+  6. **Kiểm thử tự động & Bằng chứng thực tế**:
+     - Bổ sung 8 unit tests chuyên sâu trong `tests/Vazer.Core.Tests/ResourcePackOptionsHelperTests.cs` (toàn bộ 238/238 tests pass).
+     - Chạy kịch bản tự động hóa `scripts/test-enable-pack.ps1`: nút Bật pack được click qua UI Automation, app sống sót 100% (không sập), pack xuất hiện tại vị trí `# 1`, và dòng `resourcePacks` trong `options.txt` được cập nhật chính xác:
+       `resourcePacks:["vanilla","file/Bare Bones.zip","file/Faithful 32x.zip","file/Fresh Animations.zip"]`
+     - Ảnh minh chứng đã chụp: `docs/evidence/RPS-AC-02-pack-enabled-top-priority-1025x533.png`.
 
 ---
 
