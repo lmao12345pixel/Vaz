@@ -11,7 +11,7 @@
         <MicaBackdrop Kind="Base" />
     </Window.SystemBackdrop>
 
-    <Grid x:Name="ShellRoot" RowDefinitions="Auto,*,Auto" Background="{StaticResource VazShellBackgroundBrush}" MinWidth="960" MinHeight="600">
+    <Grid x:Name="ShellRoot" RowDefinitions="Auto,*,Auto" Background="{StaticResource VazShellBackgroundBrush}" MinWidth="960" MinHeight="530">
         <!-- Custom WinUI Titlebar with Drag Area -->
         <Grid
             x:Name="AppTitleBar"

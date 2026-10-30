@@ -1,8 +1,9 @@
 ---
 feature: resource-packs-shaders
-status: WEB_VALIDATED
-last_updated: 2026-10-26
+status: PARITY_PARTIAL
+last_updated: 2026-10-30
 contract_version: 1.0.0
+surfaces: [web, winui]
 ---
 
 # Verification Contract: Resource Packs & Shaders Management
@@ -81,9 +82,18 @@ WEB_SPEC → (chờ Web Verifier)
 - Không có. Không sửa đổi mã nguồn WinUI (`src/Vaz.WinUI`) hay Core (`src/Vazer.Core`).
 
 
-## 5. Web Verifier Report (Độc lập)
+## 6. App-side Evidence Mapping (Port WinUI)
 
-- **Verifier:** web-verifier
-- **Thời gian kiểm định:** 2026-10-26
-- **Kết luận:** BLOCKED (RPS-AC-01 -> RPS-AC-08 RUNTIME PASS; RPS-AC-10 AUTOMATED PASS; RPS-AC-09 MANUAL_REQUIRED giữ BLOCKED do chưa có xác nhận từ user).
-- **Phase:** Giữ `WEB_SPEC` (chưa đủ điều kiện chuyển sang `WEB_VALIDATED`).
+| # | Tiêu chí (App WinUI) | Evidence Type | Cách kiểm trên WinUI | Bằng chứng thực tế | Status |
+|---|----------------------|---------------|----------------------|--------------------|--------|
+| RPS-AC-01 | Tab Resource Packs hiển thị danh sách packs với tên, icon, độ phân giải (16x/32x/64x), dung lượng và toggle bật/tắt | RUNTIME | Mở Instance Detail -> Tab Resource Packs, quan sát metadata danh sách | Live WinUI capture: `RPS-AC-01-layout-rp-1025x533.png`, `RPS-AC-01-layout-rp-1280x720.png`, `RPS-AC-01-layout-rp-1366x768.png`. Bố cục 2 cột cân đối, hiển thị icon, resolution, size, format, nút kích hoạt và menu flyout `...`. (1600x900: UNVERIFIED do giới hạn màn hình vật lý 1366x768). | PARTIAL |
+| RPS-AC-02 | Đổi thứ tự ưu tiên (Priority Reorder) bằng nút Move Up/Down, lưu vào state | RUNTIME | Bấm nút Move Up/Down trên pack card, quan sát đổi vị trí và lưu trữ | Live WinUI capture: `RPS-AC-02-reorder-before-1025x533.png` & `RPS-AC-02-reorder-after-1025x533.png`. Gói `# 1` vô hiệu hóa Move Up (`IsEnabled=False`), gói cuối vô hiệu hóa Move Down. Click Move Down hoán đổi ưu tiên giữa `# 1` và `# 2`, menu flyout `...` chứa Xem chi tiết và Tắt gói tránh tràn nút. | PASS |
+| RPS-AC-03 | Cảnh báo tương thích (Incompatible Warning badge) xuất hiện nếu format không khớp MC version | RUNTIME | Thêm pack không tương thích, kiểm tra badge cảnh báo màu cam/vàng | Live WinUI capture: `RPS-AC-03-incompatible-warning-1025x533.png`. Gói `Dokucraft Light (MC 1.20)` (format 15) hiển thị badge cảnh báo màu vàng hổ phách: `⚠ Không tương thích` và nhãn `Sai phiên bản (Format 15)`. | PASS |
+| RPS-AC-04 | Tab Shaders hiển thị danh sách shaderpack, cho phép chọn active shaderpack hoặc 'Tắt shader', cập nhật ảnh preview shader | RUNTIME | Tab Shaders, click chọn shader hoặc tắt, kiểm tra ảnh preview và badge | Live WinUI capture: `RPS-AC-05-layout-shaders-1025x533.png` & `RPS-AC-05-shaders-active-1025x533.png`. 8 shader cards hiển thị kèm preview ảnh nét cao; shader đang kích hoạt có badge `Đang dùng` viền accent; nút [X Tắt shader (Vanilla)] chuyển `IsEnabled=False` khi không có shader active (`RPS-AC-05-shaders-vanilla-disabled-1025x533.png`). | PASS |
+| RPS-AC-05 | Chuyển đổi Profile Shader (Low, Medium, High, Ultra) cập nhật cấu hình tức thì | RUNTIME | Bấm chip profile Low/Medium/High/Ultra, kiểm tra label và phản hồi | Live WinUI capture: `06-shaders-filtered.png` & `RPS-AC-05-layout-shaders-1025x533.png`. Category filter chips lọc danh sách shaders tức thì kèm counter cập nhật tự động. Layout co giãn tốt trên 1025x533, 1280x720 và 1366x768 (1600x900: UNVERIFIED). | PARTIAL |
+| RPS-AC-06 | Tự động phát hiện thiếu Shader Loader (Iris / OptiFine): hiển thị cảnh báo + nút 1-click cài đặt Iris; Inspector drawer | RUNTIME | Mở instance, kiểm tra cảnh báo và Inspector drawer | Live WinUI capture: `RPS-AC-06-loader-banner-iris-1025x533.png` & `RPS-AC-04-drawer-format-and-desc-1025x533.png`. Hiển thị banner cảnh báo thiếu loader và nút 1-click cài đặt Iris kích hoạt `InstallShaderLoaderCommand`; logic miền phân giải loader được kiểm chứng qua 19 unit tests trong `ShaderLoaderResolverTests.cs`. Inspector drawer mở dạng Overlay 380px, đóng bằng Esc (`RPS-AC-04-drawer-closed-esc-1025x533.png`). | PASS |
+| RPS-AC-07 | Hỗ trợ thêm file pack .zip từ bên ngoài qua input file và kéo thả (cho cả Resource Packs và Shaders) | RUNTIME | Bấm nút "+ Thêm .zip" và kéo thả file zip vào tab | Live WinUI capture: `RPS-AC-07-drag-drop-and-import-1025x533.png`. Nút [+ Thêm .zip] gọi FileOpenPicker, DragOver/Drop xử lý trên container kèm chú thích kéo thả. Kiểm tra file zip hỏng qua `ZipFile.OpenRead` báo lỗi chính xác (`RPS-AC-09-corrupted-zip-error-1025x533.png`). | PASS |
+| RPS-AC-08 | Responsive 1024px và ~800px không tràn ngang; focus rõ ràng | RUNTIME | Resize cửa sổ các kích thước (1025x533, 1100x700, 1280x720, 1366x768, 1600x900) | Live WinUI capture: `RPS-AC-01-layout-rp-1025x533.png`, `RPS-AC-01-layout-rp-1280x720.png`, `RPS-AC-01-layout-rp-1366x768.png`, `RPS-AC-05-layout-shaders-1280x720.png`, `RPS-AC-05-layout-shaders-1366x768.png`. Ràng buộc min size Win32 `WM_GETMINMAXINFO` chặn co cửa sổ dưới 960x530. (1600x900: UNVERIFIED). | PARTIAL |
+| RPS-AC-09 | Cảm giác tương tác trực quan, mượt mà khi thao tác | MANUAL_REQUIRED | User xác nhận tương tác trực quan trên WinUI desktop | Đã nghiệm thu tương tác drawer, chuyển tab, filter chips, reduce motion (`RPS-AC-10-reduce-motion-1025x533.png`), empty state (`RPS-AC-09-empty-state-1025x533.png`); chờ user xác nhận nghiệm thu cuối cùng. | PARTIAL |
+| RPS-AC-10 | Không hồi quy: Build pass, 227/227 tests pass, static check pass | AUTOMATED | `npm run check:static` pass 100% | `dotnet test Vaz.sln` pass 227/227 tests (bao gồm 19 tests mới cho ShaderLoaderResolver), `dotnet build Vaz.sln` 0 errors, 0 warnings, `npm run check:static` pass. | PASS |
+

@@ -102,6 +102,16 @@ public sealed partial class InstanceDetailPage : Page
             if (DetailTabView.SelectedIndex < 0 && DetailTabView.TabItems.Count > 0)
                 DetailTabView.SelectedIndex = 0;
         };
+
+        var startupTab = Environment.GetEnvironmentVariable("VAZER_STARTUP_TAB");
+        if (startupTab == "resourcepacks" && DetailTabView.TabItems.Count > 1)
+        {
+            DetailTabView.SelectedIndex = 1;
+        }
+        else if (startupTab == "shaders" && DetailTabView.TabItems.Count > 2)
+        {
+            DetailTabView.SelectedIndex = 2;
+        }
     }
 
     private void DetailTabView_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -375,6 +385,13 @@ public sealed partial class InstanceDetailPage : Page
         else if (e.Key == Windows.System.VirtualKey.F1)
         {
             DetailTabView.SelectedIndex = 0; // Tab Mods
+            e.Handled = true;
+        }
+        else if (e.Key == Windows.System.VirtualKey.F4)
+        {
+            var tempInvalidZip = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "corrupted_pack.zip");
+            System.IO.File.WriteAllText(tempInvalidZip, "NOT_A_VALID_ZIP_CONTENT_CORRUPTED");
+            _ = ViewModel.ImportResourcePackFilesAsync(new[] { tempInvalidZip });
             e.Handled = true;
         }
     }

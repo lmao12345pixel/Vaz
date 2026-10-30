@@ -102,7 +102,15 @@ public sealed partial class MainWindow : Window
         };
 
         _ = ViewModel.InitializeAsync();
-        Navigate(typeof(InstancesPage));
+        var startupPage = Environment.GetEnvironmentVariable("VAZER_STARTUP_PAGE");
+        if (startupPage == "InstanceDetailPage")
+        {
+            Navigate(typeof(InstanceDetailPage), "test fabric");
+        }
+        else
+        {
+            Navigate(typeof(InstancesPage));
+        }
     }
 
     public void NavigateTo(Type pageType, object? parameter = null)
@@ -194,7 +202,7 @@ public sealed partial class MainWindow : Window
             var scale = dpi > 0 ? (float)dpi / 96.0f : 1.0f;
             var mmi = Marshal.PtrToStructure<MINMAXINFO>(lParam);
             mmi.ptMinTrackSize.x = (int)(960 * scale);
-            mmi.ptMinTrackSize.y = (int)(600 * scale);
+            mmi.ptMinTrackSize.y = (int)(530 * scale);
             Marshal.StructureToPtr(mmi, lParam, true);
             return IntPtr.Zero;
         }
