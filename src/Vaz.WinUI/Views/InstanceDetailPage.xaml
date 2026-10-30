@@ -1062,9 +1062,9 @@
                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                     </StackPanel>
                                     <Button Grid.Column="2"
-                                            Content="Cài đặt Iris Shaders"
+                                            Content="Mở trang tải Iris"
                                             Visibility="{x:Bind ViewModel.HasShaderLoader, Mode=OneWay, Converter={StaticResource BoolToVisInv}}"
-                                            Command="{x:Bind ViewModel.InstallShaderLoaderCommand}"
+                                            Command="{x:Bind ViewModel.OpenIrisDownloadPageCommand}"
                                             VerticalAlignment="Center" />
                                 </Grid>
                             </Border>

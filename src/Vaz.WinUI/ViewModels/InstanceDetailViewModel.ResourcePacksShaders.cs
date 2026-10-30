@@ -153,20 +153,28 @@ public sealed partial class InstanceDetailViewModel
         else
         {
             ShaderLoaderStatus = "Chưa cài đặt Shader Loader (Iris / OptiFine)";
-            ShaderLoaderBannerText = "Để sử dụng Shaders, instance cần có Iris hoặc OptiFine. Bấm để cài đặt 1-click Iris cho Minecraft 1.21.1.";
+            ShaderLoaderBannerText = "Để sử dụng Shaders, instance cần có Iris hoặc OptiFine. Nhấn để mở trang tải Iris trên Modrinth.";
         }
     }
 
     [RelayCommand]
-    public async Task InstallShaderLoaderAsync()
+    public async Task OpenIrisDownloadPageAsync()
     {
         await Task.CompletedTask;
-        // Bỏ hoàn toàn code ghi file placeholder theo chỉ đạo.
-        // Chờ quyết định của Product Owner:
-        // [CHỌN: (a) làm tải thật từ cdn.modrinth.com kèm xác thực SHA-512 / (b) đổi nút thành "Mở trang tải Iris", chuyển 1-click sang backlog].
-        HasShaderLoader = false;
-        ShaderLoaderStatus = "Chưa cài đặt Shader Loader (Iris / OptiFine)";
-        StatusMessage = "Chức năng cài đặt tự động đang chờ quyết định kiến trúc tải file.";
+        try
+        {
+            var uri = new Uri("https://modrinth.com/mod/iris");
+            await Windows.System.Launcher.LaunchUriAsync(uri);
+        }
+        catch
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://modrinth.com/mod/iris") { UseShellExecute = true });
+            }
+            catch { }
+        }
+        StatusMessage = "Đang mở trang tải Iris Shaders trên Modrinth...";
     }
 
     private void LoadResourcePacks()
