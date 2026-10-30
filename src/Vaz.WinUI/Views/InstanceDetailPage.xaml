@@ -828,10 +828,15 @@
                                                     VerticalAlignment="Center"
                                                     Spacing="8"
                                                     Padding="24">
-                                            <FontIcon Glyph="&#xE721;" FontSize="28" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
-                                            <TextBlock Text="Không tìm thấy gói tài nguyên nào"
+                                            <FontIcon Glyph="&#xE8B7;" FontSize="28" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                                            <TextBlock Text="{x:Bind ViewModel.AvailableEmptyTitle, Mode=OneWay}"
                                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                                        FontSize="13"
+                                                       FontWeight="SemiBold"
+                                                       HorizontalAlignment="Center" />
+                                            <TextBlock Text="{x:Bind ViewModel.AvailableEmptySubtitle, Mode=OneWay}"
+                                                       Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                                       FontSize="11"
                                                        HorizontalAlignment="Center" />
                                         </StackPanel>
                                     </Grid>

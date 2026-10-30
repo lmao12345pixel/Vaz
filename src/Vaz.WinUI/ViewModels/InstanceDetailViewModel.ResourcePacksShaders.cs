@@ -233,8 +233,18 @@ public sealed partial class InstanceDetailViewModel
 
         HasNoAvailablePacks = AvailableResourcePacks.Count == 0;
         HasNoActivePacks = ActiveResourcePacks.Count == 0;
+        OnPropertyChanged(nameof(AvailableEmptyTitle));
+        OnPropertyChanged(nameof(AvailableEmptySubtitle));
         PackSummaryText = $"Đang bật {ActiveResourcePacks.Count} gói tài nguyên (ưu tiên từ trên xuống)";
     }
+
+    public string AvailableEmptyTitle => string.IsNullOrWhiteSpace(ResourcePackSearchQuery)
+        ? (ResourcePacks.Count == 0 ? "Thư mục gói tài nguyên trống" : "Không có gói khả dụng")
+        : "Không tìm thấy gói tài nguyên nào";
+
+    public string AvailableEmptySubtitle => string.IsNullOrWhiteSpace(ResourcePackSearchQuery)
+        ? (ResourcePacks.Count == 0 ? "Kéo thả file .zip hoặc nhấn '+ Thêm .zip' để cài đặt" : "Tất cả các gói đã được kích hoạt ở cột bên phải")
+        : "Thử tìm kiếm với từ khóa khác";
 
     [RelayCommand]
     public void EnablePack(ResourcePackRow pack)

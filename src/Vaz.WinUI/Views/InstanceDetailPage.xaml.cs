@@ -400,6 +400,12 @@ public sealed partial class InstanceDetailPage : Page
             ViewModel.RefreshResourcePackLists();
             e.Handled = true;
         }
+        else if (e.Key == Windows.System.VirtualKey.F6)
+        {
+            ViewModel.ResourcePacks.Clear();
+            ViewModel.RefreshResourcePackLists();
+            e.Handled = true;
+        }
         else if (e.Key == Windows.System.VirtualKey.Up && Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(Windows.System.VirtualKey.Menu).HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down))
         {
             var target = ViewModel.SelectedResourcePack ?? ViewModel.ActiveResourcePacks.FirstOrDefault();

@@ -1,0 +1,24 @@
+﻿=== UI AUTOMATION BUTTON AUDIT (Vaz.WinUI - InstanceDetailPage) ===
+Timestamp: 2026-10-30 16:27:07
+Total Buttons Found: 20
+
+Control: Class='Button' | AutoId='TogglePaneButton' | Name='Close Navigation' | HelpText/ToolTip='' | Bounds=[X=12, Y=51, W=40, H=36]
+Control: Class='Button' | AutoId='' | Name='' | HelpText/ToolTip='' | Bounds=[X=253, Y=76, W=32, H=32]
+Control: Class='Button' | AutoId='' | Name='' | HelpText/ToolTip='' | Bounds=[X=874, Y=76, W=119, H=32]
+Control: Class='Button' | AutoId='' | Name='' | HelpText/ToolTip='' | Bounds=[X=253, Y=214, W=116, H=32]
+Control: Class='Button' | AutoId='' | Name='' | HelpText/ToolTip='' | Bounds=[X=377, Y=214, W=119, H=32]
+Control: Class='Button' | AutoId='' | Name='' | HelpText/ToolTip='' | Bounds=[X=896, Y=214, W=97, H=32]
+Control: Class='Button' | AutoId='' | Name='Xem chi tiết' | HelpText/ToolTip='' | Bounds=[X=521, Y=324, W=26, H=22]
+Control: Class='Button' | AutoId='' | Name='Bật gói này' | HelpText/ToolTip='' | Bounds=[X=551, Y=324, W=30, H=22]
+Control: Class='Button' | AutoId='' | Name='Xem chi tiết' | HelpText/ToolTip='' | Bounds=[X=521, Y=398, W=26, H=22]
+Control: Class='Button' | AutoId='' | Name='Bật gói này' | HelpText/ToolTip='' | Bounds=[X=551, Y=398, W=30, H=22]
+Control: Class='Button' | AutoId='' | Name='Xem chi tiết' | HelpText/ToolTip='' | Bounds=[X=, Y=, W=, H=]
+Control: Class='Button' | AutoId='' | Name='Bật gói này' | HelpText/ToolTip='' | Bounds=[X=, Y=, W=, H=]
+Control: Class='Button' | AutoId='' | Name='Tăng mức ưu tiên' | HelpText/ToolTip='' | Bounds=[X=871, Y=324, W=26, H=22]
+Control: Class='Button' | AutoId='' | Name='Giảm mức ưu tiên' | HelpText/ToolTip='' | Bounds=[X=901, Y=324, W=26, H=22]
+Control: Class='Button' | AutoId='' | Name='Tùy chọn khác' | HelpText/ToolTip='' | Bounds=[X=931, Y=324, W=26, H=22]
+Control: Class='Button' | AutoId='' | Name='Tăng mức ưu tiên' | HelpText/ToolTip='' | Bounds=[X=871, Y=398, W=26, H=22]
+Control: Class='Button' | AutoId='' | Name='Giảm mức ưu tiên' | HelpText/ToolTip='' | Bounds=[X=901, Y=398, W=26, H=22]
+Control: Class='Button' | AutoId='' | Name='Tùy chọn khác' | HelpText/ToolTip='' | Bounds=[X=931, Y=398, W=26, H=22]
+Control: Class='Button' | AutoId='' | Name='' | HelpText/ToolTip='' | Bounds=[X=456, Y=469, W=260, H=52]
+Control: Class='Button' | AutoId='' | Name='' | HelpText/ToolTip='' | Bounds=[X=870, Y=470, W=123, H=50]
