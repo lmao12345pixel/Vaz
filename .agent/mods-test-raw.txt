@@ -1,0 +1,14 @@
+﻿SM|PASS: SM-01 keyword-with-results | HTTP 200 | hits=20 | first=sodium | 3287ms
+SM|PASS: SM-02 keyword-no-results | HTTP 200 | hits=0 | first=(none) | 294ms
+SM|PASS: SM-03 keyword-vietnamese | HTTP 200 | hits=0 | first=(none) | 278ms
+SM|PASS: SM-04 keyword-special-chars | HTTP 200 | hits=0 | first=(none) | 289ms
+SM|PASS: SM-05 keyword-500-chars | HTTP 200 | hits=0 | first=(none) | 278ms
+SM|PASS: SM-06 facets-loader-fabric | HTTP 200 | hits=20 | first=sodium | 344ms
+SM|PASS: SM-07 facets-version-1.21.1 | HTTP 200 | hits=20 | first=sodium | 349ms
+SM|PASS: SM-08 empty-query | HTTP 200 | hits=20 | 385ms
+SM|PASS: SM-09 pagination-offset-100 | HTTP 200 | hits=8 | 302ms
+SM|PASS: SM-10 pagination-offset-beyond | HTTP 200 | hits=0 | 294ms
+SM|PASS: SM-11 index-downloads | HTTP 200 | hits=20 | 363ms
+SM|PASS: SM-12 limit-max-100 | HTTP 200 | hits=100 | 598ms
+SM|PASS: SM-13 limit-over-100 | HTTP 200 | hits=100 | 616ms
+SM|PASS: SM-14 limit-zero | HTTP 200 | hits=1 | 282ms

@@ -32,5 +32,5 @@
 - B2-dup-skip | ĐÃ LÀM | Modrinth install: trùng sha512 trong manifest → bỏ qua (Warning "Duplicate skipped…"), xóa .partial; import .jar: trùng hash/nội dung → bỏ qua có tổng kết; name collision → -1/-2, không ghi đè
 - B2-synthetic-url | ĐÃ LÀM | bỏ `SourceUrl = https://github.com/vazer/{slug}` + link "Mã nguồn" giả trong XAML; ProjectUrl chỉ hiện khi Source=modrinth/có catalog entry
 - B3-tests | ĐÃ LÀM | 31 test mới: JarMetadataReaderTests 9 · ModDownloadGuardTests 14 · ModInstallBulkUpdateTests 8; `dotnet test Vaz.sln` = 269/269 PASS (đã là 238) — 0 skip 0 fail
-- B4-evidence | PENDING | chụp app 1025x533 + 960x530 + 125%/150% scale nếu được
-- UNVERIFIED-429/timeout | UNVERIFIED | chưa chủ động trigger 429; code có retry 3 + Retry-After; sẽ verify mock HTTP nếu còn thời gian
+- B4-evidence | ĐÃ LÀM | 8 bộ ảnh 1025×533 + 960×530 chụp app chạy thật trên Windows (SM-01 browse, SM-01 search sodium, SM-02 no-results, SM-03 tiếng Việt có dấu, LD-01/04/05/06 corrupt/mismatch warnings, LD-03 500+ mods đo 2698ms, UPD-01 bulk check updates); lưu tại `docs/evidence/`
+- UNVERIFIED-runtime | UNVERIFIED | ER-1..4 (mất mạng/timeout/429/5xx), DP-1 (debounce rapid typing), PH-2..3 (pagination/sort dropdown), DL-1..3 (download progress/cancel UI dialog), LD-07 (lock file khi game running), LD-09 (.mrpack import dialog), DEP (dependencies suggest) — giữ nguyên UNVERIFIED theo quy định không báo hoàn thành ảo

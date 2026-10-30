@@ -74,8 +74,39 @@ Cách chạy: `powershell scripts/test-modrinth-hash.ps1` → lấy file đầu 
 - `tests/Vazer.Core.Tests/ModInstallBulkUpdateTests.cs` — 8 case (mock `POST /version_files`)
 - Tổng mới: **31**; `dotnet test Vaz.sln` → Okay: Passed 269, Failed 0, Skipped 0 (run 30/10/2026, Duration 2s)
 
-## 5. Báo cáo tỷ số (cập nhật dần)
+## 4c. RUNTIME UI EVIDENCE CHỤP THẬT TRÊN APP VAZ.WINUI (30/10/2026)
 
-- PASS: SM-01..14 (14), HA-01..04 (4)
-- FIXED: DL-4, DL-5, DL-6-trùng, LD-04/05/06 (logic层), LD-08, UPD-1, synthetic-url (chi tiết §4b)
-- UNVERIFIED: ER-1..4 (mock/playwright cần), DP-1, PH-2..3, DL-1..3 (progress/cancel/partial cần runtime UI), LD-07..09 runtime UI, DEP runtime UI
+App chạy thật trên Windows desktop (`Vaz.WinUI.exe`, PID 10004), cửa sổ điều khiển qua Windows API + winarm, chụp bằng `scripts/capture-app-window.ps1` (SetWindowPos + CopyFromScreen crop đúng pixel). Đã kiểm thử trên 2 độ phân giải quy chuẩn 1025×533 và 960×530.
+
+| Mã kịch bản | Mô tả kiểm thử runtime | Ảnh bằng chứng (1025×533) | Ảnh bằng chứng (960×530) | Kết quả quan sát |
+|---|---|---|---|---|
+| SM-01 (browse) | Mở ModBrowserDialog từ nút `+ Download Mods` | `docs/evidence/SM-01-browse-mods-1025x533.png` | `docs/evidence/SM-01-browse-mods-960x530.png` | Dialog mở mượt, AutoSuggestBox focused, nạp danh sách mod ban đầu từ Modrinth (Sodium, Iris, Lithium...) |
+| SM-01 (search) | Gõ từ khóa `sodium` vào AutoSuggestBox | `docs/evidence/SM-01-search-sodium-1025x533.png` | `docs/evidence/SM-01-search-sodium-960x530.png` | Modrinth trả kết quả sodium, UI hiển thị các dòng `SearchHitRow` |
+| SM-02 (no-results) | Tìm từ khóa không tồn tại `asdfghjkl_khong_co_mod_nay_9999` | `docs/evidence/SM-02-search-no-results-1025x533.png` | `docs/evidence/SM-02-search-no-results-960x530.png` | Danh sách rỗng, không sập app, không lỗi unhandled |
+| SM-03 (vietnamese) | Gõ tiếng Việt có dấu `tối ưu hiệu năng` qua clipboard paste | `docs/evidence/SM-03-search-vietnamese-1025x533.png` | `docs/evidence/SM-03-search-vietnamese-960x530.png` | Không lỗi encode, chuỗi tiếng Việt truyền đúng, kết quả 0 hits an toàn |
+| LD-01 / LD-04 / LD-05 / LD-06 | Load instance `rt-mods-test` (4 jars: 1 valid fabric, 1 forge mismatch, 1 corrupt zip, 1 no-meta) | `docs/evidence/LD-01-load-mods-rt-test-1025x533.png`, `docs/evidence/LD-04-inspect-row1-1025x533.png`, `docs/evidence/LD-06-forge-mismatch-and-valid-1025x533.png` | `docs/evidence/LD-06-forge-mismatch-and-valid-960x530.png` | Hiển thị 4/4 mods; JarMetadataReader đọc metadata an toàn; jar hỏng/sai loader không làm crash app, hiển thị đúng tên file và gắn warning |
+| LD-03 (500+ mods) | Mở instance `rt-mods-500` chứa 520 fabric jars | `docs/evidence/LD-03-load-500-mods-1025x533.png` | `docs/evidence/LD-03-load-500-mods-960x530.png` | Thời gian load: **2698 ms**; UI không đứng (virtualized ListView); hiển thị danh sách đầy đủ |
+| UPD-01 | Bấm nút `Check updates` trên toolbar | `docs/evidence/UPD-01-bulk-check-updates-1025x533.png` | `docs/evidence/UPD-01-bulk-check-updates-960x530.png` | Gọi `CheckUpdatesByHashAsync` bulk qua `POST /version_files`, thanh progress chạy, UI giữ responsive |
+
+## 5. Báo cáo tỷ số (cập nhật sau Bước 4)
+
+- **PASS (có bằng chứng thật)**:
+  - API HTTP: SM-01..14 (14), HA-01..04 (4)
+  - Unit tests: 269/269 pass (31 tests mới cho JarMetadataReader, ModDownloadGuard, ModInstallBulkUpdate)
+  - Runtime UI screenshots (1025×533 + 960×530): SM-01 browse, SM-01 search, SM-02 no-result, SM-03 tiếng Việt, LD-01, LD-03 (500+ mods), LD-04/05/06 (corrupt/mismatch), UPD-01 bulk update check.
+- **FIXED (code + tests)**:
+  - DL-4 (path traversal guard)
+  - DL-5 (allowlist cdn.modrinth.com)
+  - DL-6-trùng (skip duplicate sha512)
+  - LD-04/05/06 (JarMetadataReader multi-loader + corrupt resilience)
+  - LD-08 (ImportJarFilesAsync safe staging + collision rename)
+  - UPD-1 (bulk hash lookup POST /version_files)
+  - Synthetic URL (xóa source url giả, hiện version thật)
+- **UNVERIFIED (chưa chạy runtime hoặc cần mock đặc thù)**:
+  - ER-1..4 (mất mạng / timeout 30s / HTTP 429 / HTTP 5xx — cần network proxy mock)
+  - DP-1 (debounce rapid typing UI automation)
+  - PH-2..3 (pagination scroll & sort dropdown UI automation)
+  - DL-1..3 (tiến trình download / cancel / partial file UI automation)
+  - LD-07 (toggle / delete mod khi game lock file)
+  - LD-09 (.mrpack import dialog UI automation)
+  - DEP-1..2 (dependency install prompt UI automation)
