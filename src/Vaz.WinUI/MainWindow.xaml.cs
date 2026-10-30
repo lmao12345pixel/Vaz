@@ -1,4 +1,6 @@
+using System;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -17,6 +19,38 @@ public sealed partial class MainWindow : Window
 {
     public MainViewModel ViewModel { get; }
 
+    private const int WM_GETMINMAXINFO = 0x0024;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct POINT
+    {
+        public int x;
+        public int y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MINMAXINFO
+    {
+        public POINT ptReserved;
+        public POINT ptMaxSize;
+        public POINT ptMaxPosition;
+        public POINT ptMinTrackSize;
+        public POINT ptMaxTrackSize;
+    }
+
+    private delegate IntPtr SUBCLASSPROC(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam, UIntPtr uIdSubclass, IntPtr dwRefData);
+
+    [DllImport("comctl32.dll", SetLastError = true)]
+    private static extern bool SetWindowSubclass(IntPtr hWnd, SUBCLASSPROC pfnSubclass, UIntPtr uIdSubclass, IntPtr dwRefData);
+
+    [DllImport("comctl32.dll", SetLastError = true)]
+    private static extern IntPtr DefSubclassProc(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetDpiForWindow(IntPtr hWnd);
+
+    private readonly SUBCLASSPROC? _subclassProc;
+
     public MainWindow(MainViewModel viewModel)
     {
         ViewModel = viewModel;
@@ -29,6 +63,14 @@ public sealed partial class MainWindow : Window
             AppWindow.Resize(new Windows.Graphics.SizeInt32(1100, 700));
         }
         catch { }
+
+        // Enforce MinWidth / MinHeight (960x600) via Win32 WM_GETMINMAXINFO
+        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+        if (hwnd != IntPtr.Zero)
+        {
+            _subclassProc = WindowSubclass;
+            SetWindowSubclass(hwnd, _subclassProc, UIntPtr.Zero, IntPtr.Zero);
+        }
 
         // SET-AC-04: theme/accent đã nạp trong App.OnLaunched; gắn shell + áp màu TRƯỚC
         // khi navigate để trang Instances đầu tiên render đúng theme (kể cả nav pane + dock).
@@ -142,5 +184,21 @@ public sealed partial class MainWindow : Window
             ContentFrame.Navigate(pageType, parameter, transition);
         else
             ContentFrame.Navigate(pageType, null, transition);
+    }
+
+    private IntPtr WindowSubclass(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam, UIntPtr uIdSubclass, IntPtr dwRefData)
+    {
+        if (uMsg == WM_GETMINMAXINFO)
+        {
+            var dpi = GetDpiForWindow(hWnd);
+            var scale = dpi > 0 ? (float)dpi / 96.0f : 1.0f;
+            var mmi = Marshal.PtrToStructure<MINMAXINFO>(lParam);
+            mmi.ptMinTrackSize.x = (int)(960 * scale);
+            mmi.ptMinTrackSize.y = (int)(600 * scale);
+            Marshal.StructureToPtr(mmi, lParam, true);
+            return IntPtr.Zero;
+        }
+
+        return DefSubclassProc(hWnd, uMsg, wParam, lParam);
     }
 }

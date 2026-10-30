@@ -519,6 +519,7 @@ public sealed partial class InstanceDetailPage : Page
         if (sender is FrameworkElement elem && elem.DataContext is ResourcePackRow row)
         {
             row.Enabled = true;
+            ViewModel.RefreshResourcePackLists();
         }
     }
 
@@ -527,6 +528,7 @@ public sealed partial class InstanceDetailPage : Page
         if (sender is FrameworkElement elem && elem.DataContext is ResourcePackRow row)
         {
             row.Enabled = false;
+            ViewModel.RefreshResourcePackLists();
         }
     }
 

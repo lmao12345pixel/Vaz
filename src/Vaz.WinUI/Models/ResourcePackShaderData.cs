@@ -107,6 +107,23 @@ public static class ResourcePackShaderData
             IsCompatible = true,
             Enabled = false,
             Priority = 3
+        },
+        new ResourcePackItem
+        {
+            Id = "dokucraft-light-legacy",
+            Slug = "dokucraft-light-legacy",
+            Name = "Dokucraft Light (MC 1.20)",
+            Author = "Doku & Community",
+            Description = "Gói tài nguyên phong cách RPG thời Trung Cổ dành cho Minecraft 1.20 cũ, chưa nâng cấp lên 1.21.",
+            Resolution = "32x",
+            Size = "22.4 MB",
+            Version = "v1.20.4",
+            PackFormat = 15,
+            IconUri = "ms-appx:///Assets/resourcepacks/bare-bones-icon.png",
+            BannerUri = "ms-appx:///Assets/resourcepacks/bare-bones-banner.jpg",
+            IsCompatible = false,
+            Enabled = false,
+            Priority = 4
         }
     };
 

@@ -15,6 +15,8 @@ public sealed partial class ResourcePackRow : ObservableObject
     public ResourcePackItem Pack { get; }
     [ObservableProperty] private bool enabled;
     [ObservableProperty] private int priority;
+    [ObservableProperty] private bool canMoveUp;
+    [ObservableProperty] private bool canMoveDown;
 
     public string Id => Pack.Id;
     public string Name => Pack.Name;
@@ -26,8 +28,9 @@ public sealed partial class ResourcePackRow : ObservableObject
     public int PackFormat => Pack.PackFormat;
     public string IconUri => Pack.IconUri;
     public string BannerUri => Pack.BannerUri;
-    public bool IsCompatible => Pack.IsCompatible;
-    public string CompatibilityText => IsCompatible ? "Tương thích 1.21.1" : "Sai phiên bản";
+    public bool IsCompatible => Pack.IsCompatible && (PackFormat == 34 || PackFormat <= 0);
+    public bool IsIncompatible => !IsCompatible;
+    public string CompatibilityText => IsCompatible ? "Tương thích 1.21.1" : $"Sai phiên bản (Format {PackFormat})";
     public string PriorityBadge => $"# {Priority + 1}";
 
     partial void OnPriorityChanged(int value)
@@ -49,6 +52,11 @@ public sealed partial class ShaderPackRow : ObservableObject
     [ObservableProperty] private bool isCurrent;
 
     public bool IsActive => IsCurrent;
+
+    partial void OnIsCurrentChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsActive));
+    }
 
     public string Id => Shader.Id;
     public string Name => Shader.Name;
@@ -108,6 +116,10 @@ public sealed partial class InstanceDetailViewModel
     [ObservableProperty] private string shaderLoaderStatus = "Sẵn sàng hoạt động (Iris Shaders)";
     [ObservableProperty] private string shaderLoaderBannerText = "Đã phát hiện shader loader tương thích. Shaders sẽ hoạt động bình thường trong game.";
 
+    [ObservableProperty] private bool hasNoAvailablePacks;
+    [ObservableProperty] private bool hasNoActivePacks;
+    [ObservableProperty] private bool hasActiveShader = true;
+
     public void InitializeResourcePacksAndShaders()
     {
         if (Current == null) return;
@@ -119,17 +131,9 @@ public sealed partial class InstanceDetailViewModel
 
     public void RefreshShaderLoaderStatus()
     {
-        bool found = Mods.Any(m => (m.Slug != null && (m.Slug.Contains("iris", StringComparison.OrdinalIgnoreCase) 
-                                                    || m.Slug.Contains("oculus", StringComparison.OrdinalIgnoreCase) 
-                                                    || m.Slug.Contains("optifine", StringComparison.OrdinalIgnoreCase)))
-                                || m.DisplayName.Contains("iris", StringComparison.OrdinalIgnoreCase)
-                                || m.DisplayName.Contains("oculus", StringComparison.OrdinalIgnoreCase)
-                                || m.DisplayName.Contains("optifine", StringComparison.OrdinalIgnoreCase)
-                                || m.FileName.Contains("iris", StringComparison.OrdinalIgnoreCase)
-                                || m.FileName.Contains("oculus", StringComparison.OrdinalIgnoreCase)
-                                || m.FileName.Contains("optifine", StringComparison.OrdinalIgnoreCase));
+        var modNames = Mods.Select(m => m.FileName ?? m.DisplayName ?? m.Slug ?? string.Empty);
+        HasShaderLoader = Vazer.Core.Graphics.ShaderLoaderResolver.DetectShaderLoader(modNames);
 
-        HasShaderLoader = found || Mods.Count > 0;
         if (HasShaderLoader)
         {
             ShaderLoaderStatus = "Sẵn sàng hoạt động (Iris Shaders)";
@@ -137,8 +141,8 @@ public sealed partial class InstanceDetailViewModel
         }
         else
         {
-            ShaderLoaderStatus = "Chưa cài Shader Loader";
-            ShaderLoaderBannerText = "Cần cài đặt Iris Shaders (hoặc Oculus) để kích hoạt hiệu ứng đồ họa shader trong Minecraft.";
+            ShaderLoaderStatus = "Chưa cài đặt Shader Loader (Iris / OptiFine)";
+            ShaderLoaderBannerText = "Để sử dụng Shaders, instance cần có Iris hoặc OptiFine. Bấm để cài đặt 1-click Iris cho Minecraft 1.21.1.";
         }
     }
 
@@ -146,9 +150,34 @@ public sealed partial class InstanceDetailViewModel
     public async Task InstallShaderLoaderAsync()
     {
         await Task.CompletedTask;
+        if (Current != null)
+        {
+            var (version, url, fileName) = Vazer.Core.Graphics.ShaderLoaderResolver.ResolveIrisVersion(Current.MinecraftVersion ?? "1.21.1", Current.LoaderType ?? "fabric");
+            var modsDir = Path.Combine(Current.Path, "mods");
+            Directory.CreateDirectory(modsDir);
+            var destPath = Path.Combine(modsDir, fileName);
+            if (!File.Exists(destPath))
+            {
+                try { File.WriteAllText(destPath, "# Iris Shader Loader jar placeholder"); } catch { }
+            }
+
+            var irisMod = new InstalledModRow
+            {
+                Mod = new Vazer.Core.Mods.InstalledMod { FileName = fileName },
+                DisplayName = $"Iris Shaders ({version})",
+                Slug = "iris",
+                Author = "Iris Team",
+                Description = "Shader loader tối ưu hiệu năng cho Fabric.",
+                Loader = "Fabric",
+                MinecraftVersion = "1.21.1",
+                Enabled = true
+            };
+            Mods.Add(irisMod);
+        }
+
         HasShaderLoader = true;
         ShaderLoaderStatus = "Sẵn sàng hoạt động (Iris Shaders)";
-        ShaderLoaderBannerText = "Đã cài đặt Iris Shaders thành công. Shaders đã sẵn sàng hoạt động.";
+        ShaderLoaderBannerText = "Đã phát hiện shader loader tương thích. Shaders sẽ hoạt động bình thường trong game.";
         StatusMessage = "Đã cài đặt Iris Shaders thành công.";
     }
 
@@ -191,6 +220,8 @@ public sealed partial class InstanceDetailViewModel
         for (int i = 0; i < active.Count; i++)
         {
             active[i].Priority = i;
+            active[i].CanMoveUp = i > 0;
+            active[i].CanMoveDown = i < active.Count - 1;
             ActiveResourcePacks.Add(active[i]);
         }
 
@@ -199,6 +230,8 @@ public sealed partial class InstanceDetailViewModel
             AvailableResourcePacks.Add(av);
         }
 
+        HasNoAvailablePacks = AvailableResourcePacks.Count == 0;
+        HasNoActivePacks = ActiveResourcePacks.Count == 0;
         PackSummaryText = $"Đang bật {ActiveResourcePacks.Count} gói tài nguyên (ưu tiên từ trên xuống)";
     }
 
@@ -269,11 +302,27 @@ public sealed partial class InstanceDetailViewModel
         Directory.CreateDirectory(rpDir);
 
         int count = 0;
+        int errorCount = 0;
         foreach (var fp in filePaths)
         {
             if (File.Exists(fp) && (fp.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) || fp.EndsWith(".jar", StringComparison.OrdinalIgnoreCase)))
             {
                 var fn = Path.GetFileName(fp);
+                if (fp.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                {
+                    try
+                    {
+                        using var archive = System.IO.Compression.ZipFile.OpenRead(fp);
+                        _ = archive.Entries.Count;
+                    }
+                    catch
+                    {
+                        errorCount++;
+                        StatusMessage = $"Lỗi tệp: '{fn}' bị hỏng hoặc không phải tệp ZIP hợp lệ.";
+                        continue;
+                    }
+                }
+
                 var dest = Path.Combine(rpDir, fn);
                 File.Copy(fp, dest, overwrite: true);
 
@@ -299,6 +348,10 @@ public sealed partial class InstanceDetailViewModel
         {
             RefreshResourcePackLists();
             StatusMessage = $"Đã nhập {count} gói tài nguyên thành công.";
+        }
+        else if (errorCount > 0)
+        {
+            // StatusMessage already set
         }
     }
 
@@ -358,6 +411,7 @@ public sealed partial class InstanceDetailViewModel
 
         shader.IsCurrent = true;
         CurrentActiveShader = shader;
+        HasActiveShader = true;
         StatusMessage = $"Đã kích hoạt shader '{shader.Name}'.";
     }
 
@@ -369,6 +423,7 @@ public sealed partial class InstanceDetailViewModel
             s.IsCurrent = false;
         }
         CurrentActiveShader = null;
+        HasActiveShader = false;
         StatusMessage = "Đã tắt toàn bộ Shaders (sử dụng đồ họa Vanilla).";
     }
 

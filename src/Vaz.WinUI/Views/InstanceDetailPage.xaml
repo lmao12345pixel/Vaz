@@ -811,6 +811,17 @@
                                                                     <Border Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="4" Padding="4,1">
                                                                         <TextBlock Text="{x:Bind Size}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                                                     </Border>
+                                                                    <Border Visibility="{x:Bind IsIncompatible, Mode=OneWay, Converter={StaticResource BoolToVis}}"
+                                                                            Background="#33eab308"
+                                                                            BorderBrush="#eab308"
+                                                                            BorderThickness="1"
+                                                                            CornerRadius="4"
+                                                                            Padding="4,1">
+                                                                        <StackPanel Orientation="Horizontal" Spacing="3">
+                                                                            <FontIcon Glyph="&#xE7BA;" FontSize="10" Foreground="#eab308" />
+                                                                            <TextBlock Text="⚠ Không tương thích" FontSize="10" Foreground="#eab308" FontWeight="SemiBold" />
+                                                                        </StackPanel>
+                                                                    </Border>
                                                                 </StackPanel>
                                                             </StackPanel>
 
@@ -833,6 +844,19 @@
                                                 </DataTemplate>
                                             </ListView.ItemTemplate>
                                         </ListView>
+
+                                        <StackPanel Grid.Row="1"
+                                                    Visibility="{x:Bind ViewModel.HasNoAvailablePacks, Mode=OneWay, Converter={StaticResource BoolToVis}}"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    Spacing="8"
+                                                    Padding="24">
+                                            <FontIcon Glyph="&#xE721;" FontSize="28" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                                            <TextBlock Text="Không tìm thấy gói tài nguyên nào"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                       FontSize="13"
+                                                       HorizontalAlignment="Center" />
+                                        </StackPanel>
                                     </Grid>
                                 </Border>
 
@@ -875,30 +899,52 @@
                                                                     <Border Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="4" Padding="4,1">
                                                                         <TextBlock Text="{x:Bind Resolution}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                                                     </Border>
+                                                                    <Border Visibility="{x:Bind IsIncompatible, Mode=OneWay, Converter={StaticResource BoolToVis}}"
+                                                                            Background="#33eab308"
+                                                                            BorderBrush="#eab308"
+                                                                            BorderThickness="1"
+                                                                            CornerRadius="4"
+                                                                            Padding="4,1">
+                                                                        <StackPanel Orientation="Horizontal" Spacing="3">
+                                                                            <FontIcon Glyph="&#xE7BA;" FontSize="10" Foreground="#eab308" />
+                                                                            <TextBlock Text="⚠ Không tương thích" FontSize="10" Foreground="#eab308" FontWeight="SemiBold" />
+                                                                        </StackPanel>
+                                                                    </Border>
                                                                 </StackPanel>
                                                             </StackPanel>
 
-                                                            <!-- Reordering Up/Down & Disable -->
+                                                            <!-- Reordering Up/Down & Action Overflow -->
                                                             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                                                                 <Button ToolTipService.ToolTip="Tăng mức ưu tiên"
                                                                         Click="PackMoveUp_Click"
+                                                                        IsEnabled="{x:Bind CanMoveUp, Mode=OneWay}"
                                                                         Padding="6,4">
                                                                     <FontIcon Glyph="&#xE70E;" FontSize="12" />
                                                                 </Button>
                                                                 <Button ToolTipService.ToolTip="Giảm mức ưu tiên"
                                                                         Click="PackMoveDown_Click"
+                                                                        IsEnabled="{x:Bind CanMoveDown, Mode=OneWay}"
                                                                         Padding="6,4">
                                                                     <FontIcon Glyph="&#xE70D;" FontSize="12" />
                                                                 </Button>
-                                                                <Button ToolTipService.ToolTip="Xem chi tiết"
-                                                                        Click="PackInspector_Click"
+                                                                <Button ToolTipService.ToolTip="Tùy chọn khác"
                                                                         Padding="6,4">
-                                                                    <FontIcon Glyph="&#xE946;" FontSize="12" />
-                                                                </Button>
-                                                                <Button ToolTipService.ToolTip="Tắt gói này"
-                                                                        Click="PackDisable_Click"
-                                                                        Padding="6,4">
-                                                                    <FontIcon Glyph="&#xE711;" FontSize="12" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                                                                    <FontIcon Glyph="&#xE712;" FontSize="12" />
+                                                                    <Button.Flyout>
+                                                                        <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                                                            <MenuFlyoutItem Text="Xem chi tiết" Click="PackInspector_Click">
+                                                                                <MenuFlyoutItem.Icon>
+                                                                                    <FontIcon Glyph="&#xE946;" FontSize="14" />
+                                                                                </MenuFlyoutItem.Icon>
+                                                                            </MenuFlyoutItem>
+                                                                            <MenuFlyoutSeparator />
+                                                                            <MenuFlyoutItem Text="Tắt gói này" Click="PackDisable_Click">
+                                                                                <MenuFlyoutItem.Icon>
+                                                                                    <FontIcon Glyph="&#xE711;" FontSize="14" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                                                                                </MenuFlyoutItem.Icon>
+                                                                            </MenuFlyoutItem>
+                                                                        </MenuFlyout>
+                                                                    </Button.Flyout>
                                                                 </Button>
                                                             </StackPanel>
                                                         </Grid>
@@ -906,6 +952,23 @@
                                                 </DataTemplate>
                                             </ListView.ItemTemplate>
                                         </ListView>
+
+                                        <StackPanel Grid.Row="1"
+                                                    Visibility="{x:Bind ViewModel.HasNoActivePacks, Mode=OneWay, Converter={StaticResource BoolToVis}}"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    Spacing="8"
+                                                    Padding="24">
+                                            <FontIcon Glyph="&#xE9CE;" FontSize="28" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                                            <TextBlock Text="Chưa có gói tài nguyên nào được bật"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                       FontSize="13"
+                                                       HorizontalAlignment="Center" />
+                                            <TextBlock Text="Chọn từ danh sách bên trái hoặc kéo thả file .zip vào đây"
+                                                       Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                                       FontSize="11"
+                                                       HorizontalAlignment="Center" />
+                                        </StackPanel>
                                     </Grid>
                                 </Border>
                             </Grid>
@@ -1035,7 +1098,7 @@
                                             <TextBlock Text="Mở thư mục" />
                                         </StackPanel>
                                     </Button>
-                                    <Button Click="DeactivateShaders_Click">
+                                    <Button Click="DeactivateShaders_Click" IsEnabled="{x:Bind ViewModel.HasActiveShader, Mode=OneWay}">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <FontIcon Glyph="&#xE711;" FontSize="13" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
                                             <TextBlock Text="Tắt shader (Vanilla)" />
@@ -1127,6 +1190,18 @@
                                                                 <FontIcon Glyph="&#xE946;" FontSize="12" />
                                                             </Button>
                                                             
+                                                            <Border Visibility="{x:Bind IsActive, Mode=OneWay, Converter={StaticResource BoolToVis}}"
+                                                                    Background="{StaticResource VazAccentSubtleBrush}"
+                                                                    BorderBrush="{StaticResource VazAccentBrush}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="4"
+                                                                    Padding="8,4">
+                                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                    <FontIcon Glyph="&#xE73E;" FontSize="11" Foreground="{StaticResource VazAccentBrush}" />
+                                                                    <TextBlock Text="Đang dùng" FontSize="12" Foreground="{StaticResource VazAccentBrush}" FontWeight="SemiBold" />
+                                                                </StackPanel>
+                                                            </Border>
+
                                                             <Button ToolTipService.ToolTip="Kích hoạt shader này"
                                                                     Click="ActivateShader_Click"
                                                                     Visibility="{x:Bind IsActive, Mode=OneWay, Converter={StaticResource BoolToVisInv}}"
