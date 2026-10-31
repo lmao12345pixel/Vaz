@@ -1,4 +1,6 @@
 using System;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
@@ -116,6 +118,41 @@ public sealed partial class MainWindow : Window
                     CloseButtonText = "Đóng",
                     DefaultButton = ContentDialogButton.Close
                 };
+                await dialog.ShowAsync();
+            }
+        };
+
+        ViewModel.ShowCrashDialogAction = async (msg, logPath) =>
+        {
+            if (Content is FrameworkElement root && root.XamlRoot != null)
+            {
+                var hasTarget = !string.IsNullOrEmpty(logPath) && (File.Exists(logPath) || Directory.Exists(Path.GetDirectoryName(logPath)));
+                var dialog = new ContentDialog
+                {
+                    XamlRoot = root.XamlRoot,
+                    Title = "Khởi chạy thất bại",
+                    Content = msg,
+                    PrimaryButtonText = hasTarget ? "Xem chi tiết" : null,
+                    CloseButtonText = "Đóng",
+                    DefaultButton = hasTarget ? ContentDialogButton.Primary : ContentDialogButton.Close
+                };
+
+                if (hasTarget)
+                {
+                    dialog.PrimaryButtonClick += (_, _) =>
+                    {
+                        try
+                        {
+                            var target = File.Exists(logPath) ? logPath! : Path.GetDirectoryName(logPath)!;
+                            Process.Start(new ProcessStartInfo(target) { UseShellExecute = true });
+                        }
+                        catch
+                        {
+                            // ignored
+                        }
+                    };
+                }
+
                 await dialog.ShowAsync();
             }
         };

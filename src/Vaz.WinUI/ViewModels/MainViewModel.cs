@@ -104,6 +104,8 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     public Action<string>? ShowErrorMessageAction { get; set; }
+    public Action<string, string?>? ShowCrashDialogAction { get; set; }
+    private volatile bool _userKilled;
 
     public MainViewModel(
         IInstanceManager instances,
@@ -352,15 +354,18 @@ public sealed partial class MainViewModel : ObservableObject
             CurrentProcessId = result.ProcessId;
             IsRunning = true;
             IsLaunching = false;
+            _userKilled = false;
+            var launchStartTime = DateTimeOffset.UtcNow;
             UpdatePlayButtonLabels();
 
             await _instances.UpdateLastPlayedAsync(instance.Id);
 
             _ = Task.Run(async () =>
             {
+                var exitCode = -1;
                 try
                 {
-                    await result.Process.WaitForExitAsync();
+                    exitCode = await result.Process.WaitForExitAsync();
                 }
                 catch
                 {
@@ -368,6 +373,7 @@ public sealed partial class MainViewModel : ObservableObject
                 }
                 finally
                 {
+                    var duration = DateTimeOffset.UtcNow - launchStartTime;
                     result.Process.Dispose();
                     if (_currentProcess == result.Process)
                     {
@@ -380,6 +386,20 @@ public sealed partial class MainViewModel : ObservableObject
                         CurrentProcessId = null;
                         RunningInstanceId = null;
                         UpdatePlayButtonLabels();
+
+                        if (!_userKilled && exitCode != 0 && duration < TimeSpan.FromSeconds(5))
+                        {
+                            var logPath = Path.Combine(instance.Path, "logs", "latest.log");
+                            var message = $"Minecraft đóng bất thường (Mã lỗi: {exitCode}). Vui lòng kiểm tra file log để biết chi tiết.";
+                            if (ShowCrashDialogAction != null)
+                            {
+                                ShowCrashDialogAction.Invoke(message, logPath);
+                            }
+                            else
+                            {
+                                ShowErrorMessageAction?.Invoke(message);
+                            }
+                        }
                     }
 
                     var dispatcher = App.Dispatcher;
@@ -419,6 +439,7 @@ public sealed partial class MainViewModel : ObservableObject
             {
                 if (_currentProcess is { HasExited: false })
                 {
+                    _userKilled = true;
                     try
                     {
                         _currentProcess.Kill();
