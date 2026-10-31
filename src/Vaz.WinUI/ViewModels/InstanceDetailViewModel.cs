@@ -28,6 +28,10 @@ public sealed partial class InstalledModRow : ObservableObject
     [ObservableProperty] private bool enabled;
     [ObservableProperty] private bool hasMissingDependencies;
     [ObservableProperty] private string missingDependenciesText = string.Empty;
+    [ObservableProperty] private bool isMissingFile;
+
+    public bool CanToggle => !IsMissingFile;
+    public string? ModId { get; set; }
 
     public string FileName => Mod.FileName;
     public string? VersionId => string.IsNullOrEmpty(Mod.VersionId) ? null : Mod.VersionId;
@@ -60,6 +64,11 @@ public sealed partial class InstalledModRow : ObservableObject
     partial void OnHasUpdateChanged(bool value)
     {
         OnPropertyChanged(nameof(UpdateBadge));
+    }
+
+    partial void OnIsMissingFileChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CanToggle));
     }
 }
 
@@ -281,22 +290,34 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
                                 : string.Empty
                         };
 
-                        if (proj == null)
-                        {
-                            var jarPath = Path.Combine(currentPath, "mods", mod.FileName);
-                            if (File.Exists(jarPath))
-                            {
-                                JarMetadata? meta;
-                                try
-                                {
-                                    meta = ReadJarMetadataCached(jarPath);
-                                }
-                                catch
-                                {
-                                    meta = null;
-                                }
+                        var jarPath = Path.Combine(currentPath, "mods", mod.FileName);
+                        var jarDisabledPath = mod.FileName.EndsWith(".disabled", StringComparison.OrdinalIgnoreCase)
+                            ? Path.Combine(currentPath, "mods", mod.FileName[..^".disabled".Length])
+                            : Path.Combine(currentPath, "mods", mod.FileName + ".disabled");
 
-                                if (meta != null)
+                        string? existingJarPath = File.Exists(jarPath) ? jarPath : (File.Exists(jarDisabledPath) ? jarDisabledPath : null);
+
+                        if (existingJarPath == null)
+                        {
+                            row.IsMissingFile = true;
+                            row.LoadWarning = "Không tìm thấy file jar trên đĩa (thiếu file). Mod không thể hoạt động.";
+                        }
+                        else
+                        {
+                            JarMetadata? meta = null;
+                            try
+                            {
+                                meta = ReadJarMetadataCached(existingJarPath);
+                            }
+                            catch
+                            {
+                                meta = null;
+                            }
+
+                            if (meta != null)
+                            {
+                                row.ModId = meta.ModId;
+                                if (proj == null)
                                 {
                                     row.DisplayName = meta.Name;
                                     if (meta.Authors.Count > 0)
@@ -307,24 +328,25 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
                                     {
                                         row.Description = meta.Description;
                                     }
-                                    if (!string.IsNullOrWhiteSpace(meta.Loader) &&
-                                        !string.Equals(meta.Loader, currentLoader, StringComparison.OrdinalIgnoreCase))
-                                    {
-                                        row.LoadWarning =
-                                            $"Loader của jar là '{meta.Loader}' nhưng instance đang dùng '{currentLoader}'. Hậu quả: Game không thể tải mod này.";
-                                    }
-                                    else if (!string.IsNullOrWhiteSpace(meta.MinecraftRequirement) &&
-                                             !JarMetadataReader.IsMinecraftVersionCompatible(meta.MinecraftRequirement, currentMcVersion))
-                                    {
-                                        row.LoadWarning =
-                                            $"Yêu cầu Minecraft '{meta.MinecraftRequirement}' nhưng instance dùng '{currentMcVersion}'. Hậu quả: Game sẽ crash khi khởi động do không tương thích phiên bản (ModResolutionException).";
-                                    }
                                 }
-                                else
+
+                                if (!string.IsNullOrWhiteSpace(meta.Loader) &&
+                                    !string.Equals(meta.Loader, currentLoader, StringComparison.OrdinalIgnoreCase))
                                 {
                                     row.LoadWarning =
-                                        "Jar hỏng hoặc không có metadata nhận dạng được (fabric.mod.json / quilt.mod.json / mods.toml / neoforge.mods.toml). Hậu quả: Mod sẽ bị loader bỏ qua.";
+                                        $"Loader của jar là '{meta.Loader}' nhưng instance đang dùng '{currentLoader}'. Hậu quả: Game không thể tải mod này.";
                                 }
+                                else if (!string.IsNullOrWhiteSpace(meta.MinecraftRequirement) &&
+                                         !JarMetadataReader.IsMinecraftVersionCompatible(meta.MinecraftRequirement, currentMcVersion))
+                                {
+                                    row.LoadWarning =
+                                        $"Yêu cầu Minecraft '{meta.MinecraftRequirement}' nhưng instance dùng '{currentMcVersion}'. Hậu quả: Game sẽ crash khi khởi động do không tương thích phiên bản (ModResolutionException).";
+                                }
+                            }
+                            else if (proj == null)
+                            {
+                                row.LoadWarning =
+                                    "Jar hỏng hoặc không có metadata nhận dạng được (fabric.mod.json / quilt.mod.json / mods.toml / neoforge.mods.toml). Hậu quả: Mod sẽ bị loader bỏ qua.";
                             }
                         }
 
@@ -333,8 +355,14 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
 
                     // Kiểm tra trùng mod id giữa các jar
                     var modIdGroups = rowList
-                        .Where(r => r.Mod != null && !string.IsNullOrWhiteSpace(r.Mod.ProjectId) && r.Mod.ProjectId != "unknown")
-                        .GroupBy(r => r.Mod!.ProjectId, StringComparer.OrdinalIgnoreCase);
+                        .Where(r => !r.IsMissingFile)
+                        .GroupBy(r => !string.IsNullOrWhiteSpace(r.ModId)
+                            ? r.ModId
+                            : (!string.IsNullOrWhiteSpace(r.Slug)
+                                ? r.Slug
+                                : (r.Mod?.ProjectId != "unknown" ? r.Mod?.ProjectId : r.FileName)),
+                            StringComparer.OrdinalIgnoreCase)
+                        .Where(g => !string.IsNullOrWhiteSpace(g.Key) && g.Key != "unknown");
 
                     foreach (var group in modIdGroups)
                     {
@@ -344,7 +372,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
                             foreach (var r in list)
                             {
                                 var otherFiles = string.Join(", ", list.Where(x => x != r).Select(x => x.FileName));
-                                var warn = $"Trùng mod id '{group.Key}' với file '{otherFiles}'. Hậu quả: Loader sẽ crash khi khởi động do DuplicateModException.";
+                                var warn = $"Trùng mod id '{group.Key}' với file '{otherFiles}'. Hậu quả: Loader sẽ crash khi khởi động do DuplicateModException (game sẽ không chạy).";
                                 r.LoadWarning = string.IsNullOrEmpty(r.LoadWarning) ? warn : $"{r.LoadWarning} | {warn}";
                             }
                         }
@@ -436,7 +464,12 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
 
     public async Task SetModEnabledAsync(InstalledModRow row, bool enabled)
     {
-        if (Current == null) return;
+        if (Current == null || row == null) return;
+        if (row.IsMissingFile)
+        {
+            StatusMessage = $"Không thể bật/tắt '{row.DisplayName}' vì không tìm thấy file jar trên đĩa.";
+            return;
+        }
 
         try
         {
@@ -952,13 +985,43 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         return meta;
     }
 
+    private static string GetMetadataCacheFilePath(string instancePath)
+    {
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        var cacheDir = Path.Combine(appData, "Vazer", "cache", "metadata");
+        Directory.CreateDirectory(cacheDir);
+
+        var instanceName = Path.GetFileName(instancePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        using var md5 = MD5.Create();
+        var hash = Convert.ToHexString(md5.ComputeHash(System.Text.Encoding.UTF8.GetBytes(instancePath.ToLowerInvariant())));
+        return Path.Combine(cacheDir, $"{instanceName}-{hash[..8]}.json");
+    }
+
     private void EnsureDiskCacheLoaded(string instancePath)
     {
         if (_diskCacheLoaded) return;
         _diskCacheLoaded = true;
         try
         {
-            var cacheFile = Path.Combine(instancePath, ".jar-metadata-cache.json");
+            var oldInstanceCache = Path.Combine(instancePath, ".jar-metadata-cache.json");
+            var cacheFile = GetMetadataCacheFilePath(instancePath);
+
+            if (!File.Exists(cacheFile) && File.Exists(oldInstanceCache))
+            {
+                try
+                {
+                    File.Move(oldInstanceCache, cacheFile, overwrite: true);
+                }
+                catch
+                {
+                    cacheFile = oldInstanceCache;
+                }
+            }
+            else if (File.Exists(oldInstanceCache))
+            {
+                try { File.Delete(oldInstanceCache); } catch { }
+            }
+
             if (File.Exists(cacheFile))
             {
                 var json = File.ReadAllText(cacheFile);
@@ -986,7 +1049,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
     {
         try
         {
-            var cacheFile = Path.Combine(instancePath, ".jar-metadata-cache.json");
+            var cacheFile = GetMetadataCacheFilePath(instancePath);
             var map = new Dictionary<string, JarMetadata?>();
             foreach (var (k, v) in _jarMetaCache)
             {

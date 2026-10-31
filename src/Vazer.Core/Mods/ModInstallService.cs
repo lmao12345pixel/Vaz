@@ -145,11 +145,12 @@ public class ModInstallService : IModInstallService
         Directory.CreateDirectory(modsDir);
         CleanOrphanPartials(modsDir);
 
-        var existingMod = manifest.Mods.FirstOrDefault(m =>
+        var existingMods = manifest.Mods.Where(m =>
             string.Equals(m.ProjectId, project.Id, StringComparison.OrdinalIgnoreCase) ||
             (!string.IsNullOrEmpty(project.Slug) && string.Equals(m.ProjectId, project.Slug, StringComparison.OrdinalIgnoreCase)) ||
-            string.Equals(m.ProjectId, projectSlug, StringComparison.OrdinalIgnoreCase));
+            string.Equals(m.ProjectId, projectSlug, StringComparison.OrdinalIgnoreCase)).ToList();
 
+        var existingMod = existingMods.FirstOrDefault();
         bool isEnabled = existingMod?.Enabled ?? true;
 
         var rawName = Path.GetFileNameWithoutExtension(file.Filename);
@@ -159,13 +160,15 @@ public class ModInstallService : IModInstallService
         string candidate = file.Filename;
         int suffixIndex = 1;
 
-        while (manifest.Mods.Any(m => m != existingMod &&
+        while (manifest.Mods.Any(m => !existingMods.Contains(m) &&
                    (string.Equals(m.FileName, candidate, StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(m.FileName, candidate + ".disabled", StringComparison.OrdinalIgnoreCase)))
                || (File.Exists(Path.Combine(modsDir, candidate)) &&
-                   (existingMod == null || !string.Equals(existingMod.FileName, candidate, StringComparison.OrdinalIgnoreCase)))
+                   !existingMods.Any(m => string.Equals(m.FileName, candidate, StringComparison.OrdinalIgnoreCase) ||
+                                          string.Equals(m.FileName + ".disabled", candidate, StringComparison.OrdinalIgnoreCase)))
                || (File.Exists(Path.Combine(modsDir, candidate + ".disabled")) &&
-                   (existingMod == null || !string.Equals(existingMod.FileName, candidate + ".disabled", StringComparison.OrdinalIgnoreCase))))
+                   !existingMods.Any(m => string.Equals(m.FileName, candidate + ".disabled", StringComparison.OrdinalIgnoreCase) ||
+                                          string.Equals(m.FileName, candidate, StringComparison.OrdinalIgnoreCase))))
         {
             candidate = $"{rawName}-{suffixIndex}{ext}";
             suffixIndex++;
@@ -174,6 +177,8 @@ public class ModInstallService : IModInstallService
         string targetFilename = isEnabled ? candidate : candidate + ".disabled";
         var partialPath = Path.Combine(modsDir, targetFilename + ".partial");
         var finalPath = Path.Combine(modsDir, targetFilename);
+
+        using var activeDownloadReg = RegisterActivePartial(partialPath);
 
         string? sha512Hex = null;
         try
@@ -201,7 +206,7 @@ public class ModInstallService : IModInstallService
             // DL-guard: nếu cùng nội dung (sha512 trùng) đã nằm trong mods.json → không cài lại
             if (!string.IsNullOrEmpty(sha512Hex) &&
                 manifest.Mods.Any(m =>
-                    m != existingMod &&
+                    !existingMods.Contains(m) &&
                     string.Equals(m.Sha512, sha512Hex, StringComparison.OrdinalIgnoreCase)))
             {
                 var duplicateName = manifest.Mods
@@ -217,20 +222,20 @@ public class ModInstallService : IModInstallService
                 };
             }
 
-            if (existingMod != null)
+            foreach (var oldMod in existingMods)
             {
-                var oldPath = Path.Combine(modsDir, existingMod.FileName);
+                var oldPath = Path.Combine(modsDir, oldMod.FileName);
                 if (File.Exists(oldPath) && !string.Equals(oldPath, finalPath, StringComparison.OrdinalIgnoreCase))
                 {
-                    File.Delete(oldPath);
+                    try { File.Delete(oldPath); } catch { /* ignore */ }
                 }
 
-                var oldAlt = existingMod.FileName.EndsWith(".disabled", StringComparison.OrdinalIgnoreCase)
-                    ? Path.Combine(modsDir, existingMod.FileName[..^".disabled".Length])
-                    : Path.Combine(modsDir, existingMod.FileName + ".disabled");
+                var oldAlt = oldMod.FileName.EndsWith(".disabled", StringComparison.OrdinalIgnoreCase)
+                    ? Path.Combine(modsDir, oldMod.FileName[..^".disabled".Length])
+                    : Path.Combine(modsDir, oldMod.FileName + ".disabled");
                 if (File.Exists(oldAlt) && !string.Equals(oldAlt, finalPath, StringComparison.OrdinalIgnoreCase))
                 {
-                    File.Delete(oldAlt);
+                    try { File.Delete(oldAlt); } catch { /* ignore */ }
                 }
             }
 
@@ -319,8 +324,25 @@ public class ModInstallService : IModInstallService
         return manifest.Mods.AsReadOnly();
     }
 
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> ActivePartials = new(StringComparer.OrdinalIgnoreCase);
+
+    public static IDisposable RegisterActivePartial(string partialPath)
+    {
+        var full = Path.GetFullPath(partialPath);
+        ActivePartials.TryAdd(full, 0);
+        return new ActivePartialRegistration(full);
+    }
+
+    private sealed class ActivePartialRegistration : IDisposable
+    {
+        private readonly string _path;
+        public ActivePartialRegistration(string path) => _path = path;
+        public void Dispose() => ActivePartials.TryRemove(_path, out _);
+    }
+
     /// <summary>
     /// Xóa các tệp .partial mồ côi (do tải dở, mất điện, app tắt giữa chừng).
+    /// Bỏ qua các file .partial đang thuộc lượt tải đang chạy (active downloads).
     /// </summary>
     public static void CleanOrphanPartials(string modsDir)
     {
@@ -330,6 +352,11 @@ public class ModInstallService : IModInstallService
             var partials = Directory.GetFiles(modsDir, "*.partial");
             foreach (var p in partials)
             {
+                var full = Path.GetFullPath(p);
+                if (ActivePartials.ContainsKey(full))
+                {
+                    continue;
+                }
                 try { File.Delete(p); } catch { /* ignore */ }
             }
         }
@@ -478,7 +505,16 @@ public class ModInstallService : IModInstallService
 
     public async Task<int> UpdateAllAsync(string instanceId, IProgress<InstallProgress>? progress = null, CancellationToken ct = default)
     {
-        var checkResult = await CheckUpdatesAsync(instanceId, ct);
+        var checkResult = await CheckUpdatesByHashAsync(instanceId, ct: ct);
+        if (checkResult.Updates.Count == 0 || !checkResult.Updates.Any(u => u.HasUpdate))
+        {
+            var fallback = await CheckUpdatesAsync(instanceId, ct);
+            if (fallback.Updates.Any(u => u.HasUpdate))
+            {
+                checkResult = fallback;
+            }
+        }
+
         int successCount = 0;
         var updatesToApply = checkResult.Updates.Where(u => u.HasUpdate).ToList();
 

@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -533,6 +534,108 @@ public sealed class ModNetworkAndDependencyTests : IDisposable
         File.Exists(orphan2).Should().BeFalse("File .partial mồ côi 2 phải bị xóa");
         File.Exists(legitimateJar).Should().BeTrue("File .jar hợp lệ phải được giữ nguyên");
         File.Exists(legitimateDisabled).Should().BeTrue("File .disabled hợp lệ phải được giữ nguyên");
+    }
+
+    [Fact]
+    public void DL_CleanOrphanPartials_DoesNotDeleteActiveDownloads()
+    {
+        var modsDir = Path.Combine(_tempDir, "inst-active-orphan-test", "mods");
+        Directory.CreateDirectory(modsDir);
+
+        var activePartial = Path.Combine(modsDir, "active-download.jar.partial");
+        var orphanPartial = Path.Combine(modsDir, "abandoned-download.jar.partial");
+
+        File.WriteAllText(activePartial, "active downloading bytes");
+        File.WriteAllText(orphanPartial, "abandoned bytes");
+
+        // Đăng ký activePartial là đang tải trong tiến trình
+        using (ModInstallService.RegisterActivePartial(activePartial))
+        {
+            // Thực hiện dọn dẹp orphan
+            ModInstallService.CleanOrphanPartials(modsDir);
+
+            // Active partial không được bị xóa
+            File.Exists(activePartial).Should().BeTrue("File .partial đang trong tiến trình tải không được bị xóa");
+            // Orphan partial phải bị xóa
+            File.Exists(orphanPartial).Should().BeFalse("File .partial mồ côi phải bị xóa");
+        }
+
+        // Sau khi dispose registration, nếu dọn dẹp lại thì sẽ bị xóa
+        ModInstallService.CleanOrphanPartials(modsDir);
+        File.Exists(activePartial).Should().BeFalse("Sau khi registration dispose, partial trở thành orphan và bị dọn");
+    }
+
+    [Fact]
+    public async Task InstallFromModrinthAsync_UpdateReplacesOldJar_DoesNotKeepBothSideBySide()
+    {
+        var instancePath = Path.Combine(_tempDir, "inst-update-replace");
+        var modsDir = Path.Combine(instancePath, "mods");
+        Directory.CreateDirectory(modsDir);
+
+        var instMgrMock = new Mock<IInstanceManager>();
+        instMgrMock.Setup(m => m.GetAsync("inst-update", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MinecraftInstance { Id = "inst-update", Name = "Test", Path = instancePath, LoaderType = "fabric", MinecraftVersion = "1.21.1", CreatedAt = DateTimeOffset.UtcNow });
+
+        // Tạo file cũ trên đĩa và trong manifest
+        var oldJarPath = Path.Combine(modsDir, "my-mod-1.0.jar");
+        await File.WriteAllTextAsync(oldJarPath, "old version 1.0 bytes");
+
+        var manifestPath = Path.Combine(instancePath, "mods.json");
+        var initialManifest = new ModsManifest
+        {
+            Mods =
+            [
+                new InstalledMod
+                {
+                    FileName = "my-mod-1.0.jar",
+                    ProjectId = "my-mod-proj",
+                    VersionId = "ver-1.0",
+                    Source = "modrinth",
+                    Enabled = true,
+                    InstalledAt = DateTimeOffset.UtcNow
+                }
+            ]
+        };
+        await File.WriteAllTextAsync(manifestPath, JsonSerializer.Serialize(initialManifest));
+
+        // Cấu hình Modrinth mock trả về bản mới 2.0
+        var newContent = new byte[] { 10, 20, 30 };
+        using var sha = System.Security.Cryptography.SHA512.Create();
+        var newSha = Convert.ToHexString(sha.ComputeHash(newContent));
+
+        var modrinthMock = new Mock<IModrinthClient>();
+        var proj = new ModrinthProject { Id = "my-mod-proj", Slug = "my-mod", Title = "My Mod", ProjectType = "mod" };
+        var verNew = new ProjectVersion
+        {
+            Id = "ver-2.0",
+            ProjectId = "my-mod-proj",
+            VersionType = "release",
+            DatePublished = DateTimeOffset.UtcNow,
+            Files = [new VersionFile { Url = "https://cdn.modrinth.com/my-mod-2.0.jar", Filename = "my-mod-2.0.jar", Primary = true, Hashes = new FileHashes { Sha512 = newSha } }],
+            Dependencies = []
+        };
+
+        modrinthMock.Setup(m => m.GetProjectAsync("my-mod-proj", It.IsAny<CancellationToken>())).ReturnsAsync(proj);
+        modrinthMock.Setup(m => m.GetVersionsAsync("my-mod-proj", "fabric", "1.21.1", It.IsAny<CancellationToken>())).ReturnsAsync([verNew]);
+        modrinthMock.Setup(m => m.GetVersionAsync("ver-2.0", It.IsAny<CancellationToken>())).ReturnsAsync(verNew);
+        modrinthMock.Setup(m => m.DownloadAsync(verNew.Files[0].Url, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MemoryStream(newContent));
+
+        var svc = new ModInstallService(instMgrMock.Object, modrinthMock.Object, Options.Create(TestOptions), NullLogger<ModInstallService>.Instance);
+
+        // Act: Cài đặt bản mới (cập nhật)
+        var result = await svc.InstallFromModrinthAsync("inst-update", "my-mod-proj", "ver-2.0");
+
+        // Assert
+        result.Success.Should().BeTrue();
+        File.Exists(oldJarPath).Should().BeFalse("File jar bản cũ phải bị xóa khi cập nhật, không được đặt cạnh bản mới");
+        File.Exists(Path.Combine(modsDir, "my-mod-2.0.jar")).Should().BeTrue("File jar bản mới phải tồn tại");
+
+        var updatedManifestJson = await File.ReadAllTextAsync(manifestPath);
+        var updatedManifest = JsonSerializer.Deserialize<ModsManifest>(updatedManifestJson, VazJsonContext.Default.ModsManifest);
+        updatedManifest!.Mods.Should().HaveCount(1, "Manifest chỉ chứa 1 bản duy nhất sau cập nhật");
+        updatedManifest.Mods[0].FileName.Should().Be("my-mod-2.0.jar");
+        updatedManifest.Mods[0].VersionId.Should().Be("ver-2.0");
     }
 
     [Fact]

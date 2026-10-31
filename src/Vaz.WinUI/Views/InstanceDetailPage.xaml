@@ -402,8 +402,27 @@
                                                     </StackPanel>
                                                 </Button>
 
-                                                <!-- Badges (Warning & Update) -->
+                                                <!-- Badges (Warning, Missing File & Update) -->
                                                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                    <!-- Missing File Badge -->
+                                                    <Border
+                                                        Background="#33EF4444"
+                                                        BorderBrush="#EF4444"
+                                                        BorderThickness="1"
+                                                        CornerRadius="4"
+                                                        Padding="6,2"
+                                                        Visibility="{x:Bind IsMissingFile, Mode=OneWay, Converter={StaticResource BoolToVis}}"
+                                                        ToolTipService.ToolTip="File jar không tồn tại trên đĩa. Mod không thể hoạt động.">
+                                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                                            <FontIcon Glyph="&#xE783;" FontSize="11" Foreground="#EF4444" />
+                                                            <TextBlock
+                                                                Text="Thiếu file"
+                                                                Foreground="#EF4444"
+                                                                FontSize="11"
+                                                                FontWeight="SemiBold" />
+                                                        </StackPanel>
+                                                    </Border>
+
                                                     <!-- Warning Badge (MM-AC-02) -->
                                                     <Border
                                                         Background="#33F59E0B"
@@ -441,6 +460,7 @@
                                                 <ToggleSwitch
                                                     Grid.Column="3"
                                                     IsOn="{x:Bind Enabled, Mode=OneWay}"
+                                                    IsEnabled="{x:Bind CanToggle, Mode=OneWay}"
                                                     Toggled="ModEnabled_Toggled"
                                                     OffContent=""
                                                     OnContent=""

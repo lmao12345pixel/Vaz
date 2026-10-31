@@ -28,6 +28,23 @@ public sealed class ShaderLoaderResolverTests
         ShaderLoaderResolver.DetectShaderLoader(new List<string>()).Should().BeFalse();
     }
 
+    [Fact]
+    public void DetectShaderLoader_ExcludesFilteredOutMissingOrDisabledMods()
+    {
+        // Khi mod Iris bị thiếu file hoặc bị disabled, danh sách mod thực tế còn lại không chứa Iris
+        var installedModsWithMissingIris = new List<(string Name, bool IsMissingFile, bool Enabled)>
+        {
+            ("iris-fabric-1.8.8+mc1.21.1.jar", true, true), // Thiếu file
+            ("sodium-fabric-0.6.13+mc1.21.1.jar", false, true)
+        };
+
+        var filteredActiveNames = installedModsWithMissingIris
+            .Where(m => !m.IsMissingFile && m.Enabled)
+            .Select(m => m.Name);
+
+        ShaderLoaderResolver.DetectShaderLoader(filteredActiveNames).Should().BeFalse("Mod thiếu file không được coi là có Shader Loader");
+    }
+
     [Theory]
     [InlineData(34, "1.21.1", true)]
     [InlineData(34, "1.21", true)]

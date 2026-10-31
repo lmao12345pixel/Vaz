@@ -487,9 +487,11 @@ public sealed partial class InstanceDetailPage : Page
             var confirm = new ContentDialog
             {
                 XamlRoot = XamlRoot,
-                Title = $"Gỡ cài đặt {row.DisplayName}?",
-                Content = $"Mod '{row.FileName}' sẽ bị xóa khỏi instance.",
-                PrimaryButtonText = "Gỡ cài đặt",
+                Title = row.IsMissingFile ? $"Gỡ {row.DisplayName} khỏi danh sách?" : $"Gỡ cài đặt {row.DisplayName}?",
+                Content = row.IsMissingFile
+                    ? $"Mục '{row.FileName}' không có file trên đĩa và sẽ được xóa khỏi cấu hình mods.json."
+                    : $"Mod '{row.FileName}' sẽ bị xóa khỏi instance.",
+                PrimaryButtonText = row.IsMissingFile ? "Gỡ bỏ" : "Gỡ cài đặt",
                 CloseButtonText = "Hủy",
                 DefaultButton = ContentDialogButton.Close
             };

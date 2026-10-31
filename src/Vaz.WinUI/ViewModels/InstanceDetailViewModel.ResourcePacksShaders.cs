@@ -176,7 +176,7 @@ public sealed partial class InstanceDetailViewModel
 
     public void RefreshShaderLoaderStatus()
     {
-        var modNames = Mods.Select(m => m.FileName ?? m.DisplayName ?? m.Slug ?? string.Empty);
+        var modNames = Mods.Where(m => !m.IsMissingFile && m.Enabled).Select(m => m.FileName ?? m.DisplayName ?? m.Slug ?? string.Empty);
         HasShaderLoader = Vazer.Core.Graphics.ShaderLoaderResolver.DetectShaderLoader(modNames);
 
         if (HasShaderLoader)
