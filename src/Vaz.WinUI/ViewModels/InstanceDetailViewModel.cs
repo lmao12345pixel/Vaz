@@ -197,6 +197,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
                     var modsDir = Path.Combine(currentPath, "mods");
                     if (Directory.Exists(modsDir))
                     {
+                        ModInstallService.CleanOrphanPartials(modsDir);
                         var jarFiles = Directory.GetFiles(modsDir, "*.jar");
                         if (jarFiles.Length > 0)
                         {

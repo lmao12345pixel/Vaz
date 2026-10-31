@@ -109,6 +109,22 @@ public sealed class ModNetworkAndDependencyTests : IDisposable
         callCount.Should().Be(1); // 0 auto retry for 429, tôn trọng Retry-After cho UI
     }
 
+    [Fact]
+    public async Task ER3_GetProject_429WithRetryAfter_ThrowsModrinthRateLimitException()
+    {
+        var path = "/v2/project/sodium";
+        _handler.Map(HttpMethod.Get, path, _ =>
+        {
+            var resp = new HttpResponseMessage(HttpStatusCode.TooManyRequests);
+            resp.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(TimeSpan.FromSeconds(5));
+            return resp;
+        });
+
+        var act = () => _client.GetProjectAsync("sodium");
+        var ex = await act.Should().ThrowAsync<ModrinthRateLimitException>();
+        ex.Which.RetryAfterSeconds.Should().Be(5);
+    }
+
     // ── ER-4: 5xx server error ──
 
     [Theory]
@@ -353,7 +369,7 @@ public sealed class ModNetworkAndDependencyTests : IDisposable
             .WithMessage("*Redirected to unauthorized host*");
     }
 
-    // ── DL-partial: Thất bại xóa sạch .partial ──
+    // ── DL-partial: Thất bại xóa sạch .partial trong cùng thư mục mods ──
 
     [Fact]
     public async Task DL_FailedSha512_CleansUpPartialFile()
@@ -386,27 +402,14 @@ public sealed class ModNetworkAndDependencyTests : IDisposable
 
         modrinthMock.Setup(m => m.GetProjectAsync("bad-hash", It.IsAny<CancellationToken>())).ReturnsAsync(proj);
         modrinthMock.Setup(m => m.GetVersionsAsync("bad-hash", "fabric", "1.21.1", It.IsAny<CancellationToken>())).ReturnsAsync([ver]);
-        string? createdTempFile = null;
-        var initialTempFiles = Directory.GetFiles(Path.GetTempPath(), "vazer-*.tmp");
+
+        var partialPath = Path.Combine(modsDir, "bad.jar.partial");
+        bool partialExistedDuringDownload = false;
         var rawContent = new MemoryStream(Encoding.UTF8.GetBytes("content-with-different-hash"));
         modrinthMock.Setup(m => m.DownloadAsync(ver.Files[0].Url, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new TrackingStream(rawContent, () =>
             {
-                var current = Directory.GetFiles(Path.GetTempPath(), "vazer-*.tmp");
-                var newFiles = current.Except(initialTempFiles).ToArray();
-                foreach (var file in newFiles)
-                {
-                    try
-                    {
-                        using var fs = new FileStream(file, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
-                    }
-                    catch (IOException)
-                    {
-                        createdTempFile = file;
-                        break;
-                    }
-                }
-                createdTempFile ??= newFiles.FirstOrDefault();
+                partialExistedDuringDownload = File.Exists(partialPath);
             }));
 
         var svc = new ModInstallService(instMgrMock.Object, modrinthMock.Object, Options.Create(TestOptions), NullLogger<ModInstallService>.Instance);
@@ -414,14 +417,13 @@ public sealed class ModNetworkAndDependencyTests : IDisposable
 
         await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*SHA512 mismatch*");
 
-        // Xác nhận file tạm do chính lượt tải này tạo ra đã được dọn sạch khỏi temp path và file đích KHÔNG còn trên đĩa
-        createdTempFile.Should().NotBeNull();
-        File.Exists(createdTempFile!).Should().BeFalse();
+        partialExistedDuringDownload.Should().BeTrue("File .partial phải được tạo ra trong cùng thư mục mods khi tải");
+        File.Exists(partialPath).Should().BeFalse("File .partial phải được dọn dẹp sạch khi sai hash");
         File.Exists(Path.Combine(modsDir, "bad.jar")).Should().BeFalse();
     }
 
     [Fact]
-    public async Task DL_CancelledDownload_CleansUpTempFileImmediately()
+    public async Task DL_CancelledDownload_CleansUpPartialFile()
     {
         var instancePath = Path.Combine(_tempDir, "inst-dl-cancel");
         var modsDir = Path.Combine(instancePath, "mods");
@@ -443,16 +445,15 @@ public sealed class ModNetworkAndDependencyTests : IDisposable
             Dependencies = []
         };
 
-        string? createdTempFile = null;
-        var initialTempFiles = Directory.GetFiles(Path.GetTempPath(), "vazer-*.tmp");
+        var partialPath = Path.Combine(modsDir, "cancel.jar.partial");
+        bool partialExistedBeforeCancel = false;
         var cts = new CancellationTokenSource();
         modrinthMock.Setup(m => m.GetProjectAsync("cancel-mod", It.IsAny<CancellationToken>())).ReturnsAsync(proj);
         modrinthMock.Setup(m => m.GetVersionsAsync("cancel-mod", "fabric", "1.21.1", It.IsAny<CancellationToken>())).ReturnsAsync([ver]);
         modrinthMock.Setup(m => m.DownloadAsync(ver.Files[0].Url, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CancellingStream(cts, () =>
             {
-                var current = Directory.GetFiles(Path.GetTempPath(), "vazer-*.tmp");
-                createdTempFile = current.Except(initialTempFiles).FirstOrDefault();
+                partialExistedBeforeCancel = File.Exists(partialPath);
             }));
 
         var svc = new ModInstallService(instMgrMock.Object, modrinthMock.Object, Options.Create(TestOptions), NullLogger<ModInstallService>.Instance);
@@ -460,9 +461,78 @@ public sealed class ModNetworkAndDependencyTests : IDisposable
 
         await act.Should().ThrowAsync<OperationCanceledException>();
 
-        createdTempFile.Should().NotBeNull();
-        File.Exists(createdTempFile!).Should().BeFalse();
+        partialExistedBeforeCancel.Should().BeTrue("File .partial phải được tạo ra trước khi hủy");
+        File.Exists(partialPath).Should().BeFalse("File .partial phải được dọn dẹp sạch khi hủy");
         File.Exists(Path.Combine(modsDir, "cancel.jar")).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task DL_NetworkDisconnect_CleansUpPartialFile()
+    {
+        var instancePath = Path.Combine(_tempDir, "inst-dl-disconnect");
+        var modsDir = Path.Combine(instancePath, "mods");
+        Directory.CreateDirectory(modsDir);
+
+        var instMgrMock = new Mock<IInstanceManager>();
+        instMgrMock.Setup(m => m.GetAsync("inst-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MinecraftInstance { Id = "inst-1", Name = "Test", Path = instancePath, LoaderType = "fabric", MinecraftVersion = "1.21.1", CreatedAt = DateTimeOffset.UtcNow });
+
+        var modrinthMock = new Mock<IModrinthClient>();
+        var proj = new ModrinthProject { Id = "pDisc", Slug = "disc-mod", Title = "Disc Mod", ProjectType = "mod" };
+        var ver = new ProjectVersion
+        {
+            Id = "vDisc",
+            ProjectId = "pDisc",
+            VersionType = "release",
+            DatePublished = DateTimeOffset.UtcNow,
+            Files = [new VersionFile { Url = "https://cdn.modrinth.com/disc.jar", Filename = "disc.jar", Primary = true }],
+            Dependencies = []
+        };
+
+        var partialPath = Path.Combine(modsDir, "disc.jar.partial");
+        bool partialExistedBeforeThrow = false;
+        modrinthMock.Setup(m => m.GetProjectAsync("disc-mod", It.IsAny<CancellationToken>())).ReturnsAsync(proj);
+        modrinthMock.Setup(m => m.GetVersionsAsync("disc-mod", "fabric", "1.21.1", It.IsAny<CancellationToken>())).ReturnsAsync([ver]);
+        modrinthMock.Setup(m => m.DownloadAsync(ver.Files[0].Url, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ThrowingNetworkStream(() =>
+            {
+                partialExistedBeforeThrow = File.Exists(partialPath);
+            }));
+
+        var svc = new ModInstallService(instMgrMock.Object, modrinthMock.Object, Options.Create(TestOptions), NullLogger<ModInstallService>.Instance);
+        var act = () => svc.InstallFromModrinthAsync("inst-1", "disc-mod");
+
+        await act.Should().ThrowAsync<HttpRequestException>();
+
+        partialExistedBeforeThrow.Should().BeTrue("File .partial phải được tạo ra trong quá trình truyền dữ liệu");
+        File.Exists(partialPath).Should().BeFalse("File .partial phải được dọn dẹp sạch khi mất mạng");
+        File.Exists(Path.Combine(modsDir, "disc.jar")).Should().BeFalse();
+    }
+
+    [Fact]
+    public void DL_CleanOrphanPartials_DeletesAllPartialFilesInModsDir()
+    {
+        var modsDir = Path.Combine(_tempDir, "inst-orphan-cleanup", "mods");
+        Directory.CreateDirectory(modsDir);
+
+        // Mô phỏng ứng dụng bị crash / tắt đột ngột để lại các file .partial mồ côi
+        var orphan1 = Path.Combine(modsDir, "crashed-mod-1.jar.partial");
+        var orphan2 = Path.Combine(modsDir, "crashed-mod-2.jar.partial");
+        var legitimateJar = Path.Combine(modsDir, "good-mod.jar");
+        var legitimateDisabled = Path.Combine(modsDir, "disabled-mod.jar.disabled");
+
+        File.WriteAllText(orphan1, "incomplete data 1");
+        File.WriteAllText(orphan2, "incomplete data 2");
+        File.WriteAllText(legitimateJar, "valid jar");
+        File.WriteAllText(legitimateDisabled, "valid disabled");
+
+        // Gọi dọn dẹp file .partial mồ côi
+        ModInstallService.CleanOrphanPartials(modsDir);
+
+        File.Exists(orphan1).Should().BeFalse("File .partial mồ côi 1 phải bị xóa");
+        File.Exists(orphan2).Should().BeFalse("File .partial mồ côi 2 phải bị xóa");
+        File.Exists(legitimateJar).Should().BeTrue("File .jar hợp lệ phải được giữ nguyên");
+        File.Exists(legitimateDisabled).Should().BeTrue("File .disabled hợp lệ phải được giữ nguyên");
     }
 
     [Fact]
@@ -693,5 +763,36 @@ public sealed class ModNetworkAndDependencyTests : IDisposable
             await _inner.DisposeAsync();
             await base.DisposeAsync();
         }
+    }
+
+    private sealed class ThrowingNetworkStream : Stream
+    {
+        private readonly Action? _onBeforeThrow;
+        public ThrowingNetworkStream(Action? onBeforeThrow = null) => _onBeforeThrow = onBeforeThrow;
+
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => 1024;
+        public override long Position { get => 0; set => throw new NotSupportedException(); }
+        public override void Flush() { }
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            _onBeforeThrow?.Invoke();
+            throw new HttpRequestException("Network connection lost mid-flight.");
+        }
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            _onBeforeThrow?.Invoke();
+            throw new HttpRequestException("Network connection lost mid-flight.");
+        }
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            _onBeforeThrow?.Invoke();
+            throw new HttpRequestException("Network connection lost mid-flight.");
+        }
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 }

@@ -143,6 +143,7 @@ public class ModInstallService : IModInstallService
 
         var modsDir = Path.Combine(instance.Path, "mods");
         Directory.CreateDirectory(modsDir);
+        CleanOrphanPartials(modsDir);
 
         var existingMod = manifest.Mods.FirstOrDefault(m =>
             string.Equals(m.ProjectId, project.Id, StringComparison.OrdinalIgnoreCase) ||
@@ -171,7 +172,7 @@ public class ModInstallService : IModInstallService
         }
 
         string targetFilename = isEnabled ? candidate : candidate + ".disabled";
-        var tempFilePath = Path.Combine(Path.GetTempPath(), $"vazer-{Guid.NewGuid():N}.tmp");
+        var partialPath = Path.Combine(modsDir, targetFilename + ".partial");
         var finalPath = Path.Combine(modsDir, targetFilename);
 
         string? sha512Hex = null;
@@ -181,7 +182,7 @@ public class ModInstallService : IModInstallService
             {
                 await _fileDownloader.CopyStreamAsync(
                     downloadStream,
-                    tempFilePath,
+                    partialPath,
                     file.Size > 0 ? file.Size : null,
                     $"Downloading {file.Filename}",
                     progress,
@@ -190,7 +191,7 @@ public class ModInstallService : IModInstallService
 
             if (!string.IsNullOrWhiteSpace(file.Hashes?.Sha512))
             {
-                sha512Hex = await ComputeSha512HexAsync(tempFilePath, ct);
+                sha512Hex = await ComputeSha512HexAsync(partialPath, ct);
                 if (!string.Equals(sha512Hex, file.Hashes.Sha512.Trim(), StringComparison.OrdinalIgnoreCase))
                 {
                     throw new InvalidOperationException($"SHA512 mismatch for {file.Filename}");
@@ -233,13 +234,13 @@ public class ModInstallService : IModInstallService
                 }
             }
 
-            File.Move(tempFilePath, finalPath, overwrite: true);
+            File.Move(partialPath, finalPath, overwrite: true);
         }
         finally
         {
-            if (File.Exists(tempFilePath))
+            if (File.Exists(partialPath))
             {
-                try { File.Delete(tempFilePath); } catch { /* ignore */ }
+                try { File.Delete(partialPath); } catch { /* ignore */ }
             }
         }
 
@@ -311,7 +312,28 @@ public class ModInstallService : IModInstallService
             ?? throw new InvalidOperationException($"Instance not found: {instanceId}");
 
         var manifest = await ReadManifestAsync(instance.Path, ct);
+
+        var modsDir = Path.Combine(instance.Path, "mods");
+        CleanOrphanPartials(modsDir);
+
         return manifest.Mods.AsReadOnly();
+    }
+
+    /// <summary>
+    /// Xóa các tệp .partial mồ côi (do tải dở, mất điện, app tắt giữa chừng).
+    /// </summary>
+    public static void CleanOrphanPartials(string modsDir)
+    {
+        try
+        {
+            if (!Directory.Exists(modsDir)) return;
+            var partials = Directory.GetFiles(modsDir, "*.partial");
+            foreach (var p in partials)
+            {
+                try { File.Delete(p); } catch { /* ignore */ }
+            }
+        }
+        catch { /* ignore */ }
     }
 
     public async Task SetEnabledAsync(string instanceId, string fileName, bool enabled, CancellationToken ct = default)

@@ -184,7 +184,7 @@
             <Button
                 Content="Load more"
                 Command="{x:Bind ViewModel.LoadMoreCommand}"
-                Visibility="{x:Bind ViewModel.HasResults, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
+                Visibility="{x:Bind ViewModel.HasMoreResults, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
             <ProgressRing
                 Width="20" Height="20"
                 IsActive="{x:Bind ViewModel.IsLoadingMore, Mode=OneWay}" />

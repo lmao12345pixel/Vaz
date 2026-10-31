@@ -73,13 +73,14 @@ public sealed partial class ModBrowserViewModel : ObservableObject
     [ObservableProperty] private string statusMessage = string.Empty;
     [ObservableProperty] private int progressPercent;
     [ObservableProperty] private bool hasResults;
+    [ObservableProperty] private bool hasMoreResults;
     [ObservableProperty] private bool canInstallPerformancePack = true;
     [ObservableProperty] private bool hasWarning;
     [ObservableProperty] private string warningMessage = string.Empty;
     [ObservableProperty] private bool includeDependencies = true;
 
     public bool IsNotBusy => !IsBusy;
-    public bool CanLoadMore => !IsBusy && !IsLoadingMore;
+    public bool CanLoadMore => !IsBusy && !IsLoadingMore && HasMoreResults;
     public bool ShowEmptyState => !IsBusy && !HasError && !HasResults;
 
     partial void OnSearchTextChanged(string value) => OnSearchTextChangedDebounced();
@@ -230,17 +231,27 @@ public sealed partial class ModBrowserViewModel : ObservableObject
                     return;
                 }
 
+                var modsDir = Path.Combine(inst.Path, "mods");
                 foreach (var m in installedMods)
                 {
-                    if (!string.IsNullOrEmpty(m.ProjectId)) installedIds.Add(m.ProjectId);
-                    var s = ModCatalogData.GetSlug(m.FileName, m.ProjectId);
-                    if (!string.IsNullOrEmpty(s)) installedIds.Add(s);
+                    // Chỉ coi là đã cài nếu file mod thực sự tồn tại trong thư mục mods
+                    var filePath = Path.Combine(modsDir, m.FileName);
+                    if (!File.Exists(filePath) && !File.Exists(filePath + ".disabled"))
+                    {
+                        continue;
+                    }
+
+                    if (!string.IsNullOrEmpty(m.ProjectId))
+                    {
+                        installedIds.Add(m.ProjectId);
+                    }
                 }
             }
 
             if (reset)
             {
                 Results.Clear();
+                HasMoreResults = false;
             }
 
             foreach (var hit in result.Hits)
@@ -251,6 +262,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
 
             _offset = query.Offset + result.Hits.Length;
             HasResults = Results.Count > 0;
+            HasMoreResults = Results.Count > 0 && Results.Count < result.TotalHits;
             StatusMessage = Results.Count == 0
                 ? (isBrowseMode ? "Không có mod nào phù hợp bộ lọc." : "Không tìm thấy kết quả. Thử từ khóa tiếng Anh (ví dụ: sodium, iris, fabric)...")
                 : $"{Results.Count} / {result.TotalHits} kết quả";
