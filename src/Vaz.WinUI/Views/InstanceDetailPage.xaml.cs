@@ -448,11 +448,15 @@ public sealed partial class InstanceDetailPage : Page
 
     private void ModCard_Tapped(object sender, Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
     {
+        // Bỏ qua sự kiện Tap nếu nguồn xuất phát từ một nút bấm hoặc ToggleSwitch
+        // (MC-LD-03: gạt toggle không được mở Inspector).
         var cur = e.OriginalSource as Microsoft.UI.Xaml.DependencyObject;
         while (cur != null && !ReferenceEquals(cur, sender))
         {
-            if (cur is Microsoft.UI.Xaml.Controls.Primitives.ButtonBase)
+            if (cur is Microsoft.UI.Xaml.Controls.Primitives.ButtonBase ||
+                cur is Microsoft.UI.Xaml.Controls.ToggleSwitch)
             {
+                e.Handled = true;
                 return;
             }
             cur = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(cur);
@@ -580,12 +584,14 @@ public sealed partial class InstanceDetailPage : Page
 
     private void PackCard_Tapped(object sender, Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
     {
-        // Bỏ qua sự kiện Tap nếu nguồn xuất phát từ một nút bấm (Button, Toggle, ...)
+        // Bỏ qua sự kiện Tap nếu nguồn xuất phát từ một nút bấm hoặc ToggleSwitch (Button, Toggle, ...)
         var cur = e.OriginalSource as Microsoft.UI.Xaml.DependencyObject;
         while (cur != null && !ReferenceEquals(cur, sender))
         {
-            if (cur is Microsoft.UI.Xaml.Controls.Primitives.ButtonBase)
+            if (cur is Microsoft.UI.Xaml.Controls.Primitives.ButtonBase ||
+                cur is Microsoft.UI.Xaml.Controls.ToggleSwitch)
             {
+                e.Handled = true;
                 return;
             }
             cur = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(cur);
