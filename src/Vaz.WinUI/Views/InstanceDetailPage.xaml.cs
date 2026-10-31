@@ -205,9 +205,17 @@ public sealed partial class InstanceDetailPage : Page
         var file = await picker.PickSingleFileAsync();
         if (file == null) return;
 
+        await ShowMrpackInstallConfirmAsync(file.Path);
+    }
+
+    /// <summary>
+    /// Luồng dùng chung (picker + drag-drop MC-SM-03): inspect .mrpack, confirm, import.
+    /// </summary>
+    private async Task ShowMrpackInstallConfirmAsync(string mrpackPath)
+    {
         try
         {
-            var preview = await ViewModel.InspectMrpackAsync(file.Path);
+            var preview = await ViewModel.InspectMrpackAsync(mrpackPath);
 
             var dialog = new ContentDialog
             {
@@ -230,7 +238,7 @@ public sealed partial class InstanceDetailPage : Page
             var result = await dialog.ShowAsync();
             if (result == ContentDialogResult.Primary)
             {
-                await ViewModel.ImportMrpackCommand.ExecuteAsync((file.Path, preview.Name));
+                await ViewModel.ImportMrpackCommand.ExecuteAsync((mrpackPath, preview.Name));
             }
         }
         catch (Exception ex)
@@ -521,7 +529,7 @@ public sealed partial class InstanceDetailPage : Page
     private void ModsGrid_DragOver(object sender, DragEventArgs e)
     {
         e.AcceptedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
-        e.DragUIOverride.Caption = "Thêm .jar vào mods";
+        e.DragUIOverride.Caption = "Kéo thả .jar hoặc .mrpack để cài";
         e.DragUIOverride.IsCaptionVisible = true;
         e.DragUIOverride.IsContentVisible = true;
     }
@@ -531,8 +539,21 @@ public sealed partial class InstanceDetailPage : Page
         if (e.DataView.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems))
         {
             var items = await e.DataView.GetStorageItemsAsync();
-            var paths = items
+            var files = items
                 .OfType<Windows.Storage.IStorageFile>()
+                .ToList();
+
+            // MC-SM-03: Ưu tiên .mrpack — gọi luồng import modpack thay vì import .jar.
+            var mrpack = files.FirstOrDefault(f =>
+                f.FileType.Equals(".mrpack", StringComparison.OrdinalIgnoreCase));
+            if (mrpack != null)
+            {
+                await ShowMrpackInstallConfirmAsync(mrpack.Path);
+                e.Handled = true;
+                return;
+            }
+
+            var paths = files
                 .Where(f => f.FileType.Equals(".jar", StringComparison.OrdinalIgnoreCase))
                 .Select(f => f.Path)
                 .ToList();
@@ -540,6 +561,7 @@ public sealed partial class InstanceDetailPage : Page
             if (paths.Count > 0)
             {
                 await ViewModel.ImportJarFilesAsync(paths);
+                e.Handled = true;
             }
         }
     }

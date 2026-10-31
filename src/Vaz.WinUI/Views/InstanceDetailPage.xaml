@@ -224,7 +224,9 @@
                                     <Border Width="1" Height="24" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="4,0" VerticalAlignment="Center" />
 
                                     <!-- Nhóm 2: Installers -->
-                                    <Button Click="InstallMrpack_Click">
+                                    <Button
+                                        Click="InstallMrpack_Click"
+                                        ToolTipService.ToolTip="Chọn file .mrpack hoặc kéo thả file .mrpack vào tab Mods để cài modpack">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <SymbolIcon Symbol="Import" />
                                             <TextBlock Text="Install .mrpack" />
