@@ -372,7 +372,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
                             foreach (var r in list)
                             {
                                 var otherFiles = string.Join(", ", list.Where(x => x != r).Select(x => x.FileName));
-                                var warn = $"Trùng mod id '{group.Key}' với file '{otherFiles}'. Hậu quả: Loader sẽ crash khi khởi động do DuplicateModException (game sẽ không chạy).";
+                                var warn = $"Trùng mod id '{group.Key}' với file '{otherFiles}'. Hậu quả: Loader sẽ crash khi khởi động do DuplicateModException (game có thể không chạy).";
                                 r.LoadWarning = string.IsNullOrEmpty(r.LoadWarning) ? warn : $"{r.LoadWarning} | {warn}";
                             }
                         }
