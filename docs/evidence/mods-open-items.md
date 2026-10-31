@@ -76,6 +76,7 @@
    - *Tái hiện*: Tạo bản sao trên instance tạm `rt-mods-test`, chứa 2 file `sodium-fabric-0.6.0+mc1.21.1.jar` và `sodium-fabric-0.8.13+mc1.21.1.jar`. App cảnh báo chính xác tại cả 2 độ phân giải (1025x533 và 960x530).
    - *Cập nhật thay thế*: Trong `ModInstallService.InstallFromModrinthInternalAsync`, bản mới được tải về `.partial` và kiểm tra SHA512 trước. Chỉ sau khi SHA512 khớp, app mới xóa các bản cũ (`existingMods`) và di chuyển file mới vào. Nếu tải lỗi hoặc hủy, bản cũ và manifest giữ nguyên vẹn. Unit test `InstallFromModrinthAsync_UpdateReplacesOldJar_DoesNotKeepBothSideBySide`, `InstallFromModrinthAsync_UpdateFailsOrCancels_PreservesOldJarAndManifest`, và `InstallFromModrinthAsync_UpdateSha512Mismatch_PreservesOldJarAndManifest` (đều PASS).
    - *Bằng chứng*: Ảnh chụp `docs/evidence/LD-06-duplicate-sodium-warning-1025x533.png` (1025x533 px, 96 DPI / 100% display scale) và `LD-06-duplicate-sodium-warning-960x530.png` (960x530 px, 96 DPI / 100% display scale).
+   - *Ghi chú HiDPI*: Mức hiển thị 96 DPI / 100% không đại diện cho HiDPI; kịch bản `MC-LD-06` (scale màn hình 125%/150%) vẫn giữ nguyên trạng thái `UNVERIFIED` cho đến khi kiểm thử trên màn hình thật.
 
 3. **Nguồn gốc file sodium-fabric-0.8.13 trong instance "test fabric"**:
    - **Không rõ nguồn gốc**. File `sodium-fabric-0.8.13+mc1.21.1.jar` trên đĩa có thời gian sửa đổi là 18/10/2026 10:16 PM, trước ngày repository được khởi tạo (23/10/2026). Không có bất kỳ lệnh, log hay commit nào trong lịch sử chứng minh việc tải file này.
