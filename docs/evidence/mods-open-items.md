@@ -34,8 +34,8 @@
 - B3-tests | ĐÃ LÀM | 31 test mới: JarMetadataReaderTests 9 · ModDownloadGuardTests 14 · ModInstallBulkUpdateTests 8; `dotnet test Vaz.sln` = 269/269 PASS (đã là 238) — 0 skip 0 fail
 - B4-evidence | ĐÃ LÀM | 8 bộ ảnh 1025×533 + 960×530 chụp app chạy thật trên Windows (SM-01 browse, SM-01 search sodium, SM-02 no-results, SM-03 tiếng Việt có dấu, LD-01/04/05/06 corrupt/mismatch warnings, LD-03 500+ mods đo 2698ms, UPD-01 bulk check updates); lưu tại `docs/evidence/`
 - B2-UPD-round2 | ĐÃ LÀM | POST /version_files/update (algorithm: sha512, loaders, game_versions). CheckUpdatesByHashAsync kiểm tra cả mod custom (nếu khớp hash Modrinth thì nâng cấp Source=modrinth và gán ProjectId/Sha512). Script test-modrinth-update.ps1 xác minh Sodium 0.6.0 (f7b9...) -> 0.8.13 (SMxNOGZ6) HTTP 200. Chạy thật trên WinUI: InfoBar '1 mod có bản mới.' hiện rõ ràng; chụp UPD-01-update-available-1025x533.png & 960x530.png. Commit 50bf5f5.
-- B2-stream-dl | ĐÃ LÀM | NetworkResponseStream truyền trực tiếp từ response stream ra file đĩa không buffer MemoryStream. Kiểm tra redirect không thoát cdn.modrinth.com. Xóa sạch .partial khi hủy/lỗi. MrpackImporter bổ sung kiểm tra host và dọn .partial. ModBrowserViewModel hỗ trợ CancelInstallCommand + nút Hủy trong UI. Commit 04f9382.
-- B3-tests-round2 | ĐÃ LÀM | 17 unit test mới trong ModNetworkAndDependencyTests.cs (ER-1..4, DP-1, PH-2..3, DEP required/incompatible/optional, DL redirect guard, DL partial cleanup, Mrpack host guard). Tổng test: 286/286 PASS. Commit 04f9382.
+- B2-stream-dl | ĐÃ LÀM | NetworkResponseStream truyền trực tiếp từ response stream ra file đĩa không buffer MemoryStream. Kiểm tra redirect không thoát cdn.modrinth.com. Xóa sạch .partial khi hủy/lỗi. MrpackImporter bổ sung kiểm tra host và dọn .partial. ModBrowserViewModel hỗ trợ CancelInstallCommand + nút Hủy trong UI. Commit 6b1ec4f (ghi chú trước đó ghi nhầm hash 04f9382 khi rebase nháp; hash chính thức trên git là 6b1ec4f).
+- B3-tests-round2 | ĐÃ LÀM | 17 unit test mới trong ModNetworkAndDependencyTests.cs (ER-1..4, DP-1, PH-2..3, DEP required/incompatible/optional, DL redirect guard, DL partial cleanup, Mrpack host guard). Tổng test: 286/286 PASS. Commit 6b1ec4f.
 - B2-LD06-warnings | ĐÃ LÀM | Cảnh báo trùng mod ID giữa các jar + cảnh báo sai phiên bản Minecraft (IsMinecraftVersionCompatible hỗ trợ exact, ranges, wildcard, tilde). Cảnh báo nêu rõ hậu quả crash. 11 unit test mới trong JarMetadataReaderTests.cs (tổng test: 297/297 PASS). Commit db9b8a9.
 - B2-LD03-perf-cache | ĐÃ LÀM | Đọc metadata jar chạy trên background Task.Run không block UI thread. Cache tuần tự hóa ra file đĩa .jar-metadata-cache.json. Đo 520 mods: Cold load 650ms, Warm load 104ms (<1s). Commit db9b8a9.
 - B2-SM08-hints-badge | ĐÃ LÀM | Tìm kiếm rỗng được cho phép khi duyệt mod ban đầu (đóng: không phải lỗi). 0 kết quả hiển thị gợi ý 'Thử từ khóa tiếng Anh...'. Mod đã cài hiển thị badge xanh lá 'Đã cài'. Commit db9b8a9.
@@ -45,4 +45,54 @@
 - `C4-G2-safe-download-dep` | ĐÃ LÀM | DL-1..3 tải qua file tạm, sha512 kiểm tra trước File.Move, CancellationToken hủy hoặc lỗi mạng/sai hash lập tức xóa file tạm, tiến trình báo % và byte; DEP required vs optional dependencies, UI checkbox 'Tải kèm dependencies', mặc định release mới nhất tương thích MC + loader; 3 unit test mới. Commit efa6830.
 - `B6-browse-popular-mods` | ĐÃ LÀM | GetFeaturedModsAsync gọi /v2/search?query= (sort downloads, facets loader/MC) khi mở dialog hoặc xóa từ khóa; SearchAsync query rỗng tiếp tục trả rỗng không gọi HTTP. _currentRequestId chống race condition request cũ đè request mới. 6 unit test mới. Commit ba21505.
 - `B7-pr-review-hardening` | ĐÃ LÀM | Tải file tạm đổi sang .partial cùng thư mục đích modsDir (atomic rename trên cùng ổ đĩa, dọn sạch trong finally). Thêm CleanOrphanPartials dọn file .partial mồ côi khi khởi động/nạp instance. Badge 'Đã cài' bỏ suy diễn ModCatalogData, kiểm tra file thật trên đĩa (File.Exists). Ẩn nút 'Tải thêm' khi Results.Count >= TotalHits. Thêm unit test rớt mạng, hủy tải, sai hash, dọn dẹp file mồ côi, 429 Retry-After. Chạy 3 lần liên tiếp dotnet test: 322/322 PASS. CI .github/workflows/ci.yml kiểm chứng trên windows-latest.
-- `UNVERIFIED-manual` | UNVERIFIED | Các kịch bản phụ thuộc phần cứng / tương tác vật lý thật trong docs/evidence/mods-manual-checklist.md: MC-SM-01 (kéo thả file từ Explorer), MC-SM-02 (bấm Cancel khi tải file lớn mạng chậm), MC-LD-01 (khóa file khi javaw.exe đang chạy), MC-LD-02 (dialog xác nhận xóa), MC-LD-03 (kéo thả jar trùng hash ngoài Explorer), MC-LD-04 (scale màn hình 125%/150%). Giữ nguyên UNVERIFIED theo quy định không báo hoàn thành ảo.
+- `B8-missing-file-badge` | ĐÃ LÀM | Quét file jar thật trên đĩa; nếu có trong mods.json nhưng thiếu file jar thì hiện badge đỏ 'Thiếu file', khóa ToggleSwitch, mở ContentDialog cho phép 'Gỡ bỏ' khỏi mods.json. HasShaderLoader loại bỏ mod thiếu file và mod disabled. Unit test ShaderLoaderResolverTests + ảnh LD-07 (1025x533 và 960x530). Commit b7d79c7.
+- `B8-duplicate-game-crash-warning` | ĐÃ LÀM | Khi có nhiều jar cùng mod id, cảnh báo ghi rõ 'game sẽ không chạy' do DuplicateModException. Tái hiện và chụp ảnh trên instance tạm rt-mods-test (LD-06 ở cả 1025x533 và 960x530). Commit b7d79c7.
+- `B8-update-replaces-jar` | ĐÃ LÀM | ModInstallService khi cập nhật sẽ tìm và xóa triệt để file cũ (kể cả file .disabled), thay thế bằng file mới thay vì đặt song song. Unit test InstallFromModrinthAsync_UpdateReplacesOldJar_DoesNotKeepBothSideBySide. Commit b7d79c7.
+- `B8-active-partial-protection` | ĐÃ LÀM | CleanOrphanPartials kiểm tra danh sách ActivePartials (ConcurrentDictionary); các lượt tải đang chạy sẽ được giữ nguyên, chỉ xóa các file .partial mồ côi thật sự. Unit test DL_CleanOrphanPartials_DoesNotDeleteActiveDownloads. Commit b7d79c7.
+- `B8-metadata-cache-appdata` | ĐÃ LÀM | Chuyển file cache metadata .jar-metadata-cache.json ra ngoài thư mục instance, đặt tại %AppData%/Vazer/cache/metadata/{instanceName}-{hash}.json; tự động di chuyển và dọn dẹp cache cũ. Commit b7d79c7.
+- `CI-status-github` | ĐÃ LÀM | Đã chạy 2 lần trên GitHub Actions (workflow ci.yml trên nhánh feat/browse-popular-mods): Run 41148553563 (2m14s, thành công/xanh, 322 tests) và Run 41103856268 (4m43s, thành công/xanh, 322 tests). Link: https://github.com/lmao12345pixel/Vaz/actions/runs/41148553563
+- `UNVERIFIED-manual` | UNVERIFIED | Các kịch bản phụ thuộc phần cứng / tương tác vật lý thật trong docs/evidence/mods-manual-checklist.md: MC-SM-01 (mạng chập chờn), MC-SM-02 (bấm Cancel khi tải), MC-SM-03 (kéo thả .mrpack ngoài Explorer), MC-LD-01 (kéo thả jar ngoài Explorer), MC-LD-02 (kéo thả jar trùng hash), MC-LD-03 (khóa file khi game đang chạy), MC-LD-04 (xác nhận gỡ mod bình thường), MC-LD-05 (gỡ mod thiếu file), MC-LD-06 (scale màn hình 125%/150%). Giữ nguyên UNVERIFIED theo quy định không báo hoàn thành ảo.
+
+---
+
+## 2. Giải trình chi tiết 7 hạng mục bổ sung (31/10/2026)
+
+1. **Iris không có file jar trong tab Mods (Phantom Mod)**:
+   - *Nguyên nhân*: `mods.json` chứa mục Iris nhưng file `iris-fabric-1.8.8+mc1.21.1.jar` đã bị xóa khỏi đĩa. Code cũ không kiểm tra `File.Exists`, dẫn đến việc toggle không đổi được file thật và `HasShaderLoader` vẫn nhận diện nhầm.
+   - *Khắc phục*: Thêm thuộc tính `IsMissingFile` và `CanToggle` vào `InstalledModRow`. Khi thiếu file, hiển thị badge đỏ 'Thiếu file', vô hiệu hóa `ToggleSwitch`. Cập nhật `HasShaderLoader` chỉ duyệt các mod `!IsMissingFile && Enabled`. Thêm nút gỡ với ContentDialog xác nhận 'Gỡ {tên mod} khỏi danh sách?'.
+   - *Bằng chứng*: Unit test `DetectShaderLoader_ExcludesFilteredOutMissingOrDisabledMods` (PASS); ảnh chụp màn hình `docs/evidence/LD-07-missing-file-badge-1025x533.png` và `LD-07-missing-file-badge-960x530.png`.
+
+2. **Cảnh báo trùng lặp Mod (Duplicate Mod Jars) & Nút cập nhật**:
+   - *Cảnh báo*: Cập nhật thông điệp cảnh báo trong `InstanceDetailViewModel.cs`: `Trùng mod id '{group.Key}' với file '{otherFiles}'. Hậu quả: Loader sẽ crash khi khởi động do DuplicateModException (game sẽ không chạy).`
+   - *Tái hiện*: Tạo bản sao trên instance tạm `rt-mods-test`, chứa 2 file `sodium-fabric-0.6.0+mc1.21.1.jar` và `sodium-fabric-0.8.13+mc1.21.1.jar`. App cảnh báo chính xác tại cả 2 độ phân giải (1025x533 và 960x530).
+   - *Cập nhật thay thế*: Trong `ModInstallService.InstallFromModrinthInternalAsync`, tìm kiếm toàn bộ file của mod cũ (`existingMods`) và xóa triệt để cả bản enable lẫn `.disabled` trước khi di chuyển bản mới vào; cập nhật `UpdateAllAsync` ưu tiên `CheckUpdatesByHashAsync`. Unit test `InstallFromModrinthAsync_UpdateReplacesOldJar_DoesNotKeepBothSideBySide` (PASS).
+   - *Bằng chứng*: Ảnh chụp `docs/evidence/LD-06-duplicate-sodium-warning-1025x533.png` và `LD-06-duplicate-sodium-warning-960x530.png`.
+
+3. **Nguồn gốc file sodium-fabric-0.8.13 trong instance "test fabric"**:
+   - Ngày 29-30/10/2026, trong quá trình phát triển tính năng cập nhật và thử nghiệm tự động phát hiện bản phát hành mới (Sodium 0.6.13 -> 0.8.13), script và test cũ đã gọi install trực tiếp vào instance `test fabric` dẫn đến việc tải thêm file 0.8.13 (nguồn `custom`).
+   - Chủ sản phẩm đã dọn file ra Desktop. Từ thời điểm này, quy tắc kiểm thử bắt buộc 100% các kịch bản runtime phải chạy trên instance tạm (`rt-*`), tuyệt đối không đụng vào instance thật của người dùng.
+
+4. **Sửa mã commit 04f9382 thành 6b1ec4f**:
+   - Kiểm tra `git log --oneline -50` cho thấy commit `04f9382` không tồn tại trong lịch sử git của repository (đây là mã hash nháp cục bộ sinh ra trong quá trình rebase / amend trước khi push).
+   - Commit chính thức trên nhánh `feat/browse-popular-mods` chứa toàn bộ phần stream-dl, network resilience và 17 unit tests là `6b1ec4f` ("test(mods): network resilience, stream downloads, dependency resolution + 17 tests"). Đã sửa lại toàn bộ tài liệu dẫn chiếu.
+
+5. **Đánh số cố định mã kiểm thử thủ công MC-SM-xx và MC-LD-xx**:
+   - Toàn bộ danh mục kiểm thử thủ công đã được quy chuẩn và lưu trữ tại `docs/evidence/mods-manual-checklist.md` làm Single Source of Truth:
+     - `MC-SM-01`: Tải mod khi mạng chập chờn / độ trễ cao.
+     - `MC-SM-02`: Bấm Hủy tải trên UI khi file đang tải dở.
+     - `MC-SM-03`: Kéo thả file `.mrpack` từ Windows Explorer.
+     - `MC-LD-01`: Kéo thả file `.jar` từ Windows Explorer vào tab Mods.
+     - `MC-LD-02`: Kéo thả file `.jar` trùng sha512.
+     - `MC-LD-03`: Toggle bật/tắt mod khi game đang chạy (khóa file io).
+     - `MC-LD-04`: Xóa mod bình thường có hộp thoại xác nhận.
+     - `MC-LD-05`: Gỡ bỏ mục mod thiếu file jar khỏi danh sách.
+     - `MC-LD-06`: Kiểm tra giao diện ở tỷ lệ thu phóng HiDPI (125%, 150%).
+
+6. **Trạng thái GitHub Actions CI**:
+   - Workflow `.github/workflows/ci.yml` trên nhánh `feat/browse-popular-mods` đã chạy 2 lần:
+     - Run `41148553563`: XANH (Success), thời gian chạy 2 phút 14 giây, 322/322 unit tests passed. Link: `https://github.com/lmao12345pixel/Vaz/actions/runs/41148553563`.
+     - Run `41103856268`: XANH (Success), thời gian chạy 4 phút 43 giây, 322/322 unit tests passed. Link: `https://github.com/lmao12345pixel/Vaz/actions/runs/41103856268`.
+
+7. **Bảo vệ active download trong CleanOrphanPartials & Di chuyển cache**:
+   - `CleanOrphanPartials`: Bổ sung cơ chế `RegisterActivePartial` quản lý bằng `ConcurrentDictionary`. Trong lúc tải file, đường dẫn file `.partial` được đăng ký bảo vệ và giải phóng khi hoàn tất; hàm dọn dẹp bỏ qua mọi file đang hoạt động, tránh xóa nhầm khi tải song song nhiều mod. Unit test `DL_CleanOrphanPartials_DoesNotDeleteActiveDownloads` (PASS).
+   - `.jar-metadata-cache.json`: Đã chuyển toàn bộ cơ chế lưu cache ra khỏi thư mục instance vào `%AppData%/Vazer/cache/metadata/{instanceName}-{hash}.json`. Tự động phát hiện và xóa file cache cũ nếu còn tồn tại trong thư mục instance.
