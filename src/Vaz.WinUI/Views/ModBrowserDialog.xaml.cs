@@ -101,9 +101,13 @@ public sealed partial class ModBrowserDialog : ContentDialog
 
     private void FilterChip_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is Button btn && btn.DataContext is string category)
+        if (sender is Button btn)
         {
-            ViewModel.SelectCategory(category);
+            var category = btn.DataContext as string ?? btn.Content as string;
+            if (!string.IsNullOrEmpty(category))
+            {
+                ViewModel.SelectCategory(category);
+            }
         }
     }
 

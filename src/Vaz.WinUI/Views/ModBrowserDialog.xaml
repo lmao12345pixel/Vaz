@@ -90,7 +90,6 @@
                         <Button
                             Content="{x:Bind}"
                             Click="FilterChip_Click"
-                            DataContext="{x:Bind}"
                             CornerRadius="14"
                             Padding="12,4"
                             FontSize="12"

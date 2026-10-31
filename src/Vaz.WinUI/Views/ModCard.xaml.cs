@@ -15,7 +15,7 @@ public sealed partial class ModCard : UserControl
             nameof(Item),
             typeof(SearchHitRow),
             typeof(ModCard),
-            new PropertyMetadata(null));
+            new PropertyMetadata(null, (d, _) => ((ModCard)d).Bindings.Update()));
 
     public SearchHitRow? Item
     {
