@@ -2,25 +2,23 @@
 
 Tài liệu này liệt kê các kịch bản kiểm thử cần thao tác thủ công trên máy thật hoặc phần cứng thực tế (chưa thể tự động hóa 100% bằng script/Playwright/winarm). Người dùng hoặc QA tick `[x]` khi hoàn thành kiểm chứng.
 
+> **Đã chuyển sang Automated Tests (Loại khỏi Checklist Thủ Công)**:
+> - **Zip-Slip trong gói .mrpack**: Đã kiểm chứng tự động qua `Import_ZipSlipInFiles_ThrowsAndRollsBack` và `Import_ZipSlipInOverrides_ThrowsAndRollsBack` trong `MrpackImporterTests.cs`.
+> - **Lỗi 429 và Retry-After**: Đã kiểm chứng tự động qua `ER3_TooManyRequests_SurfacesRateLimit_WithRetryAfter` và `ER3_GetProject_429WithRetryAfter_ThrowsModrinthRateLimitException` trong `ModNetworkAndDependencyTests.cs`.
+> - **Mất mạng khi tải mod**: Đã kiểm chứng tự động qua `DL_NetworkDisconnect_CleansUpPartialFile` (dọn sạch file `.partial`) trong `ModNetworkAndDependencyTests.cs`.
+> - **Hủy tải mod**: Đã kiểm chứng tự động qua `DL_CancelledDownload_CleansUpPartialFile` trong `ModNetworkAndDependencyTests.cs`.
+
 ---
 
 ## 1. TÌM MOD (Modrinth Search & Browser)
 
 - [ ] **MC-SM-01: Drag and Drop jar file từ File Explorer**
   - **Cách thử**: Mở Windows Explorer, kéo 1 hoặc nhiều file `.jar` thả trực tiếp vào cửa sổ App tại tab Mods.
-  - **Kỳ vọng**: App nhận diện sự kiện Drop, hiển thị tiến trình sao chép, quét metadata và nạp vào danh sách mà không bị crash.
+  - **Kỳ vọng**: App nhận diện sự kiện Drop của hệ điều hành, hiển thị tiến trình sao chép, quét metadata và nạp vào danh sách mà không bị crash.
 
-- [ ] **MC-SM-02: Hủy tải mod giữa chừng (User Cancel)**
-  - **Cách thử**: Trong `ModBrowserDialog`, bấm "Cài" một mod có dung lượng lớn (ví dụ: Iris hoặc Physics Mod), ngay lập tức bấm nút "Hủy" bên cạnh ProgressBar.
-  - **Kỳ vọng**: Tải dừng ngay lập tức, thông báo "Đã hủy tải", file tạm `.partial` trong thư mục `mods/` bị xóa sạch hoàn toàn, không để lại rác trên đĩa.
-
-- [ ] **MC-SM-03: Rút dây mạng / Tắt Wi-Fi khi đang tải mod**
-  - **Cách thử**: Bấm "Cài" mod, ngắt kết nối Internet trong lúc thanh tiến trình đang chạy.
-  - **Kỳ vọng**: App hiển thị thông báo lỗi mạng rõ ràng trên InfoBar, không bị treo UI, file `.partial` được dọn dẹp sạch sẽ.
-
-- [ ] **MC-SM-04: Cài đặt gói .mrpack thực tế qua Picker**
-  - **Cách thử**: Bấm nút "Cài đặt Modpack (.mrpack)", chọn một file `.mrpack` tải từ Modrinth.
-  - **Kỳ vọng**: Quá trình giải nén, kiểm tra zip-slip, kiểm tra host cdn.modrinth.com, tải các mod phụ thuộc và ghi manifest `mods.json` hoạt động trơn tru.
+- [ ] **MC-SM-02: Bấm nút Hủy trên giao diện khi đang tải tệp mod lớn**
+  - **Cách thử**: Trong `ModBrowserDialog`, bấm "Cài" một mod có dung lượng lớn, bấm nút "Hủy" trên thanh tiến trình.
+  - **Kỳ vọng**: UI cập nhật ngay "Đã hủy tải", thanh tiến trình ẩn, file `.partial` trong thư mục `mods/` bị xóa sạch hoàn toàn.
 
 ---
 
@@ -34,8 +32,8 @@ Tài liệu này liệt kê các kịch bản kiểm thử cần thao tác thủ
   - **Cách thử**: Bấm icon Thùng rác (Xóa) tại một dòng mod trong danh sách.
   - **Kỳ vọng**: Hiển thị ContentDialog yêu cầu xác nhận xóa file jar khỏi đĩa; bấm "Xóa" thì file bị xóa và biến mất khỏi danh sách; bấm "Hủy" thì giữ nguyên.
 
-- [ ] **MC-LD-03: Kéo thả nhiều jar có mod trùng lặp**
-  - **Cách thử**: Kéo 2 file `.jar` có cùng nội dung (cùng hash sha512) vào thư mục mods hoặc qua UI.
+- [ ] **MC-LD-03: Kéo thả nhiều jar có mod trùng lặp từ File Explorer**
+  - **Cách thử**: Kéo 2 file `.jar` có cùng nội dung (cùng hash sha512) từ Windows Explorer vào cửa sổ ứng dụng.
   - **Kỳ vọng**: App chỉ import 1 file và thông báo đã bỏ qua file trùng lặp.
 
 - [ ] **MC-LD-04: Hiển thị mượt mà trên màn hình độ phân giải cao (HiDPI / Scaling 125%, 150%)**
