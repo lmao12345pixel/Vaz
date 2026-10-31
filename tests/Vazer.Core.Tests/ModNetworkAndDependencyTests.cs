@@ -709,6 +709,78 @@ public sealed class ModNetworkAndDependencyTests : IDisposable
     }
 
     [Fact]
+    public async Task InstallFromModrinthAsync_UpdateSha512Mismatch_PreservesOldJarAndManifest()
+    {
+        var instancePath = Path.Combine(_tempDir, "inst-update-sha512-mismatch");
+        var modsDir = Path.Combine(instancePath, "mods");
+        Directory.CreateDirectory(modsDir);
+
+        var instMgrMock = new Mock<IInstanceManager>();
+        instMgrMock.Setup(m => m.GetAsync("inst-update-sha", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MinecraftInstance { Id = "inst-update-sha", Name = "Test", Path = instancePath, LoaderType = "fabric", MinecraftVersion = "1.21.1", CreatedAt = DateTimeOffset.UtcNow });
+
+        // Tạo file cũ trên đĩa và trong manifest
+        var oldJarPath = Path.Combine(modsDir, "my-mod-1.0.jar");
+        await File.WriteAllTextAsync(oldJarPath, "old version 1.0 bytes - sha mismatch must preserve this");
+
+        var manifestPath = Path.Combine(instancePath, "mods.json");
+        var initialManifest = new ModsManifest
+        {
+            Mods =
+            [
+                new InstalledMod
+                {
+                    FileName = "my-mod-1.0.jar",
+                    ProjectId = "my-mod-proj",
+                    VersionId = "ver-1.0",
+                    Source = "modrinth",
+                    Enabled = true,
+                    InstalledAt = DateTimeOffset.UtcNow
+                }
+            ]
+        };
+        await File.WriteAllTextAsync(manifestPath, JsonSerializer.Serialize(initialManifest));
+
+        // Cấu hình Modrinth mock: sha512 khai báo không khớp với dữ liệu tải về
+        var downloadedContent = new byte[] { 1, 2, 3, 4, 5 };
+        var modrinthMock = new Mock<IModrinthClient>();
+        var proj = new ModrinthProject { Id = "my-mod-proj", Slug = "my-mod", Title = "My Mod", ProjectType = "mod" };
+        var verNew = new ProjectVersion
+        {
+            Id = "ver-2.0",
+            ProjectId = "my-mod-proj",
+            VersionType = "release",
+            DatePublished = DateTimeOffset.UtcNow,
+            Files = [new VersionFile { Url = "https://cdn.modrinth.com/my-mod-2.0.jar", Filename = "my-mod-2.0.jar", Primary = true, Hashes = new FileHashes { Sha512 = "expected-sha512-but-download-has-different-hash" } }],
+            Dependencies = []
+        };
+
+        modrinthMock.Setup(m => m.GetProjectAsync("my-mod-proj", It.IsAny<CancellationToken>())).ReturnsAsync(proj);
+        modrinthMock.Setup(m => m.GetVersionsAsync("my-mod-proj", "fabric", "1.21.1", It.IsAny<CancellationToken>())).ReturnsAsync([verNew]);
+        modrinthMock.Setup(m => m.GetVersionAsync("ver-2.0", It.IsAny<CancellationToken>())).ReturnsAsync(verNew);
+        modrinthMock.Setup(m => m.DownloadAsync(verNew.Files[0].Url, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MemoryStream(downloadedContent));
+
+        var svc = new ModInstallService(instMgrMock.Object, modrinthMock.Object, Options.Create(TestOptions), NullLogger<ModInstallService>.Instance);
+
+        // Act: Thử cập nhật nhưng bị sai hash SHA512
+        var act = () => svc.InstallFromModrinthAsync("inst-update-sha", "my-mod-proj", "ver-2.0");
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*SHA512 mismatch*");
+
+        // Assert: File cũ và manifest phải được giữ nguyên vẹn
+        File.Exists(oldJarPath).Should().BeTrue("File jar bản cũ phải còn nguyên khi SHA512 sai lệch");
+        (await File.ReadAllTextAsync(oldJarPath)).Should().Be("old version 1.0 bytes - sha mismatch must preserve this");
+        File.Exists(Path.Combine(modsDir, "my-mod-2.0.jar")).Should().BeFalse("File mới không được tạo khi sai hash");
+        File.Exists(Path.Combine(modsDir, "my-mod-2.0.jar.partial")).Should().BeFalse("File .partial phải bị dọn sạch");
+
+        var manifestAfterFail = JsonSerializer.Deserialize<ModsManifest>(await File.ReadAllTextAsync(manifestPath), VazJsonContext.Default.ModsManifest);
+        manifestAfterFail!.Mods.Should().HaveCount(1);
+        manifestAfterFail.Mods[0].FileName.Should().Be("my-mod-1.0.jar");
+        manifestAfterFail.Mods[0].VersionId.Should().Be("ver-1.0");
+    }
+
+    [Fact]
     public async Task DL_ProgressReports_BytesAndPercent()
     {
         var instancePath = Path.Combine(_tempDir, "inst-dl-progress");
