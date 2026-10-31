@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
@@ -29,8 +30,30 @@ public sealed partial class InstalledModRow : ObservableObject
     [ObservableProperty] private bool hasMissingDependencies;
     [ObservableProperty] private string missingDependenciesText = string.Empty;
     [ObservableProperty] private bool isMissingFile;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanToggle))]
+    [NotifyPropertyChangedFor(nameof(CanUninstall))]
+    [NotifyPropertyChangedFor(nameof(ToggleToolTip))]
+    [NotifyPropertyChangedFor(nameof(UninstallToolTip))]
+    private bool isGameRunning;
 
-    public bool CanToggle => !IsMissingFile;
+    public bool CanToggle => !IsMissingFile && !IsGameRunning;
+    public bool CanUninstall => !IsGameRunning;
+
+    public string? ToggleToolTip => IsGameRunning
+        ? "Không thể thao tác khi Minecraft đang chạy."
+        : (IsMissingFile ? "Không tìm thấy file jar trên đĩa" : null);
+
+    public string UninstallToolTip => IsGameRunning
+        ? "Không thể thao tác khi Minecraft đang chạy."
+        : "Gỡ cài đặt mod";
+
+    public void NotifyStateChanged()
+    {
+        OnPropertyChanged(nameof(Enabled));
+        OnPropertyChanged(nameof(CanToggle));
+    }
+
     public string? ModId { get; set; }
 
     public string FileName => Mod.FileName;
@@ -148,6 +171,22 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
     [ObservableProperty] private int updateCount;
     [ObservableProperty] private string launchStatus = string.Empty;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanManageMods))]
+    [NotifyPropertyChangedFor(nameof(GameRunningActionToolTip))]
+    [NotifyPropertyChangedFor(nameof(MrpackToolTip))]
+    private bool isGameRunning;
+
+    public bool CanManageMods => !IsGameRunning;
+
+    public string? GameRunningActionToolTip => IsGameRunning
+        ? "Không thể thao tác khi Minecraft đang chạy."
+        : null;
+
+    public string MrpackToolTip => IsGameRunning
+        ? "Không thể thao tác khi Minecraft đang chạy."
+        : (Current == null ? "Chọn một instance để cài modpack" : "Cài đặt file .mrpack trực tiếp vào instance này");
+
     [ObservableProperty] private GameOptions gameOptions = new();
     [ObservableProperty] private string rawOptionsText = string.Empty;
     [ObservableProperty] private bool isRawViewMode;
@@ -189,6 +228,46 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         _mainViewModel = mainViewModel;
         _gameOptionsService = gameOptionsService;
         _activeInstance.CurrentChanged += OnActiveInstanceChanged;
+        _mainViewModel.PropertyChanged += OnMainViewModelPropertyChanged;
+        UpdateGameRunningState();
+    }
+
+    private void OnMainViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainViewModel.IsRunning) ||
+            e.PropertyName == nameof(MainViewModel.RunningInstanceId))
+        {
+            var dispatcher = App.Dispatcher;
+            if (dispatcher != null && !dispatcher.HasThreadAccess)
+            {
+                dispatcher.TryEnqueue(UpdateGameRunningState);
+            }
+            else
+            {
+                UpdateGameRunningState();
+            }
+        }
+    }
+
+    public void UpdateGameRunningState()
+    {
+        var running = _mainViewModel.IsRunning &&
+                      (string.IsNullOrEmpty(_mainViewModel.RunningInstanceId) ||
+                       string.Equals(_mainViewModel.RunningInstanceId, Current?.Id, StringComparison.OrdinalIgnoreCase));
+
+        if (IsGameRunning != running)
+        {
+            IsGameRunning = running;
+            SyncModsGameRunningState();
+        }
+    }
+
+    private void SyncModsGameRunningState()
+    {
+        foreach (var row in Mods)
+        {
+            row.IsGameRunning = IsGameRunning;
+        }
     }
 
     private void OnActiveInstanceChanged(object? sender, EventArgs e)
@@ -214,6 +293,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
             HasError = false;
 
             Current = await _activeInstance.GetCurrentAsync();
+            UpdateGameRunningState();
             OnPropertyChanged(nameof(HasInstance));
             OnPropertyChanged(nameof(FolderPath));
             OnPropertyChanged(nameof(LoaderDisplay));
@@ -305,6 +385,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
                         {
                             Mod = mod,
                             Enabled = mod.Enabled,
+                            IsGameRunning = IsGameRunning,
                             Slug = slug,
                             DisplayName = proj?.Name ?? (string.IsNullOrEmpty(mod.ProjectId) ? mod.FileName : mod.ProjectId),
                             Author = proj?.Author ?? "Community",
@@ -495,6 +576,13 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
     public async Task SetModEnabledAsync(InstalledModRow row, bool enabled)
     {
         if (Current == null || row == null) return;
+        if (IsGameRunning)
+        {
+            HasError = true;
+            ErrorMessage = "Không thể thay đổi mod vì Minecraft đang chạy. Vui lòng tắt game trước khi thực hiện thao tác này.";
+            return;
+        }
+
         if (row.IsMissingFile)
         {
             StatusMessage = $"Không thể bật/tắt '{row.DisplayName}' vì không tìm thấy file jar trên đĩa.";
@@ -533,17 +621,22 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
                 UpdateInspectorDependencyState(row);
             }
         }
-        catch (Exception ex)
+        catch (IOException)
         {
             HasError = true;
-            ErrorMessage = ex.Message;
+            ErrorMessage = "Không thể thay đổi mod vì Minecraft đang chạy. Vui lòng tắt game trước khi thực hiện thao tác này.";
+        }
+        catch (Exception)
+        {
+            HasError = true;
+            ErrorMessage = "Đã xảy ra lỗi khi thay đổi trạng thái mod.";
         }
     }
 
     [RelayCommand]
     public async Task InstallPerformancePackAsync()
     {
-        if (Current == null) return;
+        if (Current == null || IsGameRunning) return;
 
         try
         {
@@ -584,6 +677,12 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
     public async Task UninstallAsync(InstalledModRow? row)
     {
         if (Current == null || row == null) return;
+        if (IsGameRunning)
+        {
+            HasError = true;
+            ErrorMessage = "Không thể gỡ mod vì Minecraft đang chạy. Vui lòng tắt game trước khi thực hiện thao tác này.";
+            return;
+        }
 
         try
         {
@@ -610,6 +709,11 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
             }
 
             StatusMessage = $"Đã gỡ {row.FileName}";
+        }
+        catch (IOException)
+        {
+            HasError = true;
+            ErrorMessage = "Không thể gỡ mod vì Minecraft đang chạy. Vui lòng tắt game trước khi thực hiện thao tác này.";
         }
         catch (Exception ex)
         {
@@ -842,7 +946,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
 
     public async Task ImportJarFilesAsync(IEnumerable<string> filePaths)
     {
-        if (Current == null) return;
+        if (Current == null || IsGameRunning) return;
 
         try
         {
@@ -1102,7 +1206,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
     [RelayCommand]
     public async Task CheckUpdatesAsync()
     {
-        if (Current == null) return;
+        if (Current == null || IsGameRunning) return;
 
         try
         {
@@ -1139,7 +1243,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
     [RelayCommand]
     public async Task UpdateAllAsync()
     {
-        if (Current == null) return;
+        if (Current == null || IsGameRunning) return;
 
         try
         {
@@ -1183,6 +1287,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
     [RelayCommand]
     public async Task ImportMrpackAsync((string Path, string Name) arg)
     {
+        if (IsGameRunning) return;
         try
         {
             IsBusy = true;

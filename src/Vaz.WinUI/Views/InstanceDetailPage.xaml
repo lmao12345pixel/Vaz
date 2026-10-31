@@ -195,25 +195,38 @@
                             <Grid Grid.Row="1" ColumnDefinitions="Auto,*" ColumnSpacing="12">
                                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
                                     <!-- Nhóm 1: Mod Management -->
-                                    <Button Command="{x:Bind ViewModel.CheckUpdatesCommand}">
+                                    <Button
+                                        Command="{x:Bind ViewModel.CheckUpdatesCommand}"
+                                        IsEnabled="{x:Bind ViewModel.CanManageMods, Mode=OneWay}"
+                                        ToolTipService.ToolTip="{x:Bind ViewModel.GameRunningActionToolTip, Mode=OneWay}">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <SymbolIcon Symbol="Sync" />
                                             <TextBlock Text="Check updates" />
                                         </StackPanel>
                                     </Button>
-                                    <Button Command="{x:Bind ViewModel.UpdateAllCommand}">
+                                    <Button
+                                        Command="{x:Bind ViewModel.UpdateAllCommand}"
+                                        IsEnabled="{x:Bind ViewModel.CanManageMods, Mode=OneWay}"
+                                        ToolTipService.ToolTip="{x:Bind ViewModel.GameRunningActionToolTip, Mode=OneWay}">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <SymbolIcon Symbol="Download" />
                                             <TextBlock Text="Update all" />
                                         </StackPanel>
                                     </Button>
-                                    <Button Click="DownloadMods_Click" Style="{StaticResource VazAccentButtonStyle}">
+                                    <Button
+                                        Click="DownloadMods_Click"
+                                        Style="{StaticResource VazAccentButtonStyle}"
+                                        IsEnabled="{x:Bind ViewModel.CanManageMods, Mode=OneWay}"
+                                        ToolTipService.ToolTip="{x:Bind ViewModel.GameRunningActionToolTip, Mode=OneWay}">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <SymbolIcon Symbol="Add" />
                                             <TextBlock Text="Download Mods" />
                                         </StackPanel>
                                     </Button>
-                                    <Button Click="ImportJar_Click">
+                                    <Button
+                                        Click="ImportJar_Click"
+                                        IsEnabled="{x:Bind ViewModel.CanManageMods, Mode=OneWay}"
+                                        ToolTipService.ToolTip="{x:Bind ViewModel.GameRunningActionToolTip, Mode=OneWay}">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <FontIcon Glyph="&#xE8B7;" FontSize="14" />
                                             <TextBlock Text="+ Thêm .jar" />
@@ -226,13 +239,17 @@
                                     <!-- Nhóm 2: Installers -->
                                     <Button
                                         Click="InstallMrpack_Click"
-                                        ToolTipService.ToolTip="Chọn file .mrpack hoặc kéo thả file .mrpack vào tab Mods để cài modpack">
+                                        IsEnabled="{x:Bind ViewModel.CanManageMods, Mode=OneWay}"
+                                        ToolTipService.ToolTip="{x:Bind ViewModel.MrpackToolTip, Mode=OneWay}">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <SymbolIcon Symbol="Import" />
                                             <TextBlock Text="Install .mrpack" />
                                         </StackPanel>
                                     </Button>
-                                    <Button Click="InstallOptifine_Click">
+                                    <Button
+                                        Click="InstallOptifine_Click"
+                                        IsEnabled="{x:Bind ViewModel.CanManageMods, Mode=OneWay}"
+                                        ToolTipService.ToolTip="{x:Bind ViewModel.GameRunningActionToolTip, Mode=OneWay}">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <SymbolIcon Symbol="Setting" />
                                             <TextBlock Text="Install OptiFine" />
@@ -463,6 +480,7 @@
                                                     Grid.Column="3"
                                                     IsOn="{x:Bind Enabled, Mode=OneWay}"
                                                     IsEnabled="{x:Bind CanToggle, Mode=OneWay}"
+                                                    ToolTipService.ToolTip="{x:Bind ToggleToolTip, Mode=OneWay}"
                                                     Toggled="ModEnabled_Toggled"
                                                     OffContent=""
                                                     OnContent=""
@@ -474,12 +492,13 @@
                                                     Grid.Column="4"
                                                     Click="UninstallMod_Click"
                                                     DataContext="{x:Bind}"
+                                                    IsEnabled="{x:Bind CanUninstall, Mode=OneWay}"
                                                     Background="Transparent"
                                                     BorderThickness="0"
                                                     Padding="6"
                                                     CornerRadius="4"
                                                     VerticalAlignment="Center"
-                                                    ToolTipService.ToolTip="Gỡ cài đặt mod">
+                                                    ToolTipService.ToolTip="{x:Bind UninstallToolTip, Mode=OneWay}">
                                                     <FontIcon Glyph="&#xE74D;" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                                 </Button>
                                             </Grid>

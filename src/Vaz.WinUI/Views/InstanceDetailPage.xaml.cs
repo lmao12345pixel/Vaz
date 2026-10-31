@@ -193,6 +193,7 @@ public sealed partial class InstanceDetailPage : Page
 
     private void ModEnabled_Toggled(object sender, RoutedEventArgs e)
     {
+        if (ViewModel == null || ViewModel.IsGameRunning) return;
         if (sender is ToggleSwitch ts && ts.DataContext is InstalledModRow row && ts.IsOn != row.Enabled)
         {
             _ = ViewModel.SetModEnabledAsync(row, ts.IsOn);
@@ -201,6 +202,7 @@ public sealed partial class InstanceDetailPage : Page
 
     private async void InstallMrpack_Click(object sender, RoutedEventArgs e)
     {
+        if (ViewModel == null || ViewModel.IsGameRunning) return;
         var picker = FilePickerHelper.CreateOpenPicker(App.MainWindow, ".mrpack");
         var file = await picker.PickSingleFileAsync();
         if (file == null) return;
@@ -250,6 +252,7 @@ public sealed partial class InstanceDetailPage : Page
 
     private async void InstallOptifine_Click(object sender, RoutedEventArgs e)
     {
+        if (ViewModel == null || ViewModel.IsGameRunning) return;
         var dialog = new OptifineInstallDialog(ViewModel);
         dialog.XamlRoot = XamlRoot;
         await dialog.ShowAsync();
@@ -257,6 +260,7 @@ public sealed partial class InstanceDetailPage : Page
 
     private async void DownloadMods_Click(object sender, RoutedEventArgs e)
     {
+        if (ViewModel == null || ViewModel.IsGameRunning) return;
         var dialog = new ModBrowserDialog(ViewModel.Current?.Id);
         dialog.XamlRoot = XamlRoot;
         await dialog.ShowAsync();
@@ -494,6 +498,7 @@ public sealed partial class InstanceDetailPage : Page
 
     private async void UninstallMod_Click(object sender, RoutedEventArgs e)
     {
+        if (ViewModel == null || ViewModel.IsGameRunning) return;
         if (sender is FrameworkElement elem && elem.DataContext is InstalledModRow row)
         {
             var confirm = new ContentDialog
@@ -518,6 +523,7 @@ public sealed partial class InstanceDetailPage : Page
 
     private async void ImportJar_Click(object sender, RoutedEventArgs e)
     {
+        if (ViewModel == null || ViewModel.IsGameRunning) return;
         var picker = FilePickerHelper.CreateOpenPicker(App.MainWindow, ".jar");
         var file = await picker.PickSingleFileAsync();
         if (file != null)
@@ -528,6 +534,12 @@ public sealed partial class InstanceDetailPage : Page
 
     private void ModsGrid_DragOver(object sender, DragEventArgs e)
     {
+        if (ViewModel == null || ViewModel.IsGameRunning)
+        {
+            e.AcceptedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.None;
+            return;
+        }
+
         e.AcceptedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
         e.DragUIOverride.Caption = "Kéo thả .jar hoặc .mrpack để cài";
         e.DragUIOverride.IsCaptionVisible = true;
@@ -536,6 +548,7 @@ public sealed partial class InstanceDetailPage : Page
 
     private async void ModsGrid_Drop(object sender, DragEventArgs e)
     {
+        if (ViewModel == null || ViewModel.IsGameRunning) return;
         if (e.DataView.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems))
         {
             var items = await e.DataView.GetStorageItemsAsync();
