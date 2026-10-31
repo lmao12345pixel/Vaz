@@ -74,7 +74,9 @@ public sealed partial class InstalledModRow : ObservableObject
     public string CategoryLabel { get; set; } = "Khác";
     public string Loader { get; set; } = "Fabric";
     public string MinecraftVersion { get; set; } = "1.21.1";
-    public string IconUri { get; set; } = "ms-appx:///Assets/mods/default.png";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IconImageSource))]
+    private string iconUri = "ms-appx:///Assets/mods/default.png";
     public string ProjectUrl { get; set; } = string.Empty;
 
     /// <summary>
@@ -428,9 +430,13 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
                             if (meta != null)
                             {
                                 row.ModId = meta.ModId;
-                                if (proj == null)
+                                if (!string.IsNullOrWhiteSpace(meta.Name))
                                 {
                                     row.DisplayName = meta.Name;
+                                }
+
+                                if (proj == null)
+                                {
                                     if (meta.Authors.Count > 0)
                                     {
                                         row.Author = string.Join(", ", meta.Authors);
@@ -438,6 +444,24 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
                                     if (!string.IsNullOrEmpty(meta.Description))
                                     {
                                         row.Description = meta.Description;
+                                    }
+                                }
+
+                                // Trích xuất icon từ jar nếu mod không có asset icon catalog riêng
+                                if (proj == null || string.IsNullOrEmpty(proj.Icon) || proj.Icon.Contains("default.png"))
+                                {
+                                    try
+                                    {
+                                        var iconKey = !string.IsNullOrEmpty(meta.ModId) ? meta.ModId : slug;
+                                        var iconDest = GetModIconCacheFilePath(iconKey, existingJarPath);
+                                        if (File.Exists(iconDest) || JarMetadataReader.ExtractIconToFile(existingJarPath, iconDest, meta.IconEntryPath))
+                                        {
+                                            row.IconUri = new Uri(iconDest).AbsoluteUri;
+                                        }
+                                    }
+                                    catch
+                                    {
+                                        // Bỏ qua lỗi trích xuất icon, fallback icon mặc định
                                     }
                                 }
 
@@ -1129,6 +1153,18 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         using var md5 = MD5.Create();
         var hash = Convert.ToHexString(md5.ComputeHash(System.Text.Encoding.UTF8.GetBytes(instancePath.ToLowerInvariant())));
         return Path.Combine(cacheDir, $"{instanceName}-{hash[..8]}.json");
+    }
+
+    private static string GetModIconCacheFilePath(string modId, string jarPath)
+    {
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        var iconDir = Path.Combine(appData, "Vazer", "cache", "mod-icons");
+        Directory.CreateDirectory(iconDir);
+
+        var safeModId = string.Join("_", modId.Split(Path.GetInvalidFileNameChars()));
+        var jarName = Path.GetFileNameWithoutExtension(jarPath);
+        var safeJarName = string.Join("_", jarName.Split(Path.GetInvalidFileNameChars()));
+        return Path.Combine(iconDir, $"{safeModId}_{safeJarName}.png");
     }
 
     private void EnsureDiskCacheLoaded(string instancePath)

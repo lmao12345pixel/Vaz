@@ -1,24 +1,34 @@
+using System;
+using System.ComponentModel;
+using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
+using Vaz.WinUI.Models;
 using Vaz.WinUI.Services;
 using Vaz.WinUI.ViewModels;
 
 namespace Vaz.WinUI.Views;
 
 /// <summary>
-/// Mod Browser as a ContentDialog — opened from Instance Detail.
-/// Reuses ModBrowserViewModel; instance context comes from ActiveInstanceService.
+/// Mod Browser ContentDialog — hỗ trợ Infinite Scroll, Shimmer Skeleton,
+/// Blinking Cursor và Dynamic Filter Chips.
 /// </summary>
 public sealed partial class ModBrowserDialog : ContentDialog
 {
     public ModBrowserViewModel ViewModel { get; }
+
+    private ScrollViewer? _listScrollViewer;
+    private SearchHitRow? _pendingRowForInstall;
 
     public ModBrowserDialog(string? instanceId = null)
     {
         ViewModel = ((App)Application.Current).Services
             .GetRequiredService<ModBrowserViewModel>();
         InitializeComponent();
+
+        ViewModel.PropertyChanged += ViewModel_PropertyChanged;
 
         Loaded += async (_, _) =>
         {
@@ -34,6 +44,33 @@ public sealed partial class ModBrowserDialog : ContentDialog
                 await ViewModel.SearchAsync();
             }
         };
+
+        Unloaded += (_, _) =>
+        {
+            ViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+            if (_listScrollViewer != null)
+            {
+                _listScrollViewer.ViewChanged -= ListScrollViewer_ViewChanged;
+            }
+            ShimmerStoryboard.Stop();
+            BlinkCursorStoryboard.Stop();
+        };
+    }
+
+    private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ViewModel.IsShimmerLoading))
+        {
+            if (ViewModel.IsShimmerLoading)
+            {
+                ShimmerStoryboard.Begin();
+            }
+            else
+            {
+                ShimmerStoryboard.Stop();
+                FadeInResultsStoryboard.Begin();
+            }
+        }
     }
 
     private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
@@ -51,24 +88,72 @@ public sealed partial class ModBrowserDialog : ContentDialog
         _ = ViewModel.SearchCommand.ExecuteAsync(null);
     }
 
-    private SearchHitRow? _pendingRowForInstall;
-
-    private async void Install_Click(object sender, RoutedEventArgs e)
+    private void SearchBox_GotFocus(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement fe && fe.DataContext is SearchHitRow row)
-        {
-            var reqDeps = Models.ModCatalogData.GetRequiredDependencies(row.Slug);
-            if (reqDeps.Count > 0)
-            {
-                _pendingRowForInstall = row;
-                var depNames = string.Join(", ", reqDeps.Select(d => char.ToUpper(d[0]) + d.Substring(1)));
-                DependencyPromptText.Text = $"Mod '{row.Title}' yêu cầu các thư viện phụ thuộc: {depNames}.\n\nBạn có muốn tự động tải và cài đặt kèm toàn bộ dependencies này để game hoạt động ổn định?";
-                DependencyPromptOverlay.Visibility = Visibility.Visible;
-                return;
-            }
+        BlinkCursorStoryboard.Begin();
+    }
 
-            await ViewModel.InstallAsync(row);
+    private void SearchBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+        BlinkCursorStoryboard.Stop();
+        SearchBlinkIndicator.Opacity = 0;
+    }
+
+    private void FilterChip_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.DataContext is string category)
+        {
+            ViewModel.SelectCategory(category);
         }
+    }
+
+    private void ResultsListView_Loaded(object sender, RoutedEventArgs e)
+    {
+        _listScrollViewer = FindScrollViewer(ResultsListView);
+        if (_listScrollViewer != null)
+        {
+            _listScrollViewer.ViewChanged += ListScrollViewer_ViewChanged;
+        }
+    }
+
+    private void ListScrollViewer_ViewChanged(object? sender, ScrollViewerViewChangedEventArgs e)
+    {
+        if (_listScrollViewer == null) return;
+
+        // Infinite Scroll: Khi cuộn gần chạm đáy (còn dưới 180px), tự động tải thêm trang tiếp theo
+        var distanceToEnd = _listScrollViewer.ScrollableHeight - _listScrollViewer.VerticalOffset;
+        if (distanceToEnd < 180 && ViewModel.CanLoadMore)
+        {
+            _ = ViewModel.LoadMoreAsync();
+        }
+    }
+
+    private static ScrollViewer? FindScrollViewer(DependencyObject root)
+    {
+        var count = VisualTreeHelper.GetChildrenCount(root);
+        for (int i = 0; i < count; i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            if (child is ScrollViewer sv) return sv;
+            var result = FindScrollViewer(child);
+            if (result != null) return result;
+        }
+        return null;
+    }
+
+    private async void ModCard_InstallClick(object? sender, SearchHitRow row)
+    {
+        var reqDeps = ModCatalogData.GetRequiredDependencies(row.Slug);
+        if (reqDeps.Count > 0)
+        {
+            _pendingRowForInstall = row;
+            var depNames = string.Join(", ", reqDeps.Select(d => char.ToUpper(d[0]) + d.Substring(1)));
+            DependencyPromptText.Text = $"Mod '{row.Title}' yêu cầu các thư viện phụ thuộc: {depNames}.\n\nBạn có muốn tự động tải và cài đặt kèm toàn bộ dependencies này để game hoạt động ổn định?";
+            DependencyPromptOverlay.Visibility = Visibility.Visible;
+            return;
+        }
+
+        await ViewModel.InstallAsync(row);
     }
 
     private void CancelDependencyPrompt_Click(object sender, RoutedEventArgs e)
@@ -86,10 +171,5 @@ public sealed partial class ModBrowserDialog : ContentDialog
             _pendingRowForInstall = null;
             await ViewModel.InstallAsync(target);
         }
-    }
-
-    private void IconImage_Failed(object sender, ExceptionRoutedEventArgs e)
-    {
-        if (sender is Image img) img.Visibility = Visibility.Collapsed;
     }
 }

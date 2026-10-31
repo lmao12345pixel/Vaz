@@ -359,17 +359,18 @@
                                                         CornerRadius="6"
                                                         Background="{StaticResource VazAccentSubtleBrush}">
                                                         <Grid>
-                                                            <Image
-                                                                Source="{x:Bind IconImageSource}"
-                                                                Width="32" Height="32"
-                                                                Stretch="Uniform"
-                                                                ImageFailed="ModIcon_Failed" />
                                                             <FontIcon
                                                                 Glyph="&#xE74C;"
                                                                 FontSize="16"
                                                                 Foreground="{StaticResource VazAccentBrush}"
                                                                 HorizontalAlignment="Center"
                                                                 VerticalAlignment="Center" />
+                                                            <Image
+                                                                Source="{x:Bind IconImageSource, Mode=OneWay}"
+                                                                Width="32" Height="32"
+                                                                Stretch="Uniform"
+                                                                ImageOpened="ModIcon_Opened"
+                                                                ImageFailed="ModIcon_Failed" />
                                                         </Grid>
                                                     </Border>
                                                 </Button>
@@ -535,16 +536,18 @@
                                             CornerRadius="8"
                                             Background="{StaticResource VazAccentSubtleBrush}">
                                             <Grid>
-                                                <Image
-                                                    Source="{x:Bind ViewModel.SelectedModForInspector.IconImageSource, Mode=OneWay}"
-                                                    Width="40" Height="40"
-                                                    Stretch="Uniform" />
                                                 <FontIcon
                                                     Glyph="&#xE74C;"
                                                     FontSize="20"
                                                     Foreground="{StaticResource VazAccentBrush}"
                                                     HorizontalAlignment="Center"
                                                     VerticalAlignment="Center" />
+                                                <Image
+                                                    Source="{x:Bind ViewModel.SelectedModForInspector.IconImageSource, Mode=OneWay}"
+                                                    Width="40" Height="40"
+                                                    Stretch="Uniform"
+                                                    ImageOpened="ModIcon_Opened"
+                                                    ImageFailed="ModIcon_Failed" />
                                             </Grid>
                                         </Border>
 

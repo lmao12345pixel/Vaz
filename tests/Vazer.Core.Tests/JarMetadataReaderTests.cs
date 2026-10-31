@@ -247,6 +247,57 @@ public sealed class JarMetadataReaderTests : IDisposable
         meta.Name.Should().Be("Stream Mod");
     }
 
+    [Fact]
+    public void Read_FabricJar_ResolvesIconEntryPath()
+    {
+        var json = """
+            {
+              "schemaVersion": 1,
+              "id": "testmod",
+              "version": "1.0.0",
+              "icon": "assets/testmod/icon.png"
+            }
+            """;
+        var jarPath = CreateJar(("fabric.mod.json", json), ("assets/testmod/icon.png", "fake png data"));
+
+        var meta = JarMetadataReader.Read(jarPath);
+
+        meta.Should().NotBeNull();
+        meta!.IconEntryPath.Should().Be("assets/testmod/icon.png");
+
+        var bytes = JarMetadataReader.ExtractIcon(jarPath, meta.IconEntryPath);
+        bytes.Should().NotBeNull();
+        Encoding.UTF8.GetString(bytes!).Should().Be("fake png data");
+
+        var destFile = Path.Combine(_tempRoot, "extracted-icon.png");
+        var extracted = JarMetadataReader.ExtractIconToFile(jarPath, destFile, meta.IconEntryPath);
+        extracted.Should().BeTrue();
+        File.Exists(destFile).Should().BeTrue();
+        File.ReadAllText(destFile).Should().Be("fake png data");
+    }
+
+    [Fact]
+    public void Read_FabricJar_ResolvesDefaultCandidateIconWhenUnspecified()
+    {
+        var json = """
+            {
+              "schemaVersion": 1,
+              "id": "custommod",
+              "version": "1.0.0"
+            }
+            """;
+        var jarPath = CreateJar(("fabric.mod.json", json), ("assets/custommod/icon.png", "candidate icon data"));
+
+        var meta = JarMetadataReader.Read(jarPath);
+
+        meta.Should().NotBeNull();
+        meta!.IconEntryPath.Should().Be("assets/custommod/icon.png");
+
+        var bytes = JarMetadataReader.ExtractIcon(jarPath, meta.IconEntryPath);
+        bytes.Should().NotBeNull();
+        Encoding.UTF8.GetString(bytes!).Should().Be("candidate icon data");
+    }
+
     private string CreateJar(params (string entryName, string content)[] entries)
     {
         var path = Path.Combine(_tempRoot, $"{Guid.NewGuid():N}.jar");

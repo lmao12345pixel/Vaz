@@ -21,6 +21,8 @@ public sealed record JarMetadata
     public string Description { get; init; } = "";
     /// <summary>Yêu cầu phiên bản Minecraft (ví dụ ">=1.21 <1.22", "~1.20.1", "1.20.1"). Rỗng khi không chỉ định.</summary>
     public string MinecraftRequirement { get; init; } = "";
+    /// <summary>Đường dẫn tệp icon bên trong archive jar (ví dụ "assets/modid/icon.png" hoặc "icon.png").</summary>
+    public string IconEntryPath { get; init; } = "";
 }
 
 public static class JarMetadataReader
@@ -61,28 +63,28 @@ public static class JarMetadataReader
         var fabric = archive.GetEntry("fabric.mod.json");
         if (fabric != null)
         {
-            var meta = ReadFabricLike(fabric, loader: "fabric");
+            var meta = ReadFabricLike(fabric, loader: "fabric", archive);
             if (meta != null) return meta;
         }
 
         var quilt = archive.GetEntry("quilt.mod.json");
         if (quilt != null)
         {
-            var meta = ReadQuilt(quilt);
+            var meta = ReadQuilt(quilt, archive);
             if (meta != null) return meta;
         }
 
         var toml = archive.GetEntry("META-INF/mods.toml");
         if (toml != null)
         {
-            var meta = ReadModsToml(toml, loader: "forge");
+            var meta = ReadModsToml(toml, loader: "forge", archive);
             if (meta != null) return meta;
         }
 
         var neoforgeToml = archive.GetEntry("META-INF/neoforge.mods.toml");
         if (neoforgeToml != null)
         {
-            var meta = ReadModsToml(neoforgeToml, loader: "neoforge");
+            var meta = ReadModsToml(neoforgeToml, loader: "neoforge", archive);
             if (meta != null) return meta;
         }
 
@@ -90,7 +92,7 @@ public static class JarMetadataReader
     }
 
     /// <summary>fabric.mod.json (schemaVersion 1): id, version, name tùy chọn, authors là mảng string hoặc object.</summary>
-    private static JarMetadata? ReadFabricLike(ZipArchiveEntry entry, string loader)
+    private static JarMetadata? ReadFabricLike(ZipArchiveEntry entry, string loader, ZipArchive archive)
     {
         try
         {
@@ -113,6 +115,23 @@ public static class JarMetadataReader
             var description = root.TryGetProperty("description", out var descEl)
                               && descEl.ValueKind == JsonValueKind.String
                 ? descEl.GetString() ?? "" : "";
+
+            string? declaredIcon = null;
+            if (root.TryGetProperty("icon", out var iconEl))
+            {
+                if (iconEl.ValueKind == JsonValueKind.String)
+                {
+                    declaredIcon = iconEl.GetString();
+                }
+                else if (iconEl.ValueKind == JsonValueKind.Object)
+                {
+                    declaredIcon = iconEl.EnumerateObject()
+                        .OrderByDescending(p => int.TryParse(p.Name, out var size) ? size : 0)
+                        .Select(p => p.Value.ValueKind == JsonValueKind.String ? p.Value.GetString() : null)
+                        .FirstOrDefault(s => !string.IsNullOrWhiteSpace(s));
+                }
+            }
+            var iconPath = ResolveIconEntry(archive, id, declaredIcon);
 
             string mcReq = "";
             if (root.TryGetProperty("depends", out var dependsEl) && dependsEl.ValueKind == JsonValueKind.Object)
@@ -142,7 +161,8 @@ public static class JarMetadataReader
                 Loader = loader,
                 Authors = authors,
                 Description = description,
-                MinecraftRequirement = mcReq
+                MinecraftRequirement = mcReq,
+                IconEntryPath = iconPath
             };
         }
         catch (JsonException)
@@ -156,7 +176,7 @@ public static class JarMetadataReader
     /// metadata.contributors là map "tên-author" → vai trò.
     /// (Một số file quilt vẫn kèm fabric.mod.json tương thích — fabric đọc trước.)
     /// </summary>
-    private static JarMetadata? ReadQuilt(ZipArchiveEntry entry)
+    private static JarMetadata? ReadQuilt(ZipArchiveEntry entry, ZipArchive archive)
     {
         try
         {
@@ -180,6 +200,7 @@ public static class JarMetadataReader
             var name = "";
             var description = "";
             var authors = Array.Empty<string>();
+            string? declaredIcon = null;
             if (loaderEl.TryGetProperty("metadata", out var metaEl) && metaEl.ValueKind == JsonValueKind.Object)
             {
                 if (metaEl.TryGetProperty("name", out var nameEl) && nameEl.ValueKind == JsonValueKind.String)
@@ -201,7 +222,23 @@ public static class JarMetadataReader
                         .Where(n => !string.IsNullOrWhiteSpace(n))
                         .ToArray();
                 }
+
+                if (metaEl.TryGetProperty("icon", out var iconEl))
+                {
+                    if (iconEl.ValueKind == JsonValueKind.String)
+                    {
+                        declaredIcon = iconEl.GetString();
+                    }
+                    else if (iconEl.ValueKind == JsonValueKind.Object)
+                    {
+                        declaredIcon = iconEl.EnumerateObject()
+                            .OrderByDescending(p => int.TryParse(p.Name, out var size) ? size : 0)
+                            .Select(p => p.Value.ValueKind == JsonValueKind.String ? p.Value.GetString() : null)
+                            .FirstOrDefault(s => !string.IsNullOrWhiteSpace(s));
+                    }
+                }
             }
+            var iconPath = ResolveIconEntry(archive, id, declaredIcon);
 
             return new JarMetadata
             {
@@ -210,7 +247,8 @@ public static class JarMetadataReader
                 Version = version,
                 Loader = "quilt",
                 Authors = authors,
-                Description = description
+                Description = description,
+                IconEntryPath = iconPath
             };
         }
         catch (JsonException)
@@ -223,7 +261,7 @@ public static class JarMetadataReader
     /// META-INF/mods.toml / neoforge.mods.toml — parser TOML tối giản:
     /// lấy block [[mods]] đầu tiên và các cặp key = "value" của string.
     /// </summary>
-    private static JarMetadata? ReadModsToml(ZipArchiveEntry entry, string loader)
+    private static JarMetadata? ReadModsToml(ZipArchiveEntry entry, string loader, ZipArchive archive)
     {
         try
         {
@@ -231,7 +269,7 @@ public static class JarMetadataReader
             using var reader = new StreamReader(stream);
 
             var inModsBlock = false;
-            string? modId = null, version = null, name = null, authors = null, description = null;
+            string? modId = null, version = null, name = null, authors = null, description = null, logoFile = null;
 
             string? line;
             while ((line = reader.ReadLine()) != null)
@@ -268,9 +306,12 @@ public static class JarMetadataReader
                 else if (string.Equals(key, "displayName", StringComparison.OrdinalIgnoreCase)) name ??= value;
                 else if (string.Equals(key, "authors", StringComparison.OrdinalIgnoreCase)) authors ??= value;
                 else if (string.Equals(key, "description", StringComparison.OrdinalIgnoreCase)) description ??= value;
+                else if (string.Equals(key, "logoFile", StringComparison.OrdinalIgnoreCase)) logoFile ??= value;
             }
 
             if (string.IsNullOrWhiteSpace(modId)) return null;
+
+            var iconPath = ResolveIconEntry(archive, modId, logoFile);
 
             return new JarMetadata
             {
@@ -279,7 +320,8 @@ public static class JarMetadataReader
                 Version = version ?? "",
                 Loader = loader,
                 Authors = SplitTomlAuthors(authors),
-                Description = description ?? ""
+                Description = description ?? "",
+                IconEntryPath = iconPath
             };
         }
         catch (IOException)
@@ -414,5 +456,117 @@ public static class JarMetadataReader
         if (parts.Length == 2) return $"{parts[0]}.{parts[1]}.0";
         if (parts.Length >= 3) return $"{parts[0]}.{parts[1]}.{parts[2]}";
         return trimmed;
+    }
+
+    private static string ResolveIconEntry(ZipArchive archive, string modId, string? declaredIcon)
+    {
+        if (!string.IsNullOrWhiteSpace(declaredIcon))
+        {
+            var cleaned = declaredIcon.Trim().TrimStart('/', '\\');
+            var entry = archive.GetEntry(cleaned);
+            if (entry != null) return entry.FullName;
+
+            entry = archive.GetEntry($"assets/{modId}/{cleaned}");
+            if (entry != null) return entry.FullName;
+        }
+
+        string[] candidates =
+        {
+            $"assets/{modId}/icon.png",
+            $"assets/{modId}/logo.png",
+            $"assets/{modId}/textures/gui/icon.png",
+            "icon.png",
+            "logo.png",
+            "pack.png"
+        };
+
+        foreach (var c in candidates)
+        {
+            var entry = archive.GetEntry(c);
+            if (entry != null) return entry.FullName;
+        }
+
+        return "";
+    }
+
+    public static byte[]? ExtractIcon(string jarPath, string? iconEntryPath = null)
+    {
+        try
+        {
+            using var archive = ZipFile.OpenRead(jarPath);
+            return ExtractIcon(archive, iconEntryPath);
+        }
+        catch (Exception ex) when (ex is InvalidDataException
+                                        or IOException
+                                        or NotSupportedException
+                                        or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    public static byte[]? ExtractIcon(ZipArchive archive, string? iconEntryPath = null)
+    {
+        try
+        {
+            ZipArchiveEntry? entry = null;
+            if (!string.IsNullOrWhiteSpace(iconEntryPath))
+            {
+                entry = archive.GetEntry(iconEntryPath);
+            }
+
+            if (entry == null)
+            {
+                var candidates = new[] { "icon.png", "logo.png", "pack.png" };
+                foreach (var c in candidates)
+                {
+                    entry = archive.GetEntry(c);
+                    if (entry != null) break;
+                }
+                if (entry == null)
+                {
+                    entry = archive.Entries.FirstOrDefault(e => e.Name.Equals("icon.png", StringComparison.OrdinalIgnoreCase)
+                                                             || e.Name.Equals("logo.png", StringComparison.OrdinalIgnoreCase));
+                }
+            }
+
+            if (entry == null) return null;
+
+            using var stream = entry.Open();
+            using var ms = new MemoryStream();
+            stream.CopyTo(ms);
+            return ms.ToArray();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public static bool ExtractIconToFile(string jarPath, string destinationFilePath, string? iconEntryPath = null)
+    {
+        try
+        {
+            if (File.Exists(destinationFilePath) && new FileInfo(destinationFilePath).Length > 0)
+            {
+                return true;
+            }
+
+            var bytes = ExtractIcon(jarPath, iconEntryPath);
+            if (bytes == null || bytes.Length == 0) return false;
+
+            var dir = Path.GetDirectoryName(destinationFilePath);
+            if (!string.IsNullOrEmpty(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+
+            File.WriteAllBytes(destinationFilePath, bytes);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

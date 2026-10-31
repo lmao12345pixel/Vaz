@@ -125,7 +125,7 @@ public static class ModCatalogData
         },
         new()
         {
-            Id = "PpjUUSmh",
+            Id = "PtjYWJkn",
             Slug = "sodium-extra",
             Name = "Sodium Extra",
             Author = "FlashyReese",
@@ -499,7 +499,7 @@ public static class ModCatalogData
         },
         new()
         {
-            Id = "ironspells",
+            Id = "s4OWxYQQ",
             Slug = "irons-spells",
             Name = "Iron's Spells 'n Spellbooks",
             Author = "IronSpells",
@@ -516,7 +516,7 @@ public static class ModCatalogData
         },
         new()
         {
-            Id = "botania",
+            Id = "pfjLUfGv",
             Slug = "botania",
             Name = "Botania",
             Author = "Vazkii",
@@ -545,16 +545,31 @@ public static class ModCatalogData
         if (string.IsNullOrEmpty(fileName)) return string.Empty;
 
         var lower = fileName.ToLowerInvariant();
-        foreach (var c in Catalog)
+        if (lower.EndsWith(".disabled")) lower = lower[..^9];
+        if (lower.EndsWith(".jar")) lower = lower[..^4];
+
+        // Match longest slug first with boundary check to prevent prefixes like "sodium" matching "sodium-extra"
+        foreach (var c in Catalog.OrderByDescending(x => x.Slug.Length))
         {
-            if (lower.Contains(c.Slug.ToLowerInvariant()))
-                return c.Slug;
+            var slug = c.Slug.ToLowerInvariant();
+            var idx = lower.IndexOf(slug, StringComparison.Ordinal);
+            if (idx >= 0)
+            {
+                var beforeOk = idx == 0 || !char.IsLetterOrDigit(lower[idx - 1]);
+                var afterIdx = idx + slug.Length;
+                var afterOk = afterIdx == lower.Length || !char.IsLetterOrDigit(lower[afterIdx]);
+                if (beforeOk && afterOk)
+                {
+                    return c.Slug;
+                }
+            }
         }
 
         // Clean filename up to version or hyphen
-        var clean = fileName.Replace(".jar", "", StringComparison.OrdinalIgnoreCase);
-        var idx = clean.IndexOfAny(new[] { '-', '_' });
-        return idx > 0 ? clean[..idx].ToLowerInvariant() : clean.ToLowerInvariant();
+        var clean = fileName.Replace(".disabled", "", StringComparison.OrdinalIgnoreCase)
+                            .Replace(".jar", "", StringComparison.OrdinalIgnoreCase);
+        var idxHyphen = clean.IndexOfAny(new[] { '-', '_' });
+        return idxHyphen > 0 ? clean[..idxHyphen].ToLowerInvariant() : clean.ToLowerInvariant();
     }
 
     public static ModCatalogItem? FindProject(string? slugOrId)

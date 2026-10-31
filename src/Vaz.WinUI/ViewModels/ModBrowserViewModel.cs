@@ -1,8 +1,16 @@
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Vaz.WinUI.Models;
 using Vaz.WinUI.Services;
 using Vazer.Core.Abstractions;
@@ -11,41 +19,65 @@ using Vazer.Core.Mods;
 
 namespace Vaz.WinUI.ViewModels;
 
-/// <summary>Row view cho một Modrinth search hit.</summary>
-public sealed class SearchHitRow
+/// <summary>
+/// Row view cho một Modrinth search hit trong ModCard.
+/// </summary>
+public sealed partial class SearchHitRow : ObservableObject
 {
-    public required SearchHit Hit { get; init; }
+    public SearchHit Hit { get; init; } = null!;
 
     public string Title => Hit.Title;
     public string Author => string.IsNullOrEmpty(Hit.Author) ? Hit.Slug : Hit.Author;
     public string Description => Hit.Description;
     public string? IconUrl => Hit.IconUrl;
-
-    /// <summary>
-    /// Binding an toàn cho Image.Source: không bao giờ trả về null/empty
-    /// (lỗi gốc trong crash.txt — ConvertValue ImageSource với chuỗi rỗng).
-    /// </summary>
-    public Microsoft.UI.Xaml.Media.ImageSource IconImageSource
-    {
-        get
-        {
-            if (!string.IsNullOrWhiteSpace(Hit.IconUrl) &&
-                Uri.TryCreate(Hit.IconUrl, UriKind.RelativeOrAbsolute, out var uri))
-            {
-                return new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(uri);
-            }
-
-            return Vaz.WinUI.Helpers.UiPlaceholders.Image;
-        }
-    }
     public string Slug => Hit.Slug;
     public string ProjectId => Hit.ProjectId;
     public long Downloads => Hit.Downloads;
 
-    public bool IsInstalled { get; init; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanInstall))]
+    [NotifyPropertyChangedFor(nameof(IsInstalling))]
+    [NotifyPropertyChangedFor(nameof(IsInstalled))]
+    [NotifyPropertyChangedFor(nameof(CanInstallVisibility))]
+    [NotifyPropertyChangedFor(nameof(IsInstallingVisibility))]
+    [NotifyPropertyChangedFor(nameof(IsInstalledVisibility))]
+    private ModInstallState installState = ModInstallState.Idle;
 
-    public Microsoft.UI.Xaml.Visibility IsInstalledVisibility =>
-        IsInstalled ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
+    public bool CanInstall => InstallState == ModInstallState.Idle;
+    public bool IsInstalling => InstallState == ModInstallState.Installing;
+    public bool IsInstalled => InstallState == ModInstallState.Installed;
+
+    public Visibility CanInstallVisibility =>
+        CanInstall ? Visibility.Visible : Visibility.Collapsed;
+
+    public Visibility IsInstallingVisibility =>
+        IsInstalling ? Visibility.Visible : Visibility.Collapsed;
+
+    public Visibility IsInstalledVisibility =>
+        IsInstalled ? Visibility.Visible : Visibility.Collapsed;
+
+    private ImageSource? _iconImageSource;
+    public ImageSource IconImageSource
+    {
+        get
+        {
+            if (_iconImageSource != null) return _iconImageSource;
+
+            if (!string.IsNullOrWhiteSpace(Hit.IconUrl) &&
+                Uri.TryCreate(Hit.IconUrl, UriKind.RelativeOrAbsolute, out var uri))
+            {
+                var bitmap = new BitmapImage(uri)
+                {
+                    DecodePixelWidth = 100
+                };
+                _iconImageSource = bitmap;
+                return _iconImageSource;
+            }
+
+            _iconImageSource = Vaz.WinUI.Helpers.UiPlaceholders.Image;
+            return _iconImageSource;
+        }
+    }
 
     public string DownloadsText => FormatCount(Hit.Downloads);
 
@@ -58,33 +90,38 @@ public sealed class SearchHitRow
 }
 
 /// <summary>
-/// ViewModel cho Mod Browser page: search Modrinth (debounce 300ms),
-/// filter loader/MC version/sort, install, performance pack.
+/// ViewModel cho Mod Browser: chịu trách nhiệm UI binding, gọi Service tách biệt
+/// (IModrinthSearchService và IModDownloadManager), hỗ trợ Shimmer, Dynamic Chips và Infinite Scroll.
 /// </summary>
 public sealed partial class ModBrowserViewModel : ObservableObject
 {
-    private readonly IModrinthClient _modrinth;
-    private readonly IModInstallService _modInstall;
+    private readonly IModrinthSearchService _searchService;
+    private readonly IModDownloadManager _downloadManager;
     private readonly ActiveInstanceService _activeInstance;
+    private readonly IModInstallService? _legacyModInstall;
+
     private CancellationTokenSource? _searchCts;
-    private CancellationTokenSource? _installCts;
     private int _offset;
     private int _currentRequestId;
+    private int _debounceMs = 200; // 200ms debounce, fallback 250ms nếu gặp 429
+
+    private const int PageSize = 20;
 
     public ObservableCollection<SearchHitRow> Results { get; } = new();
+    public ObservableCollection<string> FilterChips { get; } = new();
 
     public string[] SortOptions { get; } = { "Relevance", "Downloads", "Updated", "Newest" };
     public string[] LoaderOptions { get; } = { "Auto", "All", "fabric", "neoforge" };
     public string[] VersionOptions { get; } =
         { "Auto", "All", "1.21.1", "1.21", "1.20.1", "1.20", "1.19.4", "1.19.2", "1.18.2", "1.16.5" };
 
-    private const int PageSize = 20;
-
     [ObservableProperty] private string searchText = string.Empty;
+    [ObservableProperty] private string selectedCategory = "Tất cả";
     [ObservableProperty] private string selectedLoader = "Auto";
     [ObservableProperty] private string selectedGameVersion = "Auto";
     [ObservableProperty] private string selectedSort = "Relevance";
     [ObservableProperty] private bool isBusy;
+    [ObservableProperty] private bool isShimmerLoading;
     [ObservableProperty] private bool isLoadingMore;
     [ObservableProperty] private bool hasError;
     [ObservableProperty] private string errorMessage = string.Empty;
@@ -99,22 +136,56 @@ public sealed partial class ModBrowserViewModel : ObservableObject
 
     public bool IsNotBusy => !IsBusy;
     public bool CanLoadMore => !IsBusy && !IsLoadingMore && HasMoreResults;
-    public bool ShowEmptyState => !IsBusy && !HasError && !HasResults;
+    public bool ShowEmptyState => !IsBusy && !IsShimmerLoading && !HasError && !HasResults;
 
-    partial void OnSearchTextChanged(string value) => OnSearchTextChangedDebounced();
+    partial void OnSearchTextChanged(string value)
+    {
+        UpdateFilterChips(value);
+        OnSearchTextChangedDebounced();
+    }
+
+    partial void OnSelectedCategoryChanged(string value) => _ = SearchAsync();
     partial void OnSelectedLoaderChanged(string value) => _ = SearchAsync();
     partial void OnSelectedGameVersionChanged(string value) => _ = SearchAsync();
     partial void OnSelectedSortChanged(string value) => _ = SearchAsync();
 
     public ModBrowserViewModel(
-        IModrinthClient modrinth,
-        IModInstallService modInstall,
-        ActiveInstanceService activeInstance)
+        IModrinthSearchService searchService,
+        IModDownloadManager downloadManager,
+        ActiveInstanceService activeInstance,
+        IModInstallService? legacyModInstall = null)
     {
-        _modrinth = modrinth;
-        _modInstall = modInstall;
-        _activeInstance = activeInstance;
+        _searchService = searchService ?? throw new ArgumentNullException(nameof(searchService));
+        _downloadManager = downloadManager ?? throw new ArgumentNullException(nameof(downloadManager));
+        _activeInstance = activeInstance ?? throw new ArgumentNullException(nameof(activeInstance));
+        _legacyModInstall = legacyModInstall;
+
         _activeInstance.CurrentChanged += (_, _) => _ = RefreshInstanceContextAsync();
+        UpdateFilterChips(string.Empty);
+    }
+
+    public void UpdateFilterChips(string query)
+    {
+        var suggestions = _searchService.GetSuggestedCategories(query);
+        FilterChips.Clear();
+        foreach (var c in suggestions)
+        {
+            FilterChips.Add(c);
+        }
+
+        if (!FilterChips.Contains(SelectedCategory))
+        {
+            SelectedCategory = "Tất cả";
+        }
+    }
+
+    [RelayCommand]
+    public void SelectCategory(string category)
+    {
+        if (SelectedCategory != category)
+        {
+            SelectedCategory = category;
+        }
     }
 
     /// <summary>Refresh context theo instance active (loader filter + performance pack capability).</summary>
@@ -136,6 +207,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
     [RelayCommand]
     public async Task LoadMoreAsync()
     {
+        if (!CanLoadMore) return;
         var ct = _searchCts?.Token ?? CancellationToken.None;
         await SearchCoreAsync(reset: false, ct);
     }
@@ -149,7 +221,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
         await SearchCoreAsync(reset: true, _searchCts.Token);
     }
 
-    /// <summary>Debounce 300ms — gọi từ SearchBar TextChanged.</summary>
+    /// <summary>Debounce 200ms (hoặc 250ms nếu gặp 429) — gọi từ SearchBar TextChanged.</summary>
     public void OnSearchTextChangedDebounced()
     {
         _searchCts?.Cancel();
@@ -162,7 +234,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
     {
         try
         {
-            await Task.Delay(300, ct);
+            await Task.Delay(_debounceMs, ct);
         }
         catch (OperationCanceledException)
         {
@@ -184,6 +256,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
         if (reset)
         {
             IsBusy = true;
+            IsShimmerLoading = true;
             _offset = 0;
         }
         else
@@ -211,9 +284,10 @@ public sealed partial class ModBrowserViewModel : ObservableObject
 
             bool isBrowseMode = string.IsNullOrWhiteSpace(SearchText);
 
-            var query = new SearchQuery
+            var filterOptions = new SearchFilterOptions
             {
-                Query = isBrowseMode ? null : SearchText.Trim(),
+                Query = SearchText,
+                Category = SelectedCategory,
                 Loaders = loaders,
                 GameVersions = gameVersions,
                 SortIndex = isBrowseMode ? (sort ?? "downloads") : sort,
@@ -222,13 +296,13 @@ public sealed partial class ModBrowserViewModel : ObservableObject
             };
 
             SearchResult result;
-            if (isBrowseMode)
+            if (isBrowseMode && (string.IsNullOrEmpty(SelectedCategory) || SelectedCategory == "Tất cả"))
             {
-                result = await _modrinth.GetFeaturedModsAsync(query, ct);
+                result = await _searchService.GetFeaturedModsAsync(filterOptions, ct);
             }
             else
             {
-                result = await _modrinth.SearchAsync(query, ct);
+                result = await _searchService.SearchAsync(filterOptions, ct);
             }
 
             ct.ThrowIfCancellationRequested();
@@ -238,32 +312,26 @@ public sealed partial class ModBrowserViewModel : ObservableObject
                 return;
             }
 
-            var installedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            if (inst != null)
+            var rows = new List<SearchHitRow>();
+            foreach (var hit in result.Hits)
             {
-                var installedMods = await _modInstall.ListAsync(inst.Id, ct);
-                ct.ThrowIfCancellationRequested();
-
-                if (requestId != _currentRequestId)
+                var state = ModInstallState.Idle;
+                if (inst != null)
                 {
-                    return;
+                    state = await _downloadManager.CheckInstallStateAsync(inst.Id, hit.ProjectId, hit.Slug, ct);
                 }
 
-                var modsDir = Path.Combine(inst.Path, "mods");
-                foreach (var m in installedMods)
+                rows.Add(new SearchHitRow
                 {
-                    // Chỉ coi là đã cài nếu file mod thực sự tồn tại trong thư mục mods
-                    var filePath = Path.Combine(modsDir, m.FileName);
-                    if (!File.Exists(filePath) && !File.Exists(filePath + ".disabled"))
-                    {
-                        continue;
-                    }
+                    Hit = hit,
+                    InstallState = state
+                });
+            }
 
-                    if (!string.IsNullOrEmpty(m.ProjectId))
-                    {
-                        installedIds.Add(m.ProjectId);
-                    }
-                }
+            ct.ThrowIfCancellationRequested();
+            if (requestId != _currentRequestId)
+            {
+                return;
             }
 
             if (reset)
@@ -272,13 +340,12 @@ public sealed partial class ModBrowserViewModel : ObservableObject
                 HasMoreResults = false;
             }
 
-            foreach (var hit in result.Hits)
+            foreach (var r in rows)
             {
-                bool isInstalled = installedIds.Contains(hit.ProjectId) || installedIds.Contains(hit.Slug);
-                Results.Add(new SearchHitRow { Hit = hit, IsInstalled = isInstalled });
+                Results.Add(r);
             }
 
-            _offset = query.Offset + result.Hits.Length;
+            _offset = filterOptions.Offset + result.Hits.Length;
             HasResults = Results.Count > 0;
             HasMoreResults = Results.Count > 0 && Results.Count < result.TotalHits;
             StatusMessage = Results.Count == 0
@@ -294,23 +361,29 @@ public sealed partial class ModBrowserViewModel : ObservableObject
             if (requestId == _currentRequestId)
             {
                 HasError = true;
-                ErrorMessage = ModrinthErrorMapper.Map(ex).Message;
+                var mapped = ModrinthErrorMapper.Map(ex);
+                ErrorMessage = mapped.Message;
+
+                // Nếu gặp lỗi rate limit (429), tăng debounce lên 250ms an toàn
+                if (ex.Message.Contains("429") || mapped.Message.Contains("quá nhanh"))
+                {
+                    _debounceMs = 250;
+                }
             }
         }
         finally
         {
-            // RÀNG BUỘC: Không dùng return để thoát khối finally.
-            // Bảo đảm chỉ request hiện hành được cập nhật trạng thái.
             if (requestId == _currentRequestId)
             {
                 IsBusy = false;
+                IsShimmerLoading = false;
                 IsLoadingMore = false;
                 NotifyBusyChanged();
             }
         }
     }
 
-    private string[]? ResolveLoaders(Vazer.Core.Abstractions.MinecraftInstance? inst)
+    private string[]? ResolveLoaders(MinecraftInstance? inst)
     {
         if (SelectedLoader == "All") return null;
         if (SelectedLoader != "Auto")
@@ -327,7 +400,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
         return new[] { inst.LoaderType.ToLowerInvariant() };
     }
 
-    private string[]? ResolveGameVersions(Vazer.Core.Abstractions.MinecraftInstance? inst)
+    private string[]? ResolveGameVersions(MinecraftInstance? inst)
     {
         if (SelectedGameVersion == "All") return null;
         if (SelectedGameVersion != "Auto") return new[] { SelectedGameVersion };
@@ -356,12 +429,18 @@ public sealed partial class ModBrowserViewModel : ObservableObject
             return;
         }
 
-        _installCts?.Cancel();
-        _installCts = new CancellationTokenSource();
-        var ct = _installCts.Token;
+        // Kiểm tra xem mod đã có trên đĩa chưa; nếu đã có, giữ trạng thái Installed và không tải lại
+        var alreadyInstalled = await _downloadManager.IsModInstalledOnDiskAsync(inst.Id, row.ProjectId, row.Slug);
+        if (alreadyInstalled)
+        {
+            row.InstallState = ModInstallState.Installed;
+            StatusMessage = $"Mod {row.Title} đã được cài đặt.";
+            return;
+        }
 
         try
         {
+            row.InstallState = ModInstallState.Installing;
             IsBusy = true;
             ProgressPercent = 0;
             StatusMessage = $"Đang tải {row.Title}...";
@@ -387,13 +466,22 @@ public sealed partial class ModBrowserViewModel : ObservableObject
                 });
             });
 
-            var result = await _modInstall.InstallFromModrinthAsync(
-                inst.Id, row.Slug, versionId: null, resolveDependencies: IncludeDependencies, progress: progress, ct: ct);
+            var result = await _downloadManager.InstallModAsync(
+                inst.Id, row.Slug, includeDependencies: IncludeDependencies, progress: progress);
 
-            ProgressPercent = 100;
-            StatusMessage = result.Success
-                ? $"Đã cài {result.ModName ?? row.Title}"
-                : $"Cài thất bại: {result.ModName ?? row.Title}";
+            if (result.Success)
+            {
+                row.InstallState = ModInstallState.Installed;
+                ProgressPercent = 100;
+                StatusMessage = $"Đã cài {result.ModName ?? row.Title}";
+            }
+            else
+            {
+                // Kiểm tra lại trên đĩa phòng khi đã cài trước đó
+                var onDisk = await _downloadManager.IsModInstalledOnDiskAsync(inst.Id, row.ProjectId, row.Slug);
+                row.InstallState = onDisk ? ModInstallState.Installed : ModInstallState.Idle;
+                StatusMessage = $"Cài thất bại: {result.ModName ?? row.Title}";
+            }
 
             if (!string.IsNullOrEmpty(result.Warning))
             {
@@ -403,11 +491,15 @@ public sealed partial class ModBrowserViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
+            var onDisk = await _downloadManager.IsModInstalledOnDiskAsync(inst.Id, row.ProjectId, row.Slug);
+            row.InstallState = onDisk ? ModInstallState.Installed : ModInstallState.Idle;
             ProgressPercent = 0;
             StatusMessage = "Đã hủy tải.";
         }
         catch (Exception ex)
         {
+            var onDisk = await _downloadManager.IsModInstalledOnDiskAsync(inst.Id, row.ProjectId, row.Slug);
+            row.InstallState = onDisk ? ModInstallState.Installed : ModInstallState.Idle;
             HasError = true;
             ErrorMessage = ModrinthErrorMapper.Map(ex).Message;
             StatusMessage = "Cài thất bại.";
@@ -422,7 +514,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
     [RelayCommand]
     public void CancelInstall()
     {
-        _installCts?.Cancel();
+        _downloadManager.CancelInstall();
     }
 
     [RelayCommand]
@@ -449,6 +541,12 @@ public sealed partial class ModBrowserViewModel : ObservableObject
             return;
         }
 
+        if (_legacyModInstall == null)
+        {
+            SetWarning("Dịch vụ cài đặt gói tối ưu chưa sẵn sàng.");
+            return;
+        }
+
         try
         {
             IsBusy = true;
@@ -468,7 +566,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
                 });
             });
 
-            var result = await _modInstall.InstallPerformancePackAsync(inst.Id, progress);
+            var result = await _legacyModInstall.InstallPerformancePackAsync(inst.Id, progress);
 
             StatusMessage = result.Success
                 ? "Đã cài Performance Pack"
@@ -481,7 +579,6 @@ public sealed partial class ModBrowserViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            // Không để status "Đang cài..." dính lại sau khi fail.
             StatusMessage = string.Empty;
             HasError = true;
             ErrorMessage = ModrinthErrorMapper.Map(ex).Message;
@@ -500,13 +597,11 @@ public sealed partial class ModBrowserViewModel : ObservableObject
         WarningMessage = message;
     }
 
-    /// <summary>Dialog xác nhận trước khi cài (Sodium + Iris).</summary>
     private static async Task<bool> ConfirmPerformancePackAsync(string instanceName)
     {
         var root = (App.MainWindow?.Content as FrameworkElement)?.XamlRoot;
         if (root == null)
         {
-            // Chưa lấy được XamlRoot — bỏ qua confirm thay vì chặn cài.
             return true;
         }
 

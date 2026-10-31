@@ -42,6 +42,8 @@ public partial class App : Application
 
         // UI services (singletons)
         services.AddSingleton<ActiveInstanceService>();
+        services.AddSingleton<IModrinthSearchService, ModrinthSearchService>();
+        services.AddSingleton<IModDownloadManager, ModDownloadManager>();
 
         // ViewModels
         services.AddSingleton<MainViewModel>();

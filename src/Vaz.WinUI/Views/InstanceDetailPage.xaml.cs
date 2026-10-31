@@ -488,11 +488,39 @@ public sealed partial class InstanceDetailPage : Page
         }
     }
 
+    private void ModIcon_Opened(object sender, RoutedEventArgs e)
+    {
+        if (sender is Image img)
+        {
+            img.Visibility = Visibility.Visible;
+            if (img.Parent is Grid grid)
+            {
+                foreach (var child in grid.Children)
+                {
+                    if (child is FontIcon icon)
+                    {
+                        icon.Visibility = Visibility.Collapsed;
+                    }
+                }
+            }
+        }
+    }
+
     private void ModIcon_Failed(object sender, ExceptionRoutedEventArgs e)
     {
         if (sender is Image img)
         {
             img.Visibility = Visibility.Collapsed;
+            if (img.Parent is Grid grid)
+            {
+                foreach (var child in grid.Children)
+                {
+                    if (child is FontIcon icon)
+                    {
+                        icon.Visibility = Visibility.Visible;
+                    }
+                }
+            }
         }
     }
 
