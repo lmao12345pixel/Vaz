@@ -1,9 +1,11 @@
 using System;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Vaz.WinUI.Models;
 using Vaz.WinUI.Services;
@@ -12,38 +14,25 @@ using Vaz.WinUI.ViewModels;
 namespace Vaz.WinUI.Views;
 
 /// <summary>
-/// Mod Browser ContentDialog — hỗ trợ Infinite Scroll, Shimmer Skeleton,
-/// Blinking Cursor và Dynamic Filter Chips.
+/// Mod Browser Embedded View — UserControl tích hợp hiển thị trong cửa sổ chính,
+/// hỗ trợ Infinite Scroll, Shimmer Skeleton, Blinking Cursor và Dynamic Filter Chips.
 /// </summary>
-public sealed partial class ModBrowserDialog : ContentDialog
+public sealed partial class ModBrowserView : UserControl
 {
     public ModBrowserViewModel ViewModel { get; }
+
+    public event EventHandler? CloseRequested;
 
     private ScrollViewer? _listScrollViewer;
     private SearchHitRow? _pendingRowForInstall;
 
-    public ModBrowserDialog(string? instanceId = null)
+    public ModBrowserView()
     {
         ViewModel = ((App)Application.Current).Services
             .GetRequiredService<ModBrowserViewModel>();
         InitializeComponent();
 
         ViewModel.PropertyChanged += ViewModel_PropertyChanged;
-
-        Loaded += async (_, _) =>
-        {
-            if (!string.IsNullOrEmpty(instanceId))
-            {
-                var active = ((App)Application.Current).Services
-                    .GetRequiredService<ActiveInstanceService>();
-                active.SetCurrent(instanceId);
-            }
-            await ViewModel.RefreshInstanceContextAsync();
-            if (ViewModel.Results.Count == 0)
-            {
-                await ViewModel.SearchAsync();
-            }
-        };
 
         Unloaded += (_, _) =>
         {
@@ -55,6 +44,55 @@ public sealed partial class ModBrowserDialog : ContentDialog
             ShimmerStoryboard.Stop();
             BlinkCursorStoryboard.Stop();
         };
+    }
+
+    /// <summary>
+    /// Khởi tạo dữ liệu tìm kiếm cho instance được chỉ định.
+    /// </summary>
+    public async Task InitializeForInstanceAsync(string? instanceId)
+    {
+        if (!string.IsNullOrEmpty(instanceId))
+        {
+            var active = ((App)Application.Current).Services
+                .GetRequiredService<ActiveInstanceService>();
+            active.SetCurrent(instanceId);
+        }
+
+        await ViewModel.RefreshInstanceContextAsync();
+        if (ViewModel.Results.Count == 0)
+        {
+            await ViewModel.SearchAsync();
+        }
+    }
+
+    /// <summary>
+    /// Đặt con trỏ chuột và tiêu điểm vào ô tìm kiếm.
+    /// </summary>
+    public void FocusSearchBox()
+    {
+        SearchBox?.Focus(FocusState.Programmatic);
+    }
+
+    private void CloseButton_Click(object sender, RoutedEventArgs e)
+    {
+        CloseRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void UserControl_KeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key == Windows.System.VirtualKey.Escape)
+        {
+            if (DependencyPromptOverlay.Visibility == Visibility.Visible)
+            {
+                DependencyPromptOverlay.Visibility = Visibility.Collapsed;
+                _pendingRowForInstall = null;
+                e.Handled = true;
+                return;
+            }
+
+            CloseRequested?.Invoke(this, EventArgs.Empty);
+            e.Handled = true;
+        }
     }
 
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
