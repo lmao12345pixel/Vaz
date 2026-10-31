@@ -52,7 +52,13 @@
 - `B8-active-partial-protection` | ĐÃ LÀM | CleanOrphanPartials kiểm tra danh sách ActivePartials (ConcurrentDictionary); các lượt tải đang chạy sẽ được giữ nguyên, chỉ xóa các file .partial mồ côi thật sự. Unit test DL_CleanOrphanPartials_DoesNotDeleteActiveDownloads. Commit b7d79c7.
 - `B8-metadata-cache-appdata` | ĐÃ LÀM | Chuyển file cache metadata .jar-metadata-cache.json ra ngoài thư mục instance, đặt tại %AppData%/Vazer/cache/metadata/{instanceName}-{hash}.json; tự động di chuyển và dọn dẹp cache cũ. Commit b7d79c7.
 - `B8-test-fabric-iris-missing-file` | ĐÃ LÀM | Chụp màn hình tab Mods của instance thật 'test fabric' trên app bản mới nhất, hiển thị Iris Shaders với badge 'Thiếu file'. Ảnh LD-08-test-fabric-iris-missing-file-1025x533.png và LD-08-test-fabric-iris-missing-file-960x530.png.
-- `CI-status-github` | ĐÃ LÀM | Đã chạy 3 lần trên GitHub Actions (workflow ci.yml trên nhánh feat/browse-popular-mods), 100% XANH: Run 41156024313 (commit 65af265, 325 tests), Run 41148553563 (commit 93610fa, 322 tests), Run 41103856268 (commit ba21505, 322 tests).
+- `CI-status-github` | ĐÃ LÀM | Đã chạy 6 lần trên GitHub Actions (workflow ci.yml trên nhánh feat/browse-popular-mods), 100% XANH (tổng 327 tests pass, sàn MIN_TESTS 320):
+  - Run [41170099637](https://github.com/lmao12345pixel/Vaz/actions/runs/41170099637) (commit `655595f`, 327 tests)
+  - Run [41168784317](https://github.com/lmao12345pixel/Vaz/actions/runs/41168784317) (commit `05a08f0`, 327 tests)
+  - Run [41159049111](https://github.com/lmao12345pixel/Vaz/actions/runs/41159049111) (commit `373bc51`, 326 tests - commit nằm 100% trong phạm vi PR #1)
+  - Run [41156024313](https://github.com/lmao12345pixel/Vaz/actions/runs/41156024313) (commit `65af265`, 325 tests)
+  - Run [41148553563](https://github.com/lmao12345pixel/Vaz/actions/runs/41148553563) (commit `93610fa`, 322 tests)
+  - Run [41103856268](https://github.com/lmao12345pixel/Vaz/actions/runs/41103856268) (commit `ba21505`, 322 tests)
 - `UNVERIFIED-manual` | UNVERIFIED | Các kịch bản phụ thuộc phần cứng / tương tác vật lý thật trong docs/evidence/mods-manual-checklist.md: MC-SM-01 (mạng chập chờn), MC-SM-02 (bấm Cancel khi tải), MC-SM-03 (kéo thả .mrpack ngoài Explorer), MC-LD-01 (kéo thả jar ngoài Explorer), MC-LD-02 (kéo thả jar trùng hash), MC-LD-03 (khóa file khi game đang chạy), MC-LD-04 (xác nhận gỡ mod bình thường), MC-LD-05 (gỡ mod thiếu file), MC-LD-06 (scale màn hình 125%/150%). Giữ nguyên UNVERIFIED theo quy định không báo hoàn thành ảo.
 
 ---
@@ -62,14 +68,14 @@
 1. **Iris không có file jar trong tab Mods (Phantom Mod)**:
    - *Nguyên nhân*: `mods.json` chứa mục Iris nhưng file `iris-fabric-1.8.8+mc1.21.1.jar` đã bị xóa khỏi đĩa. Code cũ không kiểm tra `File.Exists`, dẫn đến việc toggle không đổi được file thật và `HasShaderLoader` vẫn nhận diện nhầm.
    - *Khắc phục*: Thêm thuộc tính `IsMissingFile` và `CanToggle` vào `InstalledModRow`. Khi thiếu file, hiển thị badge đỏ 'Thiếu file', vô hiệu hóa `ToggleSwitch`. Cập nhật `HasShaderLoader` chỉ duyệt các mod `!IsMissingFile && Enabled`. Thêm nút gỡ với ContentDialog xác nhận 'Gỡ {tên mod} khỏi danh sách?'.
-   - *Bằng chứng*: Unit test `DetectShaderLoader_ExcludesFilteredOutMissingOrDisabledMods` (PASS); ảnh chụp màn hình `docs/evidence/LD-07-missing-file-badge-1025x533.png` và `LD-07-missing-file-badge-960x530.png` trên instance tạm `rt-mods-test`, cùng ảnh `docs/evidence/LD-08-test-fabric-iris-missing-file-1025x533.png` và `LD-08-test-fabric-iris-missing-file-960x530.png` trên instance thật `test fabric`.
-   - *Ghi chú mã ảnh*: Tiền tố `LD-07` trong ảnh `LD-07-missing-file-badge-*` và `LD-08` trong `LD-08-test-fabric-iris-missing-file-*` là mã file ảnh bằng chứng màn hình cho hạng mục Item 1 (thiếu file jar). Mã này độc lập và không thay thế mã kịch bản thủ công `MC-LD-03` (khóa file khi game đang chạy, trước đây từng được gọi tạm là LD-07 trong dự thảo cũ). Giữ nguyên file ảnh hiện tại không đổi tên hay ghi đè theo quy tắc an toàn.
+   - *Bằng chứng*: Unit test `DetectShaderLoader_ExcludesFilteredOutMissingOrDisabledMods` (PASS); ảnh chụp màn hình `docs/evidence/LD-07-missing-file-badge-1025x533.png` (1025x533 px, 96 DPI / 100% display scale) và `LD-07-missing-file-badge-960x530.png` (960x530 px, 96 DPI / 100% display scale) trên instance tạm `rt-mods-test`, cùng ảnh `docs/evidence/LD-08-test-fabric-iris-missing-file-1025x533.png` (1025x533 px, 96 DPI / 100% display scale) và `LD-08-test-fabric-iris-missing-file-960x530.png` (960x530 px, 96 DPI / 100% display scale) trên instance thật `test fabric`.
+   - *Ghi chú mã ảnh*: Tiền tố `LD-07` trong ảnh `LD-07-missing-file-badge-*` và `LD-08` trong `LD-08-test-fabric-iris-missing-file-*` là mã file ảnh bằng chứng màn hình cho hạng mục Item 1 (thiếu file jar). Mã này độc lập và không thay thế mã kịch bản thủ công `MC-LD-03` (khóa file khi game đang chạy, trước đây từng được gọi tạm là LD-07 trong dự thảo cũ). Cả 4 file ảnh đều có kích thước thực tế đúng 1025x533 px và 960x530 px, độ phân giải 96 DPI (100% display scale). Giữ nguyên file ảnh hiện tại không đổi tên hay ghi đè theo quy tắc an toàn.
 
 2. **Cảnh báo trùng lặp Mod (Duplicate Mod Jars) & Nút cập nhật**:
    - *Cảnh báo*: Cập nhật thông điệp cảnh báo trong `InstanceDetailViewModel.cs`: `Trùng mod id '{group.Key}' với file '{otherFiles}'. Hậu quả: Loader sẽ crash khi khởi động do DuplicateModException (game có thể không chạy).`
    - *Tái hiện*: Tạo bản sao trên instance tạm `rt-mods-test`, chứa 2 file `sodium-fabric-0.6.0+mc1.21.1.jar` và `sodium-fabric-0.8.13+mc1.21.1.jar`. App cảnh báo chính xác tại cả 2 độ phân giải (1025x533 và 960x530).
-   - *Cập nhật thay thế*: Trong `ModInstallService.InstallFromModrinthInternalAsync`, bản mới được tải về `.partial` và kiểm tra SHA512 trước. Chỉ sau khi SHA512 khớp, app mới xóa các bản cũ (`existingMods`) và di chuyển file mới vào. Nếu tải lỗi hoặc hủy, bản cũ và manifest giữ nguyên vẹn. Unit test `InstallFromModrinthAsync_UpdateReplacesOldJar_DoesNotKeepBothSideBySide` và `InstallFromModrinthAsync_UpdateFailsOrCancels_PreservesOldJarAndManifest` (đều PASS).
-   - *Bằng chứng*: Ảnh chụp `docs/evidence/LD-06-duplicate-sodium-warning-1025x533.png` và `LD-06-duplicate-sodium-warning-960x530.png`.
+   - *Cập nhật thay thế*: Trong `ModInstallService.InstallFromModrinthInternalAsync`, bản mới được tải về `.partial` và kiểm tra SHA512 trước. Chỉ sau khi SHA512 khớp, app mới xóa các bản cũ (`existingMods`) và di chuyển file mới vào. Nếu tải lỗi hoặc hủy, bản cũ và manifest giữ nguyên vẹn. Unit test `InstallFromModrinthAsync_UpdateReplacesOldJar_DoesNotKeepBothSideBySide`, `InstallFromModrinthAsync_UpdateFailsOrCancels_PreservesOldJarAndManifest`, và `InstallFromModrinthAsync_UpdateSha512Mismatch_PreservesOldJarAndManifest` (đều PASS).
+   - *Bằng chứng*: Ảnh chụp `docs/evidence/LD-06-duplicate-sodium-warning-1025x533.png` (1025x533 px, 96 DPI / 100% display scale) và `LD-06-duplicate-sodium-warning-960x530.png` (960x530 px, 96 DPI / 100% display scale).
 
 3. **Nguồn gốc file sodium-fabric-0.8.13 trong instance "test fabric"**:
    - **Không rõ nguồn gốc**. File `sodium-fabric-0.8.13+mc1.21.1.jar` trên đĩa có thời gian sửa đổi là 18/10/2026 10:16 PM, trước ngày repository được khởi tạo (23/10/2026). Không có bất kỳ lệnh, log hay commit nào trong lịch sử chứng minh việc tải file này.
@@ -93,7 +99,10 @@
      - `MC-LD-06`: Kiểm tra giao diện ở tỷ lệ thu phóng HiDPI (125%, 150%).
 
 6. **Trạng thái GitHub Actions CI**:
-   - Workflow `.github/workflows/ci.yml` trên nhánh `feat/browse-popular-mods` đã có 3 lần chạy, tất cả đều XANH (100% pass):
+   - Workflow `.github/workflows/ci.yml` trên nhánh `feat/browse-popular-mods` đã có 6 lần chạy, tất cả đều XANH (100% pass, MIN_TESTS sàn 320, hiện tại 327 test pass):
+     - Run `41170099637`: commit `655595f`, XANH (Success), 327/327 unit tests passed. Link: `https://github.com/lmao12345pixel/Vaz/actions/runs/41170099637`.
+     - Run `41168784317`: commit `05a08f0`, XANH (Success), 327/327 unit tests passed. Link: `https://github.com/lmao12345pixel/Vaz/actions/runs/41168784317`.
+     - Run `41159049111`: commit `373bc51`, XANH (Success), 326/326 unit tests passed. Commit `373bc51` nằm 100% trong phạm vi PR #1. Link: `https://github.com/lmao12345pixel/Vaz/actions/runs/41159049111`. File log lưu tại `docs/evidence/ci-run-41159049111.txt`.
      - Run `41156024313`: commit `65af265`, XANH (Success), 325/325 unit tests passed. Link: `https://github.com/lmao12345pixel/Vaz/actions/runs/41156024313`.
      - Run `41148553563`: commit `93610fa`, XANH (Success), 322/322 unit tests passed. Link: `https://github.com/lmao12345pixel/Vaz/actions/runs/41148553563`.
      - Run `41103856268`: commit `ba21505`, XANH (Success), 322/322 unit tests passed. Link: `https://github.com/lmao12345pixel/Vaz/actions/runs/41103856268`.
