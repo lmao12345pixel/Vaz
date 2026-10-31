@@ -53,7 +53,15 @@
                 IsOpen="{x:Bind ViewModel.HasError, Mode=TwoWay}"
                 Severity="Error"
                 Title="Lỗi"
-                Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}" />
+                Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}">
+                <!-- MC-SM-04: nút Thử lại gọi lại SearchAsync với từ khóa hiện tại. -->
+                <InfoBar.ActionButton>
+                    <Button
+                        Content="Thử lại"
+                        Command="{x:Bind ViewModel.RetryCommand}"
+                        Padding="12,4" />
+                </InfoBar.ActionButton>
+            </InfoBar>
             <TextBlock
                 Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
                 Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}"
