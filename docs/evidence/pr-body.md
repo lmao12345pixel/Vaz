@@ -16,7 +16,7 @@ PR bao gồm toàn bộ các commit trên nhánh `feat/browse-popular-mods` cả
 3. **Quản lý Mod (Mod Manager & Load Mod)**:
    - **Nhãn**: `CÓ LỖI ĐANG MỞ`
    - Phạm vi: Bật/tắt mod, xóa mod, quét metadata jar, cảnh báo trùng mod ID kèm `(game có thể không chạy)`, thay thế jar cũ khi cập nhật và rollback an toàn khi lỗi/hủy/sai hash SHA512.
-   - Trạng thái lỗi: Đã vá lỗi phantom Iris bằng badge "Thiếu file", khóa toggle và bổ sung nút "Gỡ" khỏi danh sách; loại trừ mod thiếu file khỏi `HasShaderLoader`. Bổ sung ảnh bằng chứng màn hình `LD-07` và `LD-08` (1025x533 và 960x530 ở 96 DPI / 100% display scale). Các kịch bản khóa file khi game chạy (MC-LD-03) và HiDPI (MC-LD-06) tiếp tục theo dõi trong checklist thủ công.
+   - Trạng thái lỗi: Đã vá lỗi phantom Iris bằng badge "Thiếu file", khóa toggle và bổ sung nút "Gỡ" khỏi danh sách; loại trừ mod thiếu file khỏi `HasShaderLoader`. Bổ sung ảnh bằng chứng màn hình `LD-07` và `LD-08` (kích thước đọc từ metadata ảnh: 1025x533 và 960x530 ở 96 DPI / 100% display scale; commit `65af265` và `373bc51`). Các kịch bản khóa file khi game chạy (MC-LD-03) và HiDPI 125%/150% (MC-LD-06) vẫn giữ nguyên trạng thái `UNVERIFIED` theo dõi trong checklist thủ công.
 
 4. **Tìm và Tải Mod (Modrinth Search & Download)**:
    - **Nhãn**: `CHƯA KIỂM TAY`
@@ -46,7 +46,7 @@ PR bao gồm toàn bộ các commit trên nhánh `feat/browse-popular-mods` cả
 ### Lỗi đã biết / Việc chưa xong (Checklist thủ công Đợt 3):
 - Kịch bản gạt toggle khi game đang chạy (`javaw.exe` khóa file) cần test thủ công trên máy thật (`MC-LD-03`).
 - Đăng nhập Microsoft OAuth2 với tài khoản Microsoft thật (`CHƯA KIỂM TAY`).
-- Khả năng co giãn giao diện hiển thị ở mức phóng to HiDPI 125%, 150% (`MC-LD-06`).
+- Khả năng co giãn giao diện hiển thị ở mức phóng to HiDPI 125%, 150% (`MC-LD-06` giữ nguyên `UNVERIFIED`; ảnh LD-06 hiện có ở 96 DPI / 100% scaling không đại diện cho HiDPI).
 - Thử nghiệm kéo thả tệp từ ngoài Explorer trên desktop cảm ứng/tablet (`MC-LD-01`, `MC-SM-03`).
 - Tắt hẳn mạng khi tìm mod (`MC-SM-04`), gõ tiếng Việt Unikey/Telex (`MC-SM-05`), duyệt mod phổ biến khi ô tìm trống (`MC-SM-06`).
 
@@ -55,6 +55,8 @@ PR bao gồm toàn bộ các commit trên nhánh `feat/browse-popular-mods` cả
 ### Liên kết tài liệu kiểm chứng (Evidence Links):
 - [Sổ theo dõi chi tiết (mods-open-items.md)](https://github.com/lmao12345pixel/Vaz/blob/feat/browse-popular-mods/docs/evidence/mods-open-items.md)
 - [Checklist kiểm thử thủ công (mods-manual-checklist.md)](https://github.com/lmao12345pixel/Vaz/blob/feat/browse-popular-mods/docs/evidence/mods-manual-checklist.md)
+- [Bảng theo dõi chạy kiểm thử thủ công Đợt 3 (mods-manual-checklist-run.md)](https://github.com/lmao12345pixel/Vaz/blob/feat/browse-popular-mods/docs/evidence/mods-manual-checklist-run.md)
+- [Log dotnet test 327/327 (dotnet-test-327.txt)](https://github.com/lmao12345pixel/Vaz/blob/feat/browse-popular-mods/docs/evidence/dotnet-test-327.txt)
 - [Log xuất CI Run 41159049111 (ci-run-41159049111.txt)](https://github.com/lmao12345pixel/Vaz/blob/feat/browse-popular-mods/docs/evidence/ci-run-41159049111.txt)
 - [Diff 4 commit củng cố (diff-4-commits.txt)](https://github.com/lmao12345pixel/Vaz/blob/feat/browse-popular-mods/docs/evidence/diff-4-commits.txt)
 
