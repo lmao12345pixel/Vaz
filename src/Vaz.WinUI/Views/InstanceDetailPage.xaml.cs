@@ -36,6 +36,12 @@ public sealed partial class InstanceDetailPage : Page
 
     private void BackButton_Click(object sender, RoutedEventArgs e)
     {
+        if (ModBrowserHostGrid.Visibility == Visibility.Visible)
+        {
+            CloseModBrowser();
+            return;
+        }
+
         if (Frame.CanGoBack)
         {
             Frame.GoBack();
@@ -261,10 +267,41 @@ public sealed partial class InstanceDetailPage : Page
     private async void DownloadMods_Click(object sender, RoutedEventArgs e)
     {
         if (ViewModel == null || ViewModel.IsGameRunning) return;
-        var dialog = new ModBrowserDialog(ViewModel.Current?.Id);
-        dialog.XamlRoot = XamlRoot;
-        await dialog.ShowAsync();
-        await ViewModel.LoadAsync();
+        await OpenModBrowserAsync();
+    }
+
+    private async Task OpenModBrowserAsync()
+    {
+        if (ViewModel?.Current == null) return;
+
+        ModBrowserHostGrid.Visibility = Visibility.Visible;
+        ModBrowserHostGrid.Opacity = 0.0;
+        ModBrowserTranslate.Y = 50;
+
+        OpenModBrowserStoryboard.Begin();
+
+        await EmbeddedModBrowser.InitializeForInstanceAsync(ViewModel.Current.Id);
+        EmbeddedModBrowser.FocusSearchBox();
+    }
+
+    private void CloseModBrowser()
+    {
+        if (ModBrowserHostGrid.Visibility != Visibility.Visible) return;
+        CloseModBrowserStoryboard.Begin();
+    }
+
+    private async void CloseModBrowserStoryboard_Completed(object? sender, object e)
+    {
+        ModBrowserHostGrid.Visibility = Visibility.Collapsed;
+        if (ViewModel != null)
+        {
+            await ViewModel.LoadAsync();
+        }
+    }
+
+    private void EmbeddedModBrowser_CloseRequested(object? sender, EventArgs e)
+    {
+        CloseModBrowser();
     }
 
     private void ClearLog_Click(object sender, RoutedEventArgs e)
@@ -367,6 +404,13 @@ public sealed partial class InstanceDetailPage : Page
     {
         if (e.Key == Windows.System.VirtualKey.Escape)
         {
+            if (ModBrowserHostGrid.Visibility == Visibility.Visible)
+            {
+                CloseModBrowser();
+                e.Handled = true;
+                return;
+            }
+
             if (ViewModel.IsInspectorOpen)
             {
                 ViewModel.CloseInspectorCommand.Execute(null);

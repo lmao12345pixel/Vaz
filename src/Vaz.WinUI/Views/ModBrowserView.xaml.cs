@@ -2,10 +2,13 @@ using System;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Windows.System;
 using Vaz.WinUI.Models;
 using Vaz.WinUI.Services;
 using Vaz.WinUI.ViewModels;
@@ -13,17 +16,20 @@ using Vaz.WinUI.ViewModels;
 namespace Vaz.WinUI.Views;
 
 /// <summary>
-/// Mod Browser ContentDialog — hỗ trợ Infinite Scroll, Shimmer Skeleton,
-/// Blinking Cursor, Staggered Wave Animation và Dynamic Filter Chips Animation.
+/// Mod Browser View (UserControl) tích hợp vào InstanceDetailPage.
+/// Hỗ trợ Infinite Scroll, Shimmer Skeleton, Blinking Cursor,
+/// Staggered Wave Animation và Dynamic Filter Chips Animation.
 /// </summary>
-public sealed partial class ModBrowserDialog : ContentDialog
+public sealed partial class ModBrowserView : UserControl
 {
     public ModBrowserViewModel ViewModel { get; }
+
+    public event EventHandler? CloseRequested;
 
     private ScrollViewer? _listScrollViewer;
     private SearchHitRow? _pendingRowForInstall;
 
-    public ModBrowserDialog(string? instanceId = null)
+    public ModBrowserView()
     {
         ViewModel = ((App)Application.Current).Services
             .GetRequiredService<ModBrowserViewModel>();
@@ -31,23 +37,6 @@ public sealed partial class ModBrowserDialog : ContentDialog
 
         ViewModel.PropertyChanged += ViewModel_PropertyChanged;
         ((INotifyCollectionChanged)ViewModel.FilterChips).CollectionChanged += FilterChips_CollectionChanged;
-
-        Loaded += async (_, _) =>
-        {
-            DialogContentEntranceStoryboard.Begin();
-
-            if (!string.IsNullOrEmpty(instanceId))
-            {
-                var active = ((App)Application.Current).Services
-                    .GetRequiredService<ActiveInstanceService>();
-                active.SetCurrent(instanceId);
-            }
-            await ViewModel.RefreshInstanceContextAsync();
-            if (ViewModel.Results.Count == 0)
-            {
-                await ViewModel.SearchAsync();
-            }
-        };
 
         Unloaded += (_, _) =>
         {
@@ -59,9 +48,55 @@ public sealed partial class ModBrowserDialog : ContentDialog
             }
             ShimmerStoryboard.Stop();
             BlinkCursorStoryboard.Stop();
-            DialogContentEntranceStoryboard.Stop();
             FilterChipsEntranceStoryboard.Stop();
         };
+    }
+
+    public async Task InitializeForInstanceAsync(string? instanceId)
+    {
+        if (!string.IsNullOrEmpty(instanceId))
+        {
+            var active = ((App)Application.Current).Services
+                .GetRequiredService<ActiveInstanceService>();
+            active.SetCurrent(instanceId);
+        }
+        await ViewModel.RefreshInstanceContextAsync();
+        if (ViewModel.Results.Count == 0)
+        {
+            await ViewModel.SearchAsync();
+        }
+    }
+
+    public void FocusSearchBox()
+    {
+        SearchBox.Focus(FocusState.Programmatic);
+    }
+
+    private void Back_Click(object sender, RoutedEventArgs e)
+    {
+        CloseRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void Close_Click(object sender, RoutedEventArgs e)
+    {
+        CloseRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void UserControl_KeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key == VirtualKey.Escape)
+        {
+            if (DependencyPromptOverlay.Visibility == Visibility.Visible)
+            {
+                DependencyPromptOverlay.Visibility = Visibility.Collapsed;
+                _pendingRowForInstall = null;
+                e.Handled = true;
+                return;
+            }
+
+            CloseRequested?.Invoke(this, EventArgs.Empty);
+            e.Handled = true;
+        }
     }
 
     private void FilterChips_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -124,47 +159,34 @@ public sealed partial class ModBrowserDialog : ContentDialog
         }
     }
 
-    private void ResultsListView_Loaded(object sender, RoutedEventArgs e)
+    private void ResultsListView_ContainerContentChanging(ListViewBase sender, ContainerContentChangingEventArgs args)
     {
-        _listScrollViewer = FindScrollViewer(ResultsListView);
-        if (_listScrollViewer != null)
+        if (!args.InRecycleQueue && args.ItemContainer?.ContentTemplateRoot is ModCard card)
         {
-            _listScrollViewer.ViewChanged += ListScrollViewer_ViewChanged;
+            card.AnimateEntrance(args.ItemIndex);
         }
     }
 
-    private void ResultsListView_ContainerContentChanging(ListViewBase sender, ContainerContentChangingEventArgs args)
+    private void ResultsListView_Loaded(object sender, RoutedEventArgs e)
     {
-        if (args.InRecycleQueue) return;
-        if (args.ItemContainer.ContentTemplateRoot is ModCard card)
+        if (_listScrollViewer == null)
         {
-            card.AnimateEntrance(args.ItemIndex);
+            _listScrollViewer = FindChild<ScrollViewer>(ResultsListView);
+            if (_listScrollViewer != null)
+            {
+                _listScrollViewer.ViewChanged += ListScrollViewer_ViewChanged;
+            }
         }
     }
 
     private void ListScrollViewer_ViewChanged(object? sender, ScrollViewerViewChangedEventArgs e)
     {
         if (_listScrollViewer == null) return;
-
-        // Infinite Scroll: Khi cuộn gần chạm đáy (còn dưới 180px), tự động tải thêm trang tiếp theo
         var distanceToEnd = _listScrollViewer.ScrollableHeight - _listScrollViewer.VerticalOffset;
         if (distanceToEnd < 180 && ViewModel.CanLoadMore)
         {
             _ = ViewModel.LoadMoreAsync();
         }
-    }
-
-    private static ScrollViewer? FindScrollViewer(DependencyObject root)
-    {
-        var count = VisualTreeHelper.GetChildrenCount(root);
-        for (int i = 0; i < count; i++)
-        {
-            var child = VisualTreeHelper.GetChild(root, i);
-            if (child is ScrollViewer sv) return sv;
-            var result = FindScrollViewer(child);
-            if (result != null) return result;
-        }
-        return null;
     }
 
     private async void ModCard_InstallClick(object? sender, SearchHitRow row)
@@ -197,5 +219,18 @@ public sealed partial class ModBrowserDialog : ContentDialog
             _pendingRowForInstall = null;
             await ViewModel.InstallAsync(target);
         }
+    }
+
+    private static T? FindChild<T>(DependencyObject parent) where T : DependencyObject
+    {
+        var count = VisualTreeHelper.GetChildrenCount(parent);
+        for (var i = 0; i < count; i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T typedChild) return typedChild;
+            var subChild = FindChild<T>(child);
+            if (subChild != null) return subChild;
+        }
+        return null;
     }
 }

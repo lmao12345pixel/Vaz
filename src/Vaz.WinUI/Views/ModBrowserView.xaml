@@ -1,17 +1,13 @@
-<ContentDialog
-    x:Class="Vaz.WinUI.Views.ModBrowserDialog"
-    x:Name="RootDialog"
+<UserControl
+    x:Class="Vaz.WinUI.Views.ModBrowserView"
+    x:Name="RootView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="using:Vaz.WinUI.ViewModels"
     xmlns:views="using:Vaz.WinUI.Views"
-    Title="Tải Mods"
-    CloseButtonText="Đóng"
-    DefaultButton="Close"
-    MaxWidth="860"
-    MinWidth="740">
+    KeyDown="UserControl_KeyDown">
 
-    <ContentDialog.Resources>
+    <UserControl.Resources>
         <!-- Shimmer pulse animation -->
         <Storyboard x:Name="ShimmerStoryboard" RepeatBehavior="Forever" AutoReverse="True">
             <DoubleAnimation
@@ -46,30 +42,6 @@
             </DoubleAnimation>
         </Storyboard>
 
-        <!-- Dialog content entrance animation (250ms) -->
-        <Storyboard x:Name="DialogContentEntranceStoryboard">
-            <DoubleAnimation
-                Storyboard.TargetName="DialogRootGrid"
-                Storyboard.TargetProperty="Opacity"
-                From="0.0"
-                To="1.0"
-                Duration="0:0:0.25">
-                <DoubleAnimation.EasingFunction>
-                    <CubicEase EasingMode="EaseOut" />
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-            <DoubleAnimation
-                Storyboard.TargetName="DialogContentTranslate"
-                Storyboard.TargetProperty="Y"
-                From="15"
-                To="0"
-                Duration="0:0:0.25">
-                <DoubleAnimation.EasingFunction>
-                    <CubicEase EasingMode="EaseOut" />
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-        </Storyboard>
-
         <!-- Filter chips entrance animation (150ms) -->
         <Storyboard x:Name="FilterChipsEntranceStoryboard">
             <DoubleAnimation
@@ -93,19 +65,59 @@
                 </DoubleAnimation.EasingFunction>
             </DoubleAnimation>
         </Storyboard>
-    </ContentDialog.Resources>
+    </UserControl.Resources>
 
     <Grid
-        x:Name="DialogRootGrid"
-        RowDefinitions="Auto,Auto,Auto,Auto,*,Auto"
-        RowSpacing="10"
-        MinHeight="540">
-        <Grid.RenderTransform>
-            <TranslateTransform x:Name="DialogContentTranslate" Y="0" />
-        </Grid.RenderTransform>
+        Background="{ThemeResource SolidBackgroundFillColorBaseBrush}"
+        Padding="24,16,24,20"
+        RowDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto">
+
+        <!-- 0. Header Bar: Nút Quay lại, Tiêu đề, Badge Modrinth, Nút Đóng -->
+        <Grid Grid.Row="0" Margin="0,0,0,16" ColumnDefinitions="Auto,*,Auto">
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                <Button
+                    Click="Back_Click"
+                    ToolTipService.ToolTip="Quay lại danh sách Instance"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Padding="8"
+                    CornerRadius="8">
+                    <FontIcon Glyph="&#xE72B;" FontSize="16" />
+                </Button>
+                <TextBlock
+                    Text="Khám phá &amp; Tải Mods"
+                    FontSize="20"
+                    FontWeight="SemiBold"
+                    VerticalAlignment="Center" />
+                <Border
+                    Background="#1810B981"
+                    BorderBrush="#3010B981"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Padding="6,2"
+                    VerticalAlignment="Center">
+                    <TextBlock
+                        Text="Modrinth"
+                        FontSize="11"
+                        FontWeight="SemiBold"
+                        Foreground="#10B981" />
+                </Border>
+            </StackPanel>
+
+            <Button
+                Grid.Column="2"
+                Click="Close_Click"
+                ToolTipService.ToolTip="Đóng trình duyệt mod (Esc)"
+                Background="Transparent"
+                BorderThickness="0"
+                Padding="8"
+                CornerRadius="8">
+                <FontIcon Glyph="&#xE711;" FontSize="14" />
+            </Button>
+        </Grid>
 
         <!-- 1. Search Bar with Blinking Cursor Effect -->
-        <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+        <Grid Grid.Row="1" Margin="0,0,0,12" ColumnDefinitions="*,Auto">
             <AutoSuggestBox
                 Grid.Column="0"
                 x:Name="SearchBox"
@@ -118,7 +130,6 @@
                 LostFocus="SearchBox_LostFocus"
                 HorizontalAlignment="Stretch" />
 
-            <!-- Blinking indicator beside search box to highlight active search -->
             <Border
                 Grid.Column="1"
                 x:Name="SearchBlinkIndicator"
@@ -134,7 +145,8 @@
         <!-- 2. Dynamic Filter Chips (Thanh ngang động với Animation 150ms) -->
         <ScrollViewer
             x:Name="FilterChipsScrollViewer"
-            Grid.Row="1"
+            Grid.Row="2"
+            Margin="0,0,0,12"
             HorizontalScrollBarVisibility="Hidden"
             VerticalScrollBarVisibility="Disabled"
             HorizontalScrollMode="Enabled"
@@ -162,15 +174,14 @@
                             Click="FilterChip_Click"
                             CornerRadius="14"
                             Padding="12,4"
-                            FontSize="12"
-                            Style="{StaticResource DefaultButtonStyle}" />
+                            FontSize="12" />
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </ScrollViewer>
 
         <!-- 3. Horizontal Filter Row (Thanh lọc ngang) -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+        <StackPanel Grid.Row="3" Margin="0,0,0,12" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
             <ComboBox
                 Header="Loader"
                 ItemsSource="{x:Bind ViewModel.LoaderOptions}"
@@ -194,7 +205,7 @@
         </StackPanel>
 
         <!-- 4. Status / Error / Progress Bar -->
-        <StackPanel Grid.Row="3" Spacing="6">
+        <StackPanel Grid.Row="4" Margin="0,0,0,8" Spacing="6">
             <InfoBar
                 IsOpen="{x:Bind ViewModel.HasError, Mode=TwoWay}"
                 Severity="Error"
@@ -229,7 +240,7 @@
         </StackPanel>
 
         <!-- 5. Main Content Area (Shimmer Loading Skeleton OR Results ListView OR Empty State) -->
-        <Grid Grid.Row="4">
+        <Grid Grid.Row="5">
             <!-- Shimmer Skeleton Loading State -->
             <StackPanel
                 x:Name="ShimmerPanel"
@@ -340,8 +351,8 @@
             </StackPanel>
         </Grid>
 
-        <!-- 6. Bottom Infinite Scroll Spinner (Không dùng nút Load more) -->
-        <Grid Grid.Row="5" HorizontalAlignment="Center" Margin="0,4,0,0">
+        <!-- 6. Bottom Infinite Scroll Spinner -->
+        <Grid Grid.Row="6" HorizontalAlignment="Center" Margin="0,6,0,0">
             <ProgressRing
                 Width="24"
                 Height="24"
@@ -349,13 +360,13 @@
                 Visibility="{x:Bind ViewModel.IsLoadingMore, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
         </Grid>
 
-        <!-- 7. Dependency confirmation prompt overlay (MM-AC-04) -->
+        <!-- 7. Dependency confirmation prompt overlay -->
         <Grid
             x:Name="DependencyPromptOverlay"
-            Grid.RowSpan="6"
+            Grid.RowSpan="7"
             Background="#88000000"
             Visibility="Collapsed"
-            Margin="-24"
+            Margin="-24,-16,-24,-20"
             Padding="24"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Stretch">
@@ -395,4 +406,4 @@
             </Border>
         </Grid>
     </Grid>
-</ContentDialog>
+</UserControl>
