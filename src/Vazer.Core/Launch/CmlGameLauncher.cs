@@ -106,7 +106,7 @@ public sealed class CmlGameLauncher : IGameLauncher
         if (!string.IsNullOrEmpty(parameters.MinecraftVersion) &&
             parameters.LaunchVersionName != parameters.MinecraftVersion)
         {
-            await _launcher.InstallAsync(parameters.MinecraftVersion, ct);
+            await InstallWithRetryAsync(parameters.MinecraftVersion, ct);
         }
 
         // Tra version theo tên (đã migrate nếu thiếu) rồi mới resolve object.
@@ -187,6 +187,70 @@ public sealed class CmlGameLauncher : IGameLauncher
     }
 
     /// <summary>
+    /// Tải tài nguyên phiên bản Minecraft gốc qua CmlLib với cơ chế tự động thử lại (Retry Policy).
+    /// Tối đa 3 lần, exponential backoff (2s, 4s), bắt các lỗi mạng gián đoạn.
+    /// Tôn trọng CancellationToken khi người dùng hủy.
+    /// </summary>
+    private async Task InstallWithRetryAsync(string versionName, CancellationToken ct)
+    {
+        const int maxAttempts = 3;
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            ct.ThrowIfCancellationRequested();
+            try
+            {
+                await _launcher.InstallAsync(versionName, ct);
+                return;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex) when (IsNetworkException(ex))
+            {
+                if (attempt >= maxAttempts)
+                {
+                    _logger.LogError(ex, "Tải tài nguyên version {Version} thất bại sau {MaxAttempts} lần thử", versionName, maxAttempts);
+                    throw;
+                }
+
+                var delaySeconds = (int)Math.Pow(2, attempt); // Lần 1 chờ 2s, lần 2 chờ 4s
+                _logger.LogWarning(ex, "Lỗi mạng khi tải version {Version} (lần {Attempt}/{MaxAttempts}). Thử lại sau {Delay}s...",
+                    versionName, attempt, maxAttempts, delaySeconds);
+                await Task.Delay(TimeSpan.FromSeconds(delaySeconds), ct);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Kiểm tra ngoại lệ có bắt nguồn từ lỗi kết nối mạng / timeout hay không.
+    /// </summary>
+    public static bool IsNetworkException(Exception ex)
+    {
+        for (var current = ex; current != null; current = current.InnerException)
+        {
+            if (current is System.Net.Http.HttpRequestException or
+                System.Net.Sockets.SocketException or
+                System.IO.IOException or
+                TimeoutException)
+            {
+                return true;
+            }
+
+            if (current is TaskCanceledException tce && !tce.CancellationToken.IsCancellationRequested)
+            {
+                return true;
+            }
+
+            if (current.Message.Contains("An error occurred while sending the request", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
     /// Tra version theo tên; nếu root chưa có (instance cũ cài version json
     /// ngay trong thư mục instance như "test fabric/versions/fabric-loader-*"),
     /// copy folder version từ instance lên root rồi tra lại. Trả về true nếu
@@ -229,6 +293,8 @@ public sealed class CmlGameLauncher : IGameLauncher
     private void MigrateInstanceVersionToRoot(LaunchParameters parameters)
     {
         var name = parameters.LaunchVersionName;
+        if (string.IsNullOrEmpty(name)) return;
+
         var sourceDir = Directory.EnumerateDirectories(Path.Combine(parameters.InstancePath, "versions"), "*", SearchOption.TopDirectoryOnly)
             .FirstOrDefault(d => string.Equals(Path.GetFileName(d), name, StringComparison.OrdinalIgnoreCase));
         if (sourceDir == null) return;

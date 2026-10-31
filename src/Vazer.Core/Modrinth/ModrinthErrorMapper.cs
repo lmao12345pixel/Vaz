@@ -35,64 +35,66 @@ public static class ModrinthErrorMapper
 {
     public static ModrinthErrorInfo Map(Exception ex)
     {
-        if (ex is ModrinthRateLimitException rle)
+        for (var current = ex; current != null; current = current.InnerException)
         {
-            var seconds = rle.RetryAfterSeconds ?? 5;
-            return new ModrinthErrorInfo
-            {
-                ErrorType = ModrinthErrorType.RateLimited,
-                CanRetry = true,
-                RetryAfterSeconds = seconds,
-                Message = $"Bạn đã gửi quá nhiều yêu cầu đến Modrinth (429). Vui lòng thử lại sau {seconds} giây."
-            };
-        }
-
-        if (ex is TaskCanceledException or TimeoutException)
-        {
-            return new ModrinthErrorInfo
-            {
-                ErrorType = ModrinthErrorType.Timeout,
-                CanRetry = true,
-                Message = "Yêu cầu đến Modrinth bị quá thời gian (timeout). Vui lòng thử lại."
-            };
-        }
-
-        if (ex is HttpRequestException hre)
-        {
-            if (hre.StatusCode == HttpStatusCode.TooManyRequests)
+            if (current is ModrinthRateLimitException rle)
             {
                 return new ModrinthErrorInfo
                 {
                     ErrorType = ModrinthErrorType.RateLimited,
                     CanRetry = true,
-                    RetryAfterSeconds = 5,
-                    Message = "Quá giới hạn tần suất yêu cầu Modrinth (429). Vui lòng thử lại sau."
+                    RetryAfterSeconds = rle.RetryAfterSeconds ?? 5,
+                    Message = "Bạn thao tác quá nhanh. Vui lòng đợi một lát và thử lại."
                 };
             }
 
-            if (hre.StatusCode.HasValue && (int)hre.StatusCode.Value >= 500 && (int)hre.StatusCode.Value < 600)
+            if (current is HttpRequestException hre)
+            {
+                if (hre.StatusCode == HttpStatusCode.TooManyRequests)
+                {
+                    return new ModrinthErrorInfo
+                    {
+                        ErrorType = ModrinthErrorType.RateLimited,
+                        CanRetry = true,
+                        RetryAfterSeconds = 5,
+                        Message = "Bạn thao tác quá nhanh. Vui lòng đợi một lát và thử lại."
+                    };
+                }
+
+                if (hre.StatusCode.HasValue && (int)hre.StatusCode.Value >= 500 && (int)hre.StatusCode.Value < 600)
+                {
+                    return new ModrinthErrorInfo
+                    {
+                        ErrorType = ModrinthErrorType.Server,
+                        CanRetry = true,
+                        Message = "Máy chủ đang gặp sự cố. Vui lòng thử lại sau."
+                    };
+                }
+
+                return new ModrinthErrorInfo
+                {
+                    ErrorType = ModrinthErrorType.Network,
+                    CanRetry = true,
+                    Message = "Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối Internet của bạn và thử lại."
+                };
+            }
+
+            if (current is TaskCanceledException or TimeoutException)
             {
                 return new ModrinthErrorInfo
                 {
-                    ErrorType = ModrinthErrorType.Server,
+                    ErrorType = ModrinthErrorType.Timeout,
                     CanRetry = true,
-                    Message = $"Máy chủ Modrinth gặp sự cố ({(int)hre.StatusCode.Value}). Vui lòng thử lại sau."
+                    Message = "Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối Internet của bạn và thử lại."
                 };
             }
-
-            return new ModrinthErrorInfo
-            {
-                ErrorType = ModrinthErrorType.Network,
-                CanRetry = true,
-                Message = "Không thể kết nối đến máy chủ Modrinth. Kiểm tra lại kết nối mạng."
-            };
         }
 
         return new ModrinthErrorInfo
         {
             ErrorType = ModrinthErrorType.Unknown,
             CanRetry = true,
-            Message = $"Đã xảy ra lỗi: {ex.Message}"
+            Message = "Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối Internet của bạn và thử lại."
         };
     }
 }

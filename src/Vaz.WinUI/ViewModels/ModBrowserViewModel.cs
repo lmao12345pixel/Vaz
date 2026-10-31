@@ -294,7 +294,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
             if (requestId == _currentRequestId)
             {
                 HasError = true;
-                ErrorMessage = ex.Message;
+                ErrorMessage = ModrinthErrorMapper.Map(ex).Message;
             }
         }
         finally
@@ -409,7 +409,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
         catch (Exception ex)
         {
             HasError = true;
-            ErrorMessage = ex.Message;
+            ErrorMessage = ModrinthErrorMapper.Map(ex).Message;
             StatusMessage = "Cài thất bại.";
         }
         finally
@@ -484,7 +484,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
             // Không để status "Đang cài..." dính lại sau khi fail.
             StatusMessage = string.Empty;
             HasError = true;
-            ErrorMessage = ex.Message;
+            ErrorMessage = ModrinthErrorMapper.Map(ex).Message;
         }
         finally
         {

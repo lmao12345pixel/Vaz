@@ -401,7 +401,12 @@ public sealed partial class MainViewModel : ObservableObject
             CurrentProcessId = null;
             RunningInstanceId = null;
             UpdatePlayButtonLabels();
-            ShowErrorMessageAction?.Invoke($"Khởi chạy thất bại: {ex.Message}");
+
+            var errorMessage = CmlGameLauncher.IsNetworkException(ex)
+                ? "Đứt kết nối mạng trong quá trình tải tài nguyên Minecraft. Đã tự động lưu tiến trình, vui lòng bấm CHƠI lại để tiếp tục tải."
+                : $"Khởi chạy thất bại: {ex.Message}";
+
+            ShowErrorMessageAction?.Invoke(errorMessage);
         }
     }
 

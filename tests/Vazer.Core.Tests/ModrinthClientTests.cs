@@ -329,7 +329,7 @@ public sealed class ModrinthClientTests : IDisposable
         info.ErrorType.Should().Be(ModrinthErrorType.RateLimited);
         info.CanRetry.Should().BeTrue();
         info.RetryAfterSeconds.Should().Be(2);
-        info.Message.Should().Contain("2 giây");
+        info.Message.Should().Be("Bạn thao tác quá nhanh. Vui lòng đợi một lát và thử lại.");
     }
 
     [Fact]
@@ -340,7 +340,7 @@ public sealed class ModrinthClientTests : IDisposable
 
         info.ErrorType.Should().Be(ModrinthErrorType.Server);
         info.CanRetry.Should().BeTrue();
-        info.Message.Should().Contain("500");
+        info.Message.Should().Be("Máy chủ đang gặp sự cố. Vui lòng thử lại sau.");
     }
 
     [Fact]
@@ -351,7 +351,7 @@ public sealed class ModrinthClientTests : IDisposable
 
         info.ErrorType.Should().Be(ModrinthErrorType.Timeout);
         info.CanRetry.Should().BeTrue();
-        info.Message.Should().Contain("timeout");
+        info.Message.Should().Be("Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối Internet của bạn và thử lại.");
     }
 
     [Fact]
@@ -362,7 +362,7 @@ public sealed class ModrinthClientTests : IDisposable
 
         info.ErrorType.Should().Be(ModrinthErrorType.Network);
         info.CanRetry.Should().BeTrue();
-        info.Message.Should().Contain("kết nối");
+        info.Message.Should().Be("Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối Internet của bạn và thử lại.");
     }
 
     // ── 12. PH-2/3: PaginationState Tests ──
