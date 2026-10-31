@@ -103,8 +103,7 @@ public sealed class CmlGameLauncher : IGameLauncher
 
         // NEOFORGE/OPTIFINE v.v. kế thừa vanilla base — đảm bảo version gốc
         // đã có ở root trước khi merge (no-op nếu đã cài).
-        if (!string.IsNullOrEmpty(parameters.MinecraftVersion) &&
-            parameters.LaunchVersionName != parameters.MinecraftVersion)
+        if (!string.IsNullOrEmpty(parameters.MinecraftVersion))
         {
             await InstallWithRetryAsync(parameters.MinecraftVersion, ct);
         }
@@ -114,6 +113,13 @@ public sealed class CmlGameLauncher : IGameLauncher
         {
             throw new InvalidOperationException(
                 $"Không tìm thấy version '{parameters.LaunchVersionName}' cho instance {parameters.InstanceId}. Thử tạo lại instance hoặc kiểm tra thư mục {parameters.InstancePath}\\versions.");
+        }
+
+        // Tải mod loader libraries (Fabric loader, mixin, neoforge, ...) vào shared libraries
+        if (!string.IsNullOrEmpty(parameters.LaunchVersionName) &&
+            parameters.LaunchVersionName != parameters.MinecraftVersion)
+        {
+            await InstallWithRetryAsync(parameters.LaunchVersionName, ct);
         }
 
         var version = await _launcher.GetVersionAsync(parameters.LaunchVersionName, ct);
@@ -139,9 +145,12 @@ public sealed class CmlGameLauncher : IGameLauncher
         }
 
         // Build launch parameters - use MLaunchOption with correct properties for CmlLib.Core 4.0.6
+        var mcPath = CreateInstanceMinecraftPath(parameters.InstancePath, _launcher.MinecraftPath);
+
         var launchOption = new MLaunchOption
         {
-            Path = new MinecraftPath(parameters.InstancePath),
+            Path = mcPath,
+            JavaPath = java.Path,
             MaximumRamMb = parameters.MaxRamMb,
             Session = CreateSession(parameters.Account),
             ScreenWidth = parameters.Width ?? 854,
@@ -220,6 +229,21 @@ public sealed class CmlGameLauncher : IGameLauncher
                 await Task.Delay(TimeSpan.FromSeconds(delaySeconds), ct);
             }
         }
+    }
+
+    /// <summary>
+    /// Khởi tạo MinecraftPath cho instance nhưng ghi đè Library, Assets, Versions, Runtime
+    /// trỏ về thư mục root dùng chung (shared path), để classpath và tài nguyên nạp đúng
+    /// mà vẫn giữ gameDir trỏ vào thư mục instance.
+    /// </summary>
+    internal static MinecraftPath CreateInstanceMinecraftPath(string instancePath, MinecraftPath sharedPath)
+    {
+        var mcPath = new MinecraftPath(instancePath);
+        mcPath.Library = sharedPath.Library;
+        mcPath.Assets = sharedPath.Assets;
+        mcPath.Versions = sharedPath.Versions;
+        mcPath.Runtime = sharedPath.Runtime;
+        return mcPath;
     }
 
     /// <summary>
