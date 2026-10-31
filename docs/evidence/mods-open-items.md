@@ -46,11 +46,13 @@
 - `B6-browse-popular-mods` | ĐÃ LÀM | GetFeaturedModsAsync gọi /v2/search?query= (sort downloads, facets loader/MC) khi mở dialog hoặc xóa từ khóa; SearchAsync query rỗng tiếp tục trả rỗng không gọi HTTP. _currentRequestId chống race condition request cũ đè request mới. 6 unit test mới. Commit ba21505.
 - `B7-pr-review-hardening` | ĐÃ LÀM | Tải file tạm đổi sang .partial cùng thư mục đích modsDir (atomic rename trên cùng ổ đĩa, dọn sạch trong finally). Thêm CleanOrphanPartials dọn file .partial mồ côi khi khởi động/nạp instance. Badge 'Đã cài' bỏ suy diễn ModCatalogData, kiểm tra file thật trên đĩa (File.Exists). Ẩn nút 'Tải thêm' khi Results.Count >= TotalHits. Thêm unit test rớt mạng, hủy tải, sai hash, dọn dẹp file mồ côi, 429 Retry-After. Chạy 3 lần liên tiếp dotnet test: 322/322 PASS. CI .github/workflows/ci.yml kiểm chứng trên windows-latest.
 - `B8-missing-file-badge` | ĐÃ LÀM | Quét file jar thật trên đĩa; nếu có trong mods.json nhưng thiếu file jar thì hiện badge đỏ 'Thiếu file', khóa ToggleSwitch, mở ContentDialog cho phép 'Gỡ bỏ' khỏi mods.json. HasShaderLoader loại bỏ mod thiếu file và mod disabled. Unit test ShaderLoaderResolverTests + ảnh LD-07 (1025x533 và 960x530). Commit b7d79c7.
-- `B8-duplicate-game-crash-warning` | ĐÃ LÀM | Khi có nhiều jar cùng mod id, cảnh báo ghi rõ 'game sẽ không chạy' do DuplicateModException. Tái hiện và chụp ảnh trên instance tạm rt-mods-test (LD-06 ở cả 1025x533 và 960x530). Commit b7d79c7.
-- `B8-update-replaces-jar` | ĐÃ LÀM | ModInstallService khi cập nhật sẽ tìm và xóa triệt để file cũ (kể cả file .disabled), thay thế bằng file mới thay vì đặt song song. Unit test InstallFromModrinthAsync_UpdateReplacesOldJar_DoesNotKeepBothSideBySide. Commit b7d79c7.
+- `B8-duplicate-game-crash-warning` | ĐÃ LÀM | Khi có nhiều jar cùng mod id, cảnh báo ghi rõ 'game có thể không chạy' do DuplicateModException. Tái hiện và chụp ảnh trên instance tạm rt-mods-test (LD-06 ở cả 1025x533 và 960x530). Commit e52f492.
+- `B8-update-replaces-jar` | ĐÃ LÀM | ModInstallService khi cập nhật sẽ tìm và xóa triệt để file cũ (kể cả file .disabled), thay thế bằng file mới thay vì đặt song song; bản cũ chỉ bị xóa SAU KHI bản mới tải xong và sha512 khớp. Unit test InstallFromModrinthAsync_UpdateReplacesOldJar_DoesNotKeepBothSideBySide. Commit b7d79c7.
+- `B8-update-failure-rollback` | ĐÃ LÀM | Cập nhật mod khi tải bị lỗi hoặc hủy thì bản cũ giữ nguyên vẹn trên đĩa và trong manifest. Unit test InstallFromModrinthAsync_UpdateFailsOrCancels_PreservesOldJarAndManifest. Commit d20d692.
 - `B8-active-partial-protection` | ĐÃ LÀM | CleanOrphanPartials kiểm tra danh sách ActivePartials (ConcurrentDictionary); các lượt tải đang chạy sẽ được giữ nguyên, chỉ xóa các file .partial mồ côi thật sự. Unit test DL_CleanOrphanPartials_DoesNotDeleteActiveDownloads. Commit b7d79c7.
 - `B8-metadata-cache-appdata` | ĐÃ LÀM | Chuyển file cache metadata .jar-metadata-cache.json ra ngoài thư mục instance, đặt tại %AppData%/Vazer/cache/metadata/{instanceName}-{hash}.json; tự động di chuyển và dọn dẹp cache cũ. Commit b7d79c7.
-- `CI-status-github` | ĐÃ LÀM | Đã chạy 2 lần trên GitHub Actions (workflow ci.yml trên nhánh feat/browse-popular-mods): Run 41148553563 (2m14s, thành công/xanh, 322 tests) và Run 41103856268 (4m43s, thành công/xanh, 322 tests). Link: https://github.com/lmao12345pixel/Vaz/actions/runs/41148553563
+- `B8-test-fabric-iris-missing-file` | ĐÃ LÀM | Chụp màn hình tab Mods của instance thật 'test fabric' trên app bản mới nhất, hiển thị Iris Shaders với badge 'Thiếu file'. Ảnh LD-08-test-fabric-iris-missing-file-1025x533.png và LD-08-test-fabric-iris-missing-file-960x530.png.
+- `CI-status-github` | ĐÃ LÀM | Đã chạy 3 lần trên GitHub Actions (workflow ci.yml trên nhánh feat/browse-popular-mods), 100% XANH: Run 41156024313 (commit 65af265, 325 tests), Run 41148553563 (commit 93610fa, 322 tests), Run 41103856268 (commit ba21505, 322 tests).
 - `UNVERIFIED-manual` | UNVERIFIED | Các kịch bản phụ thuộc phần cứng / tương tác vật lý thật trong docs/evidence/mods-manual-checklist.md: MC-SM-01 (mạng chập chờn), MC-SM-02 (bấm Cancel khi tải), MC-SM-03 (kéo thả .mrpack ngoài Explorer), MC-LD-01 (kéo thả jar ngoài Explorer), MC-LD-02 (kéo thả jar trùng hash), MC-LD-03 (khóa file khi game đang chạy), MC-LD-04 (xác nhận gỡ mod bình thường), MC-LD-05 (gỡ mod thiếu file), MC-LD-06 (scale màn hình 125%/150%). Giữ nguyên UNVERIFIED theo quy định không báo hoàn thành ảo.
 
 ---
@@ -60,17 +62,18 @@
 1. **Iris không có file jar trong tab Mods (Phantom Mod)**:
    - *Nguyên nhân*: `mods.json` chứa mục Iris nhưng file `iris-fabric-1.8.8+mc1.21.1.jar` đã bị xóa khỏi đĩa. Code cũ không kiểm tra `File.Exists`, dẫn đến việc toggle không đổi được file thật và `HasShaderLoader` vẫn nhận diện nhầm.
    - *Khắc phục*: Thêm thuộc tính `IsMissingFile` và `CanToggle` vào `InstalledModRow`. Khi thiếu file, hiển thị badge đỏ 'Thiếu file', vô hiệu hóa `ToggleSwitch`. Cập nhật `HasShaderLoader` chỉ duyệt các mod `!IsMissingFile && Enabled`. Thêm nút gỡ với ContentDialog xác nhận 'Gỡ {tên mod} khỏi danh sách?'.
-   - *Bằng chứng*: Unit test `DetectShaderLoader_ExcludesFilteredOutMissingOrDisabledMods` (PASS); ảnh chụp màn hình `docs/evidence/LD-07-missing-file-badge-1025x533.png` và `LD-07-missing-file-badge-960x530.png`.
+   - *Bằng chứng*: Unit test `DetectShaderLoader_ExcludesFilteredOutMissingOrDisabledMods` (PASS); ảnh chụp màn hình `docs/evidence/LD-07-missing-file-badge-1025x533.png` và `LD-07-missing-file-badge-960x530.png` trên instance tạm `rt-mods-test`, cùng ảnh `docs/evidence/LD-08-test-fabric-iris-missing-file-1025x533.png` và `LD-08-test-fabric-iris-missing-file-960x530.png` trên instance thật `test fabric`.
 
 2. **Cảnh báo trùng lặp Mod (Duplicate Mod Jars) & Nút cập nhật**:
-   - *Cảnh báo*: Cập nhật thông điệp cảnh báo trong `InstanceDetailViewModel.cs`: `Trùng mod id '{group.Key}' với file '{otherFiles}'. Hậu quả: Loader sẽ crash khi khởi động do DuplicateModException (game sẽ không chạy).`
+   - *Cảnh báo*: Cập nhật thông điệp cảnh báo trong `InstanceDetailViewModel.cs`: `Trùng mod id '{group.Key}' với file '{otherFiles}'. Hậu quả: Loader sẽ crash khi khởi động do DuplicateModException (game có thể không chạy).`
    - *Tái hiện*: Tạo bản sao trên instance tạm `rt-mods-test`, chứa 2 file `sodium-fabric-0.6.0+mc1.21.1.jar` và `sodium-fabric-0.8.13+mc1.21.1.jar`. App cảnh báo chính xác tại cả 2 độ phân giải (1025x533 và 960x530).
-   - *Cập nhật thay thế*: Trong `ModInstallService.InstallFromModrinthInternalAsync`, tìm kiếm toàn bộ file của mod cũ (`existingMods`) và xóa triệt để cả bản enable lẫn `.disabled` trước khi di chuyển bản mới vào; cập nhật `UpdateAllAsync` ưu tiên `CheckUpdatesByHashAsync`. Unit test `InstallFromModrinthAsync_UpdateReplacesOldJar_DoesNotKeepBothSideBySide` (PASS).
+   - *Cập nhật thay thế*: Trong `ModInstallService.InstallFromModrinthInternalAsync`, bản mới được tải về `.partial` và kiểm tra SHA512 trước. Chỉ sau khi SHA512 khớp, app mới xóa các bản cũ (`existingMods`) và di chuyển file mới vào. Nếu tải lỗi hoặc hủy, bản cũ và manifest giữ nguyên vẹn. Unit test `InstallFromModrinthAsync_UpdateReplacesOldJar_DoesNotKeepBothSideBySide` và `InstallFromModrinthAsync_UpdateFailsOrCancels_PreservesOldJarAndManifest` (đều PASS).
    - *Bằng chứng*: Ảnh chụp `docs/evidence/LD-06-duplicate-sodium-warning-1025x533.png` và `LD-06-duplicate-sodium-warning-960x530.png`.
 
 3. **Nguồn gốc file sodium-fabric-0.8.13 trong instance "test fabric"**:
-   - Ngày 29-30/10/2026, trong quá trình phát triển tính năng cập nhật và thử nghiệm tự động phát hiện bản phát hành mới (Sodium 0.6.13 -> 0.8.13), script và test cũ đã gọi install trực tiếp vào instance `test fabric` dẫn đến việc tải thêm file 0.8.13 (nguồn `custom`).
-   - Chủ sản phẩm đã dọn file ra Desktop. Từ thời điểm này, quy tắc kiểm thử bắt buộc 100% các kịch bản runtime phải chạy trên instance tạm (`rt-*`), tuyệt đối không đụng vào instance thật của người dùng.
+   - **Không rõ nguồn gốc**. File `sodium-fabric-0.8.13+mc1.21.1.jar` trên đĩa có thời gian sửa đổi là 18/10/2026 10:16 PM, trước ngày repository được khởi tạo (23/10/2026). Không có bất kỳ lệnh, log hay commit nào trong lịch sử chứng minh việc tải file này.
+   - Thời điểm 2026-10-29T20:04:05 ghi trong `mods.json` chỉ là thời điểm app tự động quét thư mục `mods`, phát hiện file chưa được khai báo và tự thêm vào manifest với thuộc tính `source: custom`. Không suy đoán nguồn gốc file ngoài thực tế.
+   - Chủ sản phẩm đã dọn file ra Desktop. Toàn bộ test hiện tại và tương lai được cô lập 100% trên instance tạm (`rt-*`).
 
 4. **Sửa mã commit 04f9382 thành 6b1ec4f**:
    - Kiểm tra `git log --oneline -50` cho thấy commit `04f9382` không tồn tại trong lịch sử git của repository (đây là mã hash nháp cục bộ sinh ra trong quá trình rebase / amend trước khi push).
@@ -89,9 +92,10 @@
      - `MC-LD-06`: Kiểm tra giao diện ở tỷ lệ thu phóng HiDPI (125%, 150%).
 
 6. **Trạng thái GitHub Actions CI**:
-   - Workflow `.github/workflows/ci.yml` trên nhánh `feat/browse-popular-mods` đã chạy 2 lần:
-     - Run `41148553563`: XANH (Success), thời gian chạy 2 phút 14 giây, 322/322 unit tests passed. Link: `https://github.com/lmao12345pixel/Vaz/actions/runs/41148553563`.
-     - Run `41103856268`: XANH (Success), thời gian chạy 4 phút 43 giây, 322/322 unit tests passed. Link: `https://github.com/lmao12345pixel/Vaz/actions/runs/41103856268`.
+   - Workflow `.github/workflows/ci.yml` trên nhánh `feat/browse-popular-mods` đã có 3 lần chạy, tất cả đều XANH (100% pass):
+     - Run `41156024313`: commit `65af265`, XANH (Success), 325/325 unit tests passed. Link: `https://github.com/lmao12345pixel/Vaz/actions/runs/41156024313`.
+     - Run `41148553563`: commit `93610fa`, XANH (Success), 322/322 unit tests passed. Link: `https://github.com/lmao12345pixel/Vaz/actions/runs/41148553563`.
+     - Run `41103856268`: commit `ba21505`, XANH (Success), 322/322 unit tests passed. Link: `https://github.com/lmao12345pixel/Vaz/actions/runs/41103856268`.
 
 7. **Bảo vệ active download trong CleanOrphanPartials & Di chuyển cache**:
    - `CleanOrphanPartials`: Bổ sung cơ chế `RegisterActivePartial` quản lý bằng `ConcurrentDictionary`. Trong lúc tải file, đường dẫn file `.partial` được đăng ký bảo vệ và giải phóng khi hoàn tất; hàm dọn dẹp bỏ qua mọi file đang hoạt động, tránh xóa nhầm khi tải song song nhiều mod. Unit test `DL_CleanOrphanPartials_DoesNotDeleteActiveDownloads` (PASS).
