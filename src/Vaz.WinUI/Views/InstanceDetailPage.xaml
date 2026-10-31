@@ -5,7 +5,6 @@
     xmlns:vm="using:Vaz.WinUI.ViewModels"
     xmlns:models="using:Vaz.WinUI.Models"
     xmlns:controls="using:Vaz.WinUI.Controls"
-    xmlns:views="using:Vaz.WinUI.Views"
     KeyDown="Page_KeyDown"
     NavigationCacheMode="Disabled">
 
@@ -76,54 +75,6 @@
                 </Setter.Value>
             </Setter>
         </Style>
-
-        <!-- Open Animation: Slide up 50px + Fade-in 0->1 in 250ms (Đợt 11) -->
-        <Storyboard x:Name="OpenModBrowserStoryboard">
-            <DoubleAnimation
-                Storyboard.TargetName="ModBrowserHostGrid"
-                Storyboard.TargetProperty="Opacity"
-                From="0.0"
-                To="1.0"
-                Duration="0:0:0.25">
-                <DoubleAnimation.EasingFunction>
-                    <CubicEase EasingMode="EaseOut" />
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-            <DoubleAnimation
-                Storyboard.TargetName="ModBrowserTranslate"
-                Storyboard.TargetProperty="Y"
-                From="50"
-                To="0"
-                Duration="0:0:0.25">
-                <DoubleAnimation.EasingFunction>
-                    <CubicEase EasingMode="EaseOut" />
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-        </Storyboard>
-
-        <!-- Close Animation: Fade-out 1->0 in 200ms (Đợt 11) -->
-        <Storyboard x:Name="CloseModBrowserStoryboard" Completed="CloseModBrowserStoryboard_Completed">
-            <DoubleAnimation
-                Storyboard.TargetName="ModBrowserHostGrid"
-                Storyboard.TargetProperty="Opacity"
-                From="1.0"
-                To="0.0"
-                Duration="0:0:0.2">
-                <DoubleAnimation.EasingFunction>
-                    <CubicEase EasingMode="EaseIn" />
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-            <DoubleAnimation
-                Storyboard.TargetName="ModBrowserTranslate"
-                Storyboard.TargetProperty="Y"
-                From="0"
-                To="30"
-                Duration="0:0:0.2">
-                <DoubleAnimation.EasingFunction>
-                    <CubicEase EasingMode="EaseIn" />
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-        </Storyboard>
     </Page.Resources>
 
     <Grid x:Name="PageRoot" RowDefinitions="Auto,Auto,*" Padding="24,16,24,16" RowSpacing="10">
@@ -1715,26 +1666,5 @@
                     </TabViewItem.Content>
                 </TabViewItem>
             </TabView>
-
-        <!-- Embedded Mod Browser Host Grid (Đợt 11) -->
-        <Grid
-            x:Name="ModBrowserHostGrid"
-            Grid.Row="0"
-            Grid.RowSpan="3"
-            Visibility="Collapsed"
-            Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
-            Margin="-24,-16,-24,-16"
-            Padding="24,16,24,16">
-
-            <Grid.RenderTransform>
-                <TranslateTransform x:Name="ModBrowserTranslate" Y="50" />
-            </Grid.RenderTransform>
-
-            <views:ModBrowserView
-                x:Name="EmbeddedModBrowser"
-                CloseRequested="EmbeddedModBrowser_CloseRequested"
-                HorizontalAlignment="Stretch"
-                VerticalAlignment="Stretch" />
-        </Grid>
     </Grid>
 </Page>

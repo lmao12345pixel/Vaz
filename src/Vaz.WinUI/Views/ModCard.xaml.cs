@@ -1,9 +1,9 @@
 using System;
-using Microsoft.UI;
+using System.ComponentModel;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
+using Vaz.WinUI.Models;
 using Vaz.WinUI.ViewModels;
 
 namespace Vaz.WinUI.Views;
@@ -15,7 +15,7 @@ public sealed partial class ModCard : UserControl
             nameof(Item),
             typeof(SearchHitRow),
             typeof(ModCard),
-            new PropertyMetadata(null, (d, _) => ((ModCard)d).Bindings.Update()));
+            new PropertyMetadata(null, (d, e) => ((ModCard)d).OnItemChanged(e.OldValue as SearchHitRow, e.NewValue as SearchHitRow)));
 
     public SearchHitRow? Item
     {
@@ -25,28 +25,138 @@ public sealed partial class ModCard : UserControl
 
     public event EventHandler<SearchHitRow>? InstallClick;
 
-    private static readonly SolidColorBrush HoverBrush = new(Windows.UI.Color.FromArgb(255, 16, 185, 129)); // #10B981 Emerald
-    private Brush? _defaultBorderBrush;
+    private SearchHitRow? _observedItem;
+    private ModInstallState _lastKnownState = ModInstallState.Idle;
 
     public ModCard()
     {
         InitializeComponent();
-        Loaded += (_, _) =>
+    }
+
+    private void OnItemChanged(SearchHitRow? oldItem, SearchHitRow? newItem)
+    {
+        if (oldItem != null)
         {
-            _defaultBorderBrush = CardBorder.BorderBrush;
-        };
+            oldItem.PropertyChanged -= Item_PropertyChanged;
+        }
+
+        _observedItem = newItem;
+        if (newItem != null)
+        {
+            newItem.PropertyChanged += Item_PropertyChanged;
+            _lastKnownState = newItem.InstallState;
+            UpdateState(newItem.InstallState, animate: false);
+        }
+        else
+        {
+            _lastKnownState = ModInstallState.Idle;
+            UpdateState(ModInstallState.Idle, animate: false);
+        }
+
+        Bindings.Update();
+    }
+
+    private void Item_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (sender is SearchHitRow row && e.PropertyName == nameof(SearchHitRow.InstallState))
+        {
+            if (row.InstallState != _lastKnownState)
+            {
+                _lastKnownState = row.InstallState;
+                UpdateState(row.InstallState, animate: true);
+            }
+        }
+    }
+
+    private void UpdateState(ModInstallState state, bool animate)
+    {
+        if (animate)
+        {
+            switch (state)
+            {
+                case ModInstallState.Installing:
+                    IdleContainer.IsHitTestVisible = false;
+                    InstallingContainer.IsHitTestVisible = false;
+                    InstalledContainer.IsHitTestVisible = false;
+                    FadeToInstallingStoryboard.Begin();
+                    break;
+                case ModInstallState.Installed:
+                    IdleContainer.IsHitTestVisible = false;
+                    InstallingContainer.IsHitTestVisible = false;
+                    InstalledContainer.IsHitTestVisible = false;
+                    FadeToInstalledStoryboard.Begin();
+                    break;
+                default:
+                    IdleContainer.IsHitTestVisible = true;
+                    InstallingContainer.IsHitTestVisible = false;
+                    InstalledContainer.IsHitTestVisible = false;
+                    FadeToIdleStoryboard.Begin();
+                    break;
+            }
+        }
+        else
+        {
+            FadeToInstallingStoryboard.Stop();
+            FadeToInstalledStoryboard.Stop();
+            FadeToIdleStoryboard.Stop();
+
+            switch (state)
+            {
+                case ModInstallState.Installing:
+                    IdleContainer.Opacity = 0;
+                    IdleContainer.IsHitTestVisible = false;
+                    InstallingContainer.Opacity = 1;
+                    InstallingContainer.IsHitTestVisible = false;
+                    InstalledContainer.Opacity = 0;
+                    InstalledContainer.IsHitTestVisible = false;
+                    break;
+                case ModInstallState.Installed:
+                    IdleContainer.Opacity = 0;
+                    IdleContainer.IsHitTestVisible = false;
+                    InstallingContainer.Opacity = 0;
+                    InstallingContainer.IsHitTestVisible = false;
+                    InstalledContainer.Opacity = 1;
+                    InstalledContainer.IsHitTestVisible = false;
+                    break;
+                default:
+                    IdleContainer.Opacity = 1;
+                    IdleContainer.IsHitTestVisible = true;
+                    InstallingContainer.Opacity = 0;
+                    InstallingContainer.IsHitTestVisible = false;
+                    InstalledContainer.Opacity = 0;
+                    InstalledContainer.IsHitTestVisible = false;
+                    break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Kích hoạt hiệu ứng Staggered Entrance (làn sóng): trượt nhẹ từ dưới lên (20px -> 0)
+    /// kèm fade-in (0 -> 1) trong 250ms với CubicEase, delay 30ms mỗi thẻ.
+    /// </summary>
+    public void AnimateEntrance(int index)
+    {
+        var delayMs = Math.Min(index, 15) * 30;
+        EntranceTranslateAnim.BeginTime = TimeSpan.FromMilliseconds(delayMs);
+        EntranceOpacityAnim.BeginTime = TimeSpan.FromMilliseconds(delayMs);
+
+        CardContainer.Opacity = 0;
+        CardTranslate.Y = 20;
+
+        EntranceStoryboard.Stop();
+        EntranceStoryboard.Begin();
     }
 
     private void Card_PointerEntered(object sender, PointerRoutedEventArgs e)
     {
+        HoverExitStoryboard.Stop();
         HoverEnterStoryboard.Begin();
-        CardBorder.BorderBrush = HoverBrush;
     }
 
     private void Card_PointerExited(object sender, PointerRoutedEventArgs e)
     {
+        HoverEnterStoryboard.Stop();
         HoverExitStoryboard.Begin();
-        CardBorder.BorderBrush = _defaultBorderBrush ?? (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"];
     }
 
     private void Card_SizeChanged(object sender, SizeChangedEventArgs e)

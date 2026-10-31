@@ -1,11 +1,10 @@
 using System;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Vaz.WinUI.Models;
 using Vaz.WinUI.Services;
@@ -14,85 +13,61 @@ using Vaz.WinUI.ViewModels;
 namespace Vaz.WinUI.Views;
 
 /// <summary>
-/// Mod Browser Embedded View — UserControl tích hợp hiển thị trong cửa sổ chính,
-/// hỗ trợ Infinite Scroll, Shimmer Skeleton, Blinking Cursor và Dynamic Filter Chips.
+/// Mod Browser ContentDialog — hỗ trợ Infinite Scroll, Shimmer Skeleton,
+/// Blinking Cursor, Staggered Wave Animation và Dynamic Filter Chips Animation.
 /// </summary>
-public sealed partial class ModBrowserView : UserControl
+public sealed partial class ModBrowserDialog : ContentDialog
 {
     public ModBrowserViewModel ViewModel { get; }
-
-    public event EventHandler? CloseRequested;
 
     private ScrollViewer? _listScrollViewer;
     private SearchHitRow? _pendingRowForInstall;
 
-    public ModBrowserView()
+    public ModBrowserDialog(string? instanceId = null)
     {
         ViewModel = ((App)Application.Current).Services
             .GetRequiredService<ModBrowserViewModel>();
         InitializeComponent();
 
         ViewModel.PropertyChanged += ViewModel_PropertyChanged;
+        ((INotifyCollectionChanged)ViewModel.FilterChips).CollectionChanged += FilterChips_CollectionChanged;
+
+        Loaded += async (_, _) =>
+        {
+            DialogContentEntranceStoryboard.Begin();
+
+            if (!string.IsNullOrEmpty(instanceId))
+            {
+                var active = ((App)Application.Current).Services
+                    .GetRequiredService<ActiveInstanceService>();
+                active.SetCurrent(instanceId);
+            }
+            await ViewModel.RefreshInstanceContextAsync();
+            if (ViewModel.Results.Count == 0)
+            {
+                await ViewModel.SearchAsync();
+            }
+        };
 
         Unloaded += (_, _) =>
         {
             ViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+            ((INotifyCollectionChanged)ViewModel.FilterChips).CollectionChanged -= FilterChips_CollectionChanged;
             if (_listScrollViewer != null)
             {
                 _listScrollViewer.ViewChanged -= ListScrollViewer_ViewChanged;
             }
             ShimmerStoryboard.Stop();
             BlinkCursorStoryboard.Stop();
+            DialogContentEntranceStoryboard.Stop();
+            FilterChipsEntranceStoryboard.Stop();
         };
     }
 
-    /// <summary>
-    /// Khởi tạo dữ liệu tìm kiếm cho instance được chỉ định.
-    /// </summary>
-    public async Task InitializeForInstanceAsync(string? instanceId)
+    private void FilterChips_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        if (!string.IsNullOrEmpty(instanceId))
-        {
-            var active = ((App)Application.Current).Services
-                .GetRequiredService<ActiveInstanceService>();
-            active.SetCurrent(instanceId);
-        }
-
-        await ViewModel.RefreshInstanceContextAsync();
-        if (ViewModel.Results.Count == 0)
-        {
-            await ViewModel.SearchAsync();
-        }
-    }
-
-    /// <summary>
-    /// Đặt con trỏ chuột và tiêu điểm vào ô tìm kiếm.
-    /// </summary>
-    public void FocusSearchBox()
-    {
-        SearchBox?.Focus(FocusState.Programmatic);
-    }
-
-    private void CloseButton_Click(object sender, RoutedEventArgs e)
-    {
-        CloseRequested?.Invoke(this, EventArgs.Empty);
-    }
-
-    private void UserControl_KeyDown(object sender, KeyRoutedEventArgs e)
-    {
-        if (e.Key == Windows.System.VirtualKey.Escape)
-        {
-            if (DependencyPromptOverlay.Visibility == Visibility.Visible)
-            {
-                DependencyPromptOverlay.Visibility = Visibility.Collapsed;
-                _pendingRowForInstall = null;
-                e.Handled = true;
-                return;
-            }
-
-            CloseRequested?.Invoke(this, EventArgs.Empty);
-            e.Handled = true;
-        }
+        FilterChipsEntranceStoryboard.Stop();
+        FilterChipsEntranceStoryboard.Begin();
     }
 
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -155,6 +130,15 @@ public sealed partial class ModBrowserView : UserControl
         if (_listScrollViewer != null)
         {
             _listScrollViewer.ViewChanged += ListScrollViewer_ViewChanged;
+        }
+    }
+
+    private void ResultsListView_ContainerContentChanging(ListViewBase sender, ContainerContentChangingEventArgs args)
+    {
+        if (args.InRecycleQueue) return;
+        if (args.ItemContainer.ContentTemplateRoot is ModCard card)
+        {
+            card.AnimateEntrance(args.ItemIndex);
         }
     }
 
