@@ -67,6 +67,12 @@ public sealed record LaunchParameters
     /// Custom main class (cho mod loader đặc biệt).
     /// </summary>
     public string? MainClass { get; init; }
+
+    /// <summary>
+    /// Tên version CmlLib đã cài cho instance (ví dụ "fabric-loader-0.19.5-1.21.1").
+    /// Bắt buộc khi launch — do CmlLib tra version theo tên này, không phải instance id.
+    /// </summary>
+    public string? LaunchVersionName { get; init; }
 }
 
 /// <summary>

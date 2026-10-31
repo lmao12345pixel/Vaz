@@ -112,6 +112,7 @@ public sealed class InstanceManager : IInstanceManager
             MinecraftVersion = minecraftVersion,
             LoaderType = "vanilla",
             LoaderVersion = null,
+            LaunchVersionName = minecraftVersion,
             Path = instancePath,
             IconPath = null,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -157,6 +158,7 @@ public sealed class InstanceManager : IInstanceManager
             MinecraftVersion = minecraftVersion,
             LoaderType = "fabric",
             LoaderVersion = loaderVersion,
+            LaunchVersionName = versionName,
             Path = instancePath,
             IconPath = null,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -198,6 +200,15 @@ public sealed class InstanceManager : IInstanceManager
 
         await SaveMetaAsync(instance, ct);
         await svc.InstallAsync(instance, null, ct);
+
+        // NeoForge installer tự đặt tên version (folder versions/neoforge-*),
+        // không trả tên về — quét đĩa sau cài để chốt tên version cho launch.
+        var launchVersionName = DiscoverVersionName(instancePath);
+        if (launchVersionName != null)
+        {
+            instance = instance with { LaunchVersionName = launchVersionName };
+            await SaveMetaAsync(instance, ct);
+        }
 
         _logger.LogInformation("Created NeoForge instance {Id} ({Version})", id, version);
         return instance;
@@ -245,6 +256,27 @@ public sealed class InstanceManager : IInstanceManager
         var invalid = Path.GetInvalidFileNameChars();
         var id = string.Join("", name.Select(c => invalid.Contains(c) ? '_' : c));
         return id.ToLowerInvariant();
+    }
+
+    /// <summary>
+    /// Quét {instancePath}/versions/*/ và trả về tên folder version đầu tiên
+    /// có file json cùng tên (tên version CmlLib mà installer tự tạo). Trả về
+    /// null nếu không tìm thấy.
+    /// </summary>
+    internal static string? DiscoverVersionName(string instancePath)
+    {
+        var versionsDir = Path.Combine(instancePath, "versions");
+        if (!Directory.Exists(versionsDir)) return null;
+
+        foreach (var dir in System.IO.Directory.EnumerateDirectories(versionsDir))
+        {
+            var name = System.IO.Path.GetFileName(dir);
+            if (!string.IsNullOrEmpty(name) && File.Exists(System.IO.Path.Combine(dir, name + ".json")))
+            {
+                return name;
+            }
+        }
+        return null;
     }
 
     internal static string RequireLoaderVersion(string? loaderVersion, string minecraftVersion)

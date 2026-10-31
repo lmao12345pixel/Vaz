@@ -12,6 +12,7 @@ using Windows.UI;
 using Vaz.WinUI.Messages;
 using Vaz.WinUI.Services;
 using Vazer.Core.Abstractions;
+using Vazer.Core.Launch;
 
 namespace Vaz.WinUI.ViewModels;
 
@@ -343,6 +344,7 @@ public sealed partial class MainViewModel : ObservableObject
                 Account = account,
                 Java = java,
                 MinecraftVersion = instance.MinecraftVersion,
+                LaunchVersionName = LaunchVersionResolver.Resolve(instance),
                 MaxRamMb = 4096
             });
 

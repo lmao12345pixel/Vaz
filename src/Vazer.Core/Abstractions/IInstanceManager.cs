@@ -34,6 +34,13 @@ public sealed record MinecraftInstance
     public string? LoaderVersion { get; init; }
 
     /// <summary>
+    /// Tên version CmlLib đã cài cho instance (ví dụ: "1.21.1" cho vanilla,
+    /// "fabric-loader-0.19.5-1.21.1" cho Fabric; null cho instance cũ → launcher
+    /// sẽ tự suy ra từ LoaderType/LoaderVersion/MinecraftVersion).
+    /// </summary>
+    public string? LaunchVersionName { get; init; }
+
+    /// <summary>
     /// Đường dẫn thư mục instance.
     /// </summary>
     public required string Path { get; init; }
