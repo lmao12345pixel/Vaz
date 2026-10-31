@@ -41,6 +41,7 @@ public sealed partial class ModCard : UserControl
         }
 
         _observedItem = newItem;
+        ModIconImage.Source = null;
         if (newItem != null)
         {
             newItem.PropertyChanged += Item_PropertyChanged;
@@ -128,6 +129,43 @@ public sealed partial class ModCard : UserControl
                     break;
             }
         }
+    }
+
+    /// <summary>
+    /// Nạp icon ảnh bất đồng bộ trong Phase 2 với DecodePixelWidth=100.
+    /// </summary>
+    public void LoadIconImage()
+    {
+        if (Item == null) return;
+        if (ModIconImage.Source != null) return;
+
+        if (!string.IsNullOrWhiteSpace(Item.IconUrl) &&
+            Uri.TryCreate(Item.IconUrl, UriKind.RelativeOrAbsolute, out var uri))
+        {
+            var bitmap = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(uri)
+            {
+                DecodePixelWidth = 100
+            };
+            ModIconImage.Source = bitmap;
+            ModIconImage.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            ModIconImage.Source = Vaz.WinUI.Helpers.UiPlaceholders.Image;
+            ModIconImage.Visibility = Visibility.Visible;
+        }
+    }
+
+    /// <summary>
+    /// Giải phóng tài nguyên hình ảnh khi card bị đẩy vào hàng đợi tái chế (RecycleQueue).
+    /// </summary>
+    public void Recycle()
+    {
+        ModIconImage.Source = null;
+        HoverExitStoryboard.Stop();
+        EntranceStoryboard.Stop();
+        CardContainer.Opacity = 1;
+        CardTranslate.Y = 0;
     }
 
     /// <summary>

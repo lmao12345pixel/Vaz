@@ -194,7 +194,7 @@
             BorderThickness="1">
 
             <Grid ColumnDefinitions="48,*,Auto" ColumnSpacing="16">
-                <!-- Mod Icon (Lazy load, DecodePixelWidth 100) -->
+                <!-- Mod Icon (Lazy load in Phase 2, DecodePixelWidth 100) -->
                 <Border
                     Grid.Column="0"
                     Width="48" Height="48"
@@ -204,7 +204,6 @@
                         x:Name="ModIconImage"
                         Width="48" Height="48"
                         Stretch="UniformToFill"
-                        Source="{x:Bind Item.IconImageSource, Mode=OneWay}"
                         ImageFailed="IconImage_Failed" />
                 </Border>
 

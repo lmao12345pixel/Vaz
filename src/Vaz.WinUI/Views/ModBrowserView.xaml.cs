@@ -36,11 +36,15 @@ public sealed partial class ModBrowserView : UserControl
         InitializeComponent();
 
         ViewModel.PropertyChanged += ViewModel_PropertyChanged;
+        ViewModel.ItemsTrimmedFromHead += ViewModel_ItemsTrimmedFromHead;
+        ViewModel.ItemsPrependedAtHead += ViewModel_ItemsPrependedAtHead;
         ((INotifyCollectionChanged)ViewModel.FilterChips).CollectionChanged += FilterChips_CollectionChanged;
 
         Unloaded += (_, _) =>
         {
             ViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+            ViewModel.ItemsTrimmedFromHead -= ViewModel_ItemsTrimmedFromHead;
+            ViewModel.ItemsPrependedAtHead -= ViewModel_ItemsPrependedAtHead;
             ((INotifyCollectionChanged)ViewModel.FilterChips).CollectionChanged -= FilterChips_CollectionChanged;
             if (_listScrollViewer != null)
             {
@@ -161,19 +165,51 @@ public sealed partial class ModBrowserView : UserControl
 
     private void ResultsListView_ContainerContentChanging(ListViewBase sender, ContainerContentChangingEventArgs args)
     {
-        if (!args.InRecycleQueue && args.ItemContainer?.ContentTemplateRoot is ModCard card)
+        EnsureScrollViewer();
+
+        if (args.InRecycleQueue)
         {
-            card.AnimateEntrance(args.ItemIndex);
+            if (args.ItemContainer?.ContentTemplateRoot is ModCard card)
+            {
+                card.Recycle();
+            }
+            return;
+        }
+
+        if (args.ItemContainer?.ContentTemplateRoot is ModCard modCard)
+        {
+            if (args.Phase == 0)
+            {
+                // Phase 0: Animate entrance cho item mới hiển thị và đăng ký phase tiếp theo
+                modCard.AnimateEntrance(args.ItemIndex);
+                args.RegisterUpdateCallback(ResultsListView_ContainerContentChanging);
+            }
+            else if (args.Phase == 1)
+            {
+                // Phase 1: Chuẩn bị layout & metadata, đăng ký phase tải ảnh
+                args.RegisterUpdateCallback(ResultsListView_ContainerContentChanging);
+            }
+            else if (args.Phase == 2)
+            {
+                // Phase 2: Nạp ảnh bất đồng bộ với DecodePixelWidth=100
+                modCard.LoadIconImage();
+            }
         }
     }
 
     private void ResultsListView_Loaded(object sender, RoutedEventArgs e)
+    {
+        EnsureScrollViewer();
+    }
+
+    private void EnsureScrollViewer()
     {
         if (_listScrollViewer == null)
         {
             _listScrollViewer = FindChild<ScrollViewer>(ResultsListView);
             if (_listScrollViewer != null)
             {
+                _listScrollViewer.VerticalAnchorRatio = 0.5;
                 _listScrollViewer.ViewChanged += ListScrollViewer_ViewChanged;
             }
         }
@@ -182,11 +218,39 @@ public sealed partial class ModBrowserView : UserControl
     private void ListScrollViewer_ViewChanged(object? sender, ScrollViewerViewChangedEventArgs e)
     {
         if (_listScrollViewer == null) return;
+
+        // Cuộn xuống gần cuối -> nạp tiếp
         var distanceToEnd = _listScrollViewer.ScrollableHeight - _listScrollViewer.VerticalOffset;
-        if (distanceToEnd < 180 && ViewModel.CanLoadMore)
+        if (distanceToEnd < 250 && ViewModel.CanLoadMore)
         {
             _ = ViewModel.LoadMoreAsync();
         }
+
+        // Cuộn ngược lên gần đầu -> nạp lại các item đã bị trim ở đầu (Sliding Window)
+        if (_listScrollViewer.VerticalOffset < 250 && ViewModel.CanLoadPrevious)
+        {
+            _ = ViewModel.LoadPreviousAsync();
+        }
+    }
+
+    private void ViewModel_ItemsTrimmedFromHead(object? sender, int count)
+    {
+        EnsureScrollViewer();
+        if (_listScrollViewer == null) return;
+        const double estimatedItemHeight = 82.0;
+        var delta = count * estimatedItemHeight;
+        var newOffset = Math.Max(0, _listScrollViewer.VerticalOffset - delta);
+        _listScrollViewer.ChangeView(null, newOffset, null, disableAnimation: true);
+    }
+
+    private void ViewModel_ItemsPrependedAtHead(object? sender, int count)
+    {
+        EnsureScrollViewer();
+        if (_listScrollViewer == null) return;
+        const double estimatedItemHeight = 82.0;
+        var delta = count * estimatedItemHeight;
+        var newOffset = _listScrollViewer.VerticalOffset + delta;
+        _listScrollViewer.ChangeView(null, newOffset, null, disableAnimation: true);
     }
 
     private async void ModCard_InstallClick(object? sender, SearchHitRow row)

@@ -302,7 +302,7 @@
                 </Border>
             </StackPanel>
 
-            <!-- Results ListView with ModCard & Staggered Wave Animation -->
+            <!-- Results ListView with Virtualized ItemsStackPanel, ModCard & Phased Loading -->
             <ListView
                 x:Name="ResultsListView"
                 ItemsSource="{x:Bind ViewModel.Results, Mode=OneWay}"
@@ -310,7 +310,18 @@
                 SelectionMode="None"
                 Loaded="ResultsListView_Loaded"
                 ContainerContentChanging="ResultsListView_ContainerContentChanging"
+                ScrollViewer.VerticalScrollBarVisibility="Auto"
+                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                ScrollViewer.VerticalScrollMode="Enabled"
+                ScrollViewer.HorizontalScrollMode="Disabled"
                 Padding="0,2">
+                <ListView.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <ItemsStackPanel
+                            Orientation="Vertical"
+                            CacheLength="2.0" />
+                    </ItemsPanelTemplate>
+                </ListView.ItemsPanel>
                 <ListView.ItemContainerTransitions>
                     <TransitionCollection>
                         <AddDeleteThemeTransition />
