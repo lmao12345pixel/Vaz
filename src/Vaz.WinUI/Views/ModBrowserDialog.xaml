@@ -101,7 +101,7 @@
                                 <Image
                                     Width="48" Height="48"
                                     Stretch="UniformToFill"
-                                    Source="{x:Bind IconUrl}"
+                                    Source="{x:Bind IconImageSource}"
                                     ImageFailed="IconImage_Failed" />
                             </Border>
 

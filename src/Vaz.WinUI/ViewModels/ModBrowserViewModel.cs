@@ -20,6 +20,24 @@ public sealed class SearchHitRow
     public string Author => string.IsNullOrEmpty(Hit.Author) ? Hit.Slug : Hit.Author;
     public string Description => Hit.Description;
     public string? IconUrl => Hit.IconUrl;
+
+    /// <summary>
+    /// Binding an toàn cho Image.Source: không bao giờ trả về null/empty
+    /// (lỗi gốc trong crash.txt — ConvertValue ImageSource với chuỗi rỗng).
+    /// </summary>
+    public Microsoft.UI.Xaml.Media.ImageSource IconImageSource
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(Hit.IconUrl) &&
+                Uri.TryCreate(Hit.IconUrl, UriKind.RelativeOrAbsolute, out var uri))
+            {
+                return new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(uri);
+            }
+
+            return Vaz.WinUI.Helpers.UiPlaceholders.Image;
+        }
+    }
     public string Slug => Hit.Slug;
     public string ProjectId => Hit.ProjectId;
     public long Downloads => Hit.Downloads;

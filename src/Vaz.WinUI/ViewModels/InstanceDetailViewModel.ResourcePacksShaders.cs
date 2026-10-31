@@ -30,36 +30,33 @@ public sealed partial class ResourcePackRow : ObservableObject
     public string IconUri => Pack.IconUri;
     public string BannerUri => Pack.BannerUri;
     public bool HasBanner => !string.IsNullOrWhiteSpace(BannerUri);
-    public Microsoft.UI.Xaml.Media.ImageSource? BannerImageSource
+    public Microsoft.UI.Xaml.Media.ImageSource BannerImageSource
     {
         get
         {
-            if (string.IsNullOrWhiteSpace(BannerUri)) return null;
-            try
+            if (!string.IsNullOrWhiteSpace(BannerUri))
             {
                 if (Uri.TryCreate(BannerUri, UriKind.RelativeOrAbsolute, out var uri))
                 {
                     return new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(uri);
                 }
             }
-            catch { }
-            return null;
+            // Không bao giờ trả về null cho binding ImageSource (crash.txt).
+            return Vaz.WinUI.Helpers.UiPlaceholders.Image;
         }
     }
-    public Microsoft.UI.Xaml.Media.ImageSource? IconImageSource
+    public Microsoft.UI.Xaml.Media.ImageSource IconImageSource
     {
         get
         {
-            if (string.IsNullOrWhiteSpace(IconUri)) return null;
-            try
+            if (!string.IsNullOrWhiteSpace(IconUri))
             {
                 if (Uri.TryCreate(IconUri, UriKind.RelativeOrAbsolute, out var uri))
                 {
                     return new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(uri);
                 }
             }
-            catch { }
-            return null;
+            return Vaz.WinUI.Helpers.UiPlaceholders.Image;
         }
     }
     public bool IsCompatible => Pack.IsCompatible && (PackFormat == 34 || PackFormat <= 0);
@@ -109,6 +106,24 @@ public sealed partial class ShaderPackRow : ObservableObject
     public string Size => Shader.Size;
     public string ImageUri => Shader.ImageUri;
     public Uri? ImageUriSource => !string.IsNullOrEmpty(Shader.ImageUri) ? new Uri(Shader.ImageUri) : null;
+
+    /// <summary>
+    /// Binding an toàn cho Image.Source trong shader inspector — fallback placeholder
+    /// thay vì chuỗi rỗng (lỗi crash.txt: "The value cannot be converted to ImageSource").
+    /// </summary>
+    public Microsoft.UI.Xaml.Media.ImageSource ShaderImageSource
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(Shader.ImageUri) &&
+                Uri.TryCreate(Shader.ImageUri, UriKind.RelativeOrAbsolute, out var uri))
+            {
+                return new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(uri);
+            }
+
+            return Vaz.WinUI.Helpers.UiPlaceholders.Image;
+        }
+    }
     public string AccentColor => Shader.AccentColor;
     public System.Collections.Generic.List<string> Features => Shader.Features;
 

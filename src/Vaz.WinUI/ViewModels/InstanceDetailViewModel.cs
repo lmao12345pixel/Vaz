@@ -54,6 +54,36 @@ public sealed partial class InstalledModRow : ObservableObject
     public string IconUri { get; set; } = "ms-appx:///Assets/mods/default.png";
     public string ProjectUrl { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Binding an toàn cho Image.Source — fallback placeholder khi IconUri rỗng/sai
+    /// (lỗi crash.txt: "The value cannot be converted to type ImageSource").
+    /// </summary>
+    public Microsoft.UI.Xaml.Media.ImageSource IconImageSource
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(IconUri) &&
+                Uri.TryCreate(IconUri, UriKind.RelativeOrAbsolute, out var uri))
+            {
+                return new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(uri);
+            }
+
+            return Vaz.WinUI.Helpers.UiPlaceholders.Image;
+        }
+    }
+
+    /// <summary>Binding an toàn cho HyperlinkButton.NavigateUri (Uri, không rỗng — fallback "about:blank" theo yêu cầuHotfix).</summary>
+    public Uri? ProjectLink
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(ProjectUrl)) return Vaz.WinUI.Helpers.UiPlaceholders.FallbackLink;
+            return Uri.TryCreate(ProjectUrl, UriKind.Absolute, out var uri) && uri is { } ? uri : Vaz.WinUI.Helpers.UiPlaceholders.FallbackLink;
+        }
+    }
+
+    public bool HasProjectUrl => !string.IsNullOrWhiteSpace(ProjectUrl);
+
     public List<ModDependencyStatusItem> Dependencies { get; set; } = new();
 
     partial void OnHasMissingDependenciesChanged(bool value)

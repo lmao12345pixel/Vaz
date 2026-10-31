@@ -111,6 +111,20 @@ public sealed class SettingsSectionVisibilityConverter : IValueConverter
         => throw new NotSupportedException();
 }
 
+/// <summary>
+/// Placeholder dùng chung cho binding ImageSource: tránh ràng buộc chuỗi rỗng/null
+/// đang làm crash `XamlBindingHelper.ConvertValue` (crash.txt — ImageSource/Uri conversion).
+/// </summary>
+public static class UiPlaceholders
+{
+    private const string PlaceholderAppx = "ms-appx:///Assets/blocks/grass_block_gray.png";
+
+    public static Microsoft.UI.Xaml.Media.ImageSource Image
+        => new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri(PlaceholderAppx));
+
+    public static readonly Uri FallbackLink = new("about:blank", UriKind.Absolute);
+}
+
 /// <summary>Mã màu hex (#10B981) → SolidColorBrush cho swatch accent.</summary>
 public sealed class AccentHexToBrushConverter : IValueConverter
 {
