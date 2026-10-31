@@ -1,0 +1,131 @@
+﻿diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 70c0d98..f4f8db4 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -47,7 +47,7 @@ jobs:
+       - name: Verify test count
+         shell: pwsh
+         env:
+-          MIN_TESTS: '119'
++          MIN_TESTS: '320'
+         run: |
+           $trx = Get-ChildItem -Path tests -Recurse -Filter '*.trx' -ErrorAction SilentlyContinue
+           if (-not $trx) {
+diff --git a/docs/evidence/mods-manual-checklist.md b/docs/evidence/mods-manual-checklist.md
+index b5f970f..602af61 100644
+--- a/docs/evidence/mods-manual-checklist.md
++++ b/docs/evidence/mods-manual-checklist.md
+@@ -18,6 +18,18 @@ T├ái liß╗çu n├áy l├á nguß╗ôn duy nhß║Ñt (Single Source of Truth) ─æß╗ïnh ngh─⌐a
+   - **B╞░ß╗¢c thß╗¡**: Mß╗ƒ Windows Explorer, k├⌐o file `.mrpack` hß╗úp lß╗ç thß║ú v├áo v├╣ng cß╗¡a sß╗ò App.
+   - **Kß║┐t quß║ú mong ─æß╗úi**: App nhß║¡n diß╗çn file modpack, hiß╗ân thß╗ï hß╗Öp thoß║íi x├íc nhß║¡n th├┤ng tin g├│i (t├¬n, phi├¬n bß║ún Minecraft, t├│m tß║»t) v├á cho ph├⌐p ng╞░ß╗¥i d├╣ng bß║Ñm "C├ái" hoß║╖c "Hß╗ºy".
+ 
++- [ ] **MC-SM-04: Tß║»t hß║│n mß║íng rß╗ôi t├¼m mod**
++  - **B╞░ß╗¢c thß╗¡**: Tß║»t kß║┐t nß╗æi mß║íng ho├án to├án (ngß║»t Wi-Fi / r├║t d├óy mß║íng / bß║¡t Airplane mode), mß╗ƒ `ModBrowserDialog` v├á nhß║¡p tß╗½ kh├│a t├¼m mod (hoß║╖c nhß║Ñn n├║t t├¼m).
++  - **Kß║┐t quß║ú mong ─æß╗úi**: App kh├┤ng crash, hiß╗ân thß╗ï th├┤ng b├ío lß╗ùi mß║íng ngß║»n gß╗ìn, th├ón thiß╗çn v├á c├│ n├║t "Thß╗¡ lß║íi".
++
++- [ ] **MC-SM-05: G├╡ tiß║┐ng Viß╗çt bß║▒ng Unikey/Telex v├áo ├┤ t├¼m kiß║┐m**
++  - **B╞░ß╗¢c thß╗¡**: Bß║¡t Unikey/EVKey vß╗¢i bß║úng m├ú Unicode v├á kiß╗âu g├╡ Telex, nhß║Ñp v├áo ├┤ t├¼m kiß║┐m AutoSuggestBox trong `ModBrowserDialog` v├á g├╡ c├íc cß╗Ñm tß╗½ tiß║┐ng Viß╗çt c├│ dß║Ñu (v├¡ dß╗Ñ: "tß╗æi ╞░u h├│a", "chß║┐ tß║ío", "bß║ún ─æß╗ô").
++  - **Kß║┐t quß║ú mong ─æß╗úi**: K├╜ tß╗▒ tiß║┐ng Viß╗çt nhß║¡n diß╗çn ch├¡nh x├íc, kh├┤ng bß╗ï mß║Ñt chß╗», kh├┤ng bß╗ï nh├ón ─æ├┤i k├╜ tß╗▒, sß╗▒ kiß╗çn debounce k├¡ch hoß║ít t├¼m kiß║┐m b├¼nh th╞░ß╗¥ng.
++
++- [ ] **MC-SM-06: Mß╗ƒ Download Mods l├║c ├┤ t├¼m kiß║┐m trß╗æng (Browse Popular Mods)**
++  - **B╞░ß╗¢c thß╗¡**: Mß╗ƒ `ModBrowserDialog` khi ├┤ t├¼m kiß║┐m ho├án to├án trß╗æng.
++  - **Kß║┐t quß║ú mong ─æß╗úi**: Danh s├ích hiß╗ân thß╗ï c├íc mod phß╗ò biß║┐n (sort downloads/featured) ph├╣ hß╗úp ch├¡nh x├íc vß╗¢i loader v├á phi├¬n bß║ún Minecraft cß╗ºa instance hiß╗çn tß║íi; kh├┤ng lß║½n mod sai loader hoß║╖c sai phi├¬n bß║ún Minecraft.
++
+ ---
+ 
+ ## 2. LOAD MOD (Quß║ún l├╜ danh s├ích Mod)
+diff --git a/docs/evidence/mods-open-items.md b/docs/evidence/mods-open-items.md
+index 0218055..b078725 100644
+--- a/docs/evidence/mods-open-items.md
++++ b/docs/evidence/mods-open-items.md
+@@ -63,6 +63,7 @@
+    - *Nguy├¬n nh├ón*: `mods.json` chß╗⌐a mß╗Ñc Iris nh╞░ng file `iris-fabric-1.8.8+mc1.21.1.jar` ─æ├ú bß╗ï x├│a khß╗Åi ─æ─⌐a. Code c┼⌐ kh├┤ng kiß╗âm tra `File.Exists`, dß║½n ─æß║┐n viß╗çc toggle kh├┤ng ─æß╗òi ─æ╞░ß╗úc file thß║¡t v├á `HasShaderLoader` vß║½n nhß║¡n diß╗çn nhß║ºm.
+    - *Khß║»c phß╗Ñc*: Th├¬m thuß╗Öc t├¡nh `IsMissingFile` v├á `CanToggle` v├áo `InstalledModRow`. Khi thiß║┐u file, hiß╗ân thß╗ï badge ─æß╗Å 'Thiß║┐u file', v├┤ hiß╗çu h├│a `ToggleSwitch`. Cß║¡p nhß║¡t `HasShaderLoader` chß╗ë duyß╗çt c├íc mod `!IsMissingFile && Enabled`. Th├¬m n├║t gß╗í vß╗¢i ContentDialog x├íc nhß║¡n 'Gß╗í {t├¬n mod} khß╗Åi danh s├ích?'.
+    - *Bß║▒ng chß╗⌐ng*: Unit test `DetectShaderLoader_ExcludesFilteredOutMissingOrDisabledMods` (PASS); ß║únh chß╗Ñp m├án h├¼nh `docs/evidence/LD-07-missing-file-badge-1025x533.png` v├á `LD-07-missing-file-badge-960x530.png` tr├¬n instance tß║ím `rt-mods-test`, c├╣ng ß║únh `docs/evidence/LD-08-test-fabric-iris-missing-file-1025x533.png` v├á `LD-08-test-fabric-iris-missing-file-960x530.png` tr├¬n instance thß║¡t `test fabric`.
++   - *Ghi ch├║ m├ú ß║únh*: Tiß╗ün tß╗æ `LD-07` trong ß║únh `LD-07-missing-file-badge-*` v├á `LD-08` trong `LD-08-test-fabric-iris-missing-file-*` l├á m├ú file ß║únh bß║▒ng chß╗⌐ng m├án h├¼nh cho hß║íng mß╗Ñc Item 1 (thiß║┐u file jar). M├ú n├áy ─æß╗Öc lß║¡p v├á kh├┤ng thay thß║┐ m├ú kß╗ïch bß║ún thß╗º c├┤ng `MC-LD-03` (kh├│a file khi game ─æang chß║íy, tr╞░ß╗¢c ─æ├óy tß╗½ng ─æ╞░ß╗úc gß╗ìi tß║ím l├á LD-07 trong dß╗▒ thß║úo c┼⌐). Giß╗» nguy├¬n file ß║únh hiß╗çn tß║íi kh├┤ng ─æß╗òi t├¬n hay ghi ─æ├¿ theo quy tß║»c an to├án.
+ 
+ 2. **Cß║únh b├ío tr├╣ng lß║╖p Mod (Duplicate Mod Jars) & N├║t cß║¡p nhß║¡t**:
+    - *Cß║únh b├ío*: Cß║¡p nhß║¡t th├┤ng ─æiß╗çp cß║únh b├ío trong `InstanceDetailViewModel.cs`: `Tr├╣ng mod id '{group.Key}' vß╗¢i file '{otherFiles}'. Hß║¡u quß║ú: Loader sß║╜ crash khi khß╗ƒi ─æß╗Öng do DuplicateModException (game c├│ thß╗â kh├┤ng chß║íy).`
+diff --git a/tests/Vazer.Core.Tests/ModNetworkAndDependencyTests.cs b/tests/Vazer.Core.Tests/ModNetworkAndDependencyTests.cs
+index be6a793..ef31e7a 100644
+--- a/tests/Vazer.Core.Tests/ModNetworkAndDependencyTests.cs
++++ b/tests/Vazer.Core.Tests/ModNetworkAndDependencyTests.cs
+@@ -708,6 +708,78 @@ public sealed class ModNetworkAndDependencyTests : IDisposable
+         manifestAfterFail.Mods[0].VersionId.Should().Be("ver-1.0");
+     }
+ 
++    [Fact]
++    public async Task InstallFromModrinthAsync_UpdateSha512Mismatch_PreservesOldJarAndManifest()
++    {
++        var instancePath = Path.Combine(_tempDir, "inst-update-sha512-mismatch");
++        var modsDir = Path.Combine(instancePath, "mods");
++        Directory.CreateDirectory(modsDir);
++
++        var instMgrMock = new Mock<IInstanceManager>();
++        instMgrMock.Setup(m => m.GetAsync("inst-update-sha", It.IsAny<CancellationToken>()))
++            .ReturnsAsync(new MinecraftInstance { Id = "inst-update-sha", Name = "Test", Path = instancePath, LoaderType = "fabric", MinecraftVersion = "1.21.1", CreatedAt = DateTimeOffset.UtcNow });
++
++        // Tß║ío file c┼⌐ tr├¬n ─æ─⌐a v├á trong manifest
++        var oldJarPath = Path.Combine(modsDir, "my-mod-1.0.jar");
++        await File.WriteAllTextAsync(oldJarPath, "old version 1.0 bytes - sha mismatch must preserve this");
++
++        var manifestPath = Path.Combine(instancePath, "mods.json");
++        var initialManifest = new ModsManifest
++        {
++            Mods =
++            [
++                new InstalledMod
++                {
++                    FileName = "my-mod-1.0.jar",
++                    ProjectId = "my-mod-proj",
++                    VersionId = "ver-1.0",
++                    Source = "modrinth",
++                    Enabled = true,
++                    InstalledAt = DateTimeOffset.UtcNow
++                }
++            ]
++        };
++        await File.WriteAllTextAsync(manifestPath, JsonSerializer.Serialize(initialManifest));
++
++        // Cß║Ñu h├¼nh Modrinth mock: sha512 khai b├ío kh├┤ng khß╗¢p vß╗¢i dß╗» liß╗çu tß║úi vß╗ü
++        var downloadedContent = new byte[] { 1, 2, 3, 4, 5 };
++        var modrinthMock = new Mock<IModrinthClient>();
++        var proj = new ModrinthProject { Id = "my-mod-proj", Slug = "my-mod", Title = "My Mod", ProjectType = "mod" };
++        var verNew = new ProjectVersion
++        {
++            Id = "ver-2.0",
++            ProjectId = "my-mod-proj",
++            VersionType = "release",
++            DatePublished = DateTimeOffset.UtcNow,
++            Files = [new VersionFile { Url = "https://cdn.modrinth.com/my-mod-2.0.jar", Filename = "my-mod-2.0.jar", Primary = true, Hashes = new FileHashes { Sha512 = "expected-sha512-but-download-has-different-hash" } }],
++            Dependencies = []
++        };
++
++        modrinthMock.Setup(m => m.GetProjectAsync("my-mod-proj", It.IsAny<CancellationToken>())).ReturnsAsync(proj);
++        modrinthMock.Setup(m => m.GetVersionsAsync("my-mod-proj", "fabric", "1.21.1", It.IsAny<CancellationToken>())).ReturnsAsync([verNew]);
++        modrinthMock.Setup(m => m.GetVersionAsync("ver-2.0", It.IsAny<CancellationToken>())).ReturnsAsync(verNew);
++        modrinthMock.Setup(m => m.DownloadAsync(verNew.Files[0].Url, It.IsAny<CancellationToken>()))
++            .ReturnsAsync(new MemoryStream(downloadedContent));
++
++        var svc = new ModInstallService(instMgrMock.Object, modrinthMock.Object, Options.Create(TestOptions), NullLogger<ModInstallService>.Instance);
++
++        // Act: Thß╗¡ cß║¡p nhß║¡t nh╞░ng bß╗ï sai hash SHA512
++        var act = () => svc.InstallFromModrinthAsync("inst-update-sha", "my-mod-proj", "ver-2.0");
++        await act.Should().ThrowAsync<InvalidOperationException>()
++            .WithMessage("*SHA512 mismatch*");
++
++        // Assert: File c┼⌐ v├á manifest phß║úi ─æ╞░ß╗úc giß╗» nguy├¬n vß║╣n
++        File.Exists(oldJarPath).Should().BeTrue("File jar bß║ún c┼⌐ phß║úi c├▓n nguy├¬n khi SHA512 sai lß╗çch");
++        (await File.ReadAllTextAsync(oldJarPath)).Should().Be("old version 1.0 bytes - sha mismatch must preserve this");
++        File.Exists(Path.Combine(modsDir, "my-mod-2.0.jar")).Should().BeFalse("File mß╗¢i kh├┤ng ─æ╞░ß╗úc tß║ío khi sai hash");
++        File.Exists(Path.Combine(modsDir, "my-mod-2.0.jar.partial")).Should().BeFalse("File .partial phß║úi bß╗ï dß╗ìn sß║ích");
++
++        var manifestAfterFail = JsonSerializer.Deserialize<ModsManifest>(await File.ReadAllTextAsync(manifestPath), VazJsonContext.Default.ModsManifest);
++        manifestAfterFail!.Mods.Should().HaveCount(1);
++        manifestAfterFail.Mods[0].FileName.Should().Be("my-mod-1.0.jar");
++        manifestAfterFail.Mods[0].VersionId.Should().Be("ver-1.0");
++    }
++
+     [Fact]
+     public async Task DL_ProgressReports_BytesAndPercent()
+     {
