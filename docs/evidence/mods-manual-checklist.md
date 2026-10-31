@@ -18,6 +18,18 @@ Tài liệu này là nguồn duy nhất (Single Source of Truth) định nghĩa 
   - **Bước thử**: Mở Windows Explorer, kéo file `.mrpack` hợp lệ thả vào vùng cửa sổ App.
   - **Kết quả mong đợi**: App nhận diện file modpack, hiển thị hộp thoại xác nhận thông tin gói (tên, phiên bản Minecraft, tóm tắt) và cho phép người dùng bấm "Cài" hoặc "Hủy".
 
+- [ ] **MC-SM-04: Tắt hẳn mạng rồi tìm mod**
+  - **Bước thử**: Tắt kết nối mạng hoàn toàn (ngắt Wi-Fi / rút dây mạng / bật Airplane mode), mở `ModBrowserDialog` và nhập từ khóa tìm mod (hoặc nhấn nút tìm).
+  - **Kết quả mong đợi**: App không crash, hiển thị thông báo lỗi mạng ngắn gọn, thân thiện và có nút "Thử lại".
+
+- [ ] **MC-SM-05: Gõ tiếng Việt bằng Unikey/Telex vào ô tìm kiếm**
+  - **Bước thử**: Bật Unikey/EVKey với bảng mã Unicode và kiểu gõ Telex, nhấp vào ô tìm kiếm AutoSuggestBox trong `ModBrowserDialog` và gõ các cụm từ tiếng Việt có dấu (ví dụ: "tối ưu hóa", "chế tạo", "bản đồ").
+  - **Kết quả mong đợi**: Ký tự tiếng Việt nhận diện chính xác, không bị mất chữ, không bị nhân đôi ký tự, sự kiện debounce kích hoạt tìm kiếm bình thường.
+
+- [ ] **MC-SM-06: Mở Download Mods lúc ô tìm kiếm trống (Browse Popular Mods)**
+  - **Bước thử**: Mở `ModBrowserDialog` khi ô tìm kiếm hoàn toàn trống.
+  - **Kết quả mong đợi**: Danh sách hiển thị các mod phổ biến (sort downloads/featured) phù hợp chính xác với loader và phiên bản Minecraft của instance hiện tại; không lẫn mod sai loader hoặc sai phiên bản Minecraft.
+
 ---
 
 ## 2. LOAD MOD (Quản lý danh sách Mod)
