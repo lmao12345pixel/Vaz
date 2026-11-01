@@ -204,6 +204,10 @@ public sealed partial class ModBrowserViewModel : ObservableObject
     [ObservableProperty] private string warningMessage = string.Empty;
     [ObservableProperty] private bool includeDependencies = true;
     [ObservableProperty] private bool hasChanges;
+    [ObservableProperty] private string projectType = "mod";
+    [ObservableProperty] private string browserTitle = "Khám phá & Cài đặt Mods";
+    [ObservableProperty] private string searchPlaceholder = "Tìm kiếm mods (ví dụ: sodium, iris, fabric)...";
+    [ObservableProperty] private bool isModProjectType = true;
 
     public bool IsNotBusy => !IsBusy;
     public bool CanLoadMore => !IsBusy && !IsLoadingMore && HasMoreResults;
@@ -238,13 +242,59 @@ public sealed partial class ModBrowserViewModel : ObservableObject
         UpdateFilterChips(string.Empty);
     }
 
+    public void SetProjectType(string? type)
+    {
+        ProjectType = string.IsNullOrWhiteSpace(type) ? "mod" : type.ToLowerInvariant();
+        IsModProjectType = ProjectType == "mod";
+        if (ProjectType == "resourcepack")
+        {
+            BrowserTitle = "Khám phá & Tải Resource Packs";
+            SearchPlaceholder = "Tìm kiếm resource packs (ví dụ: faithful, bare bones)...";
+        }
+        else if (ProjectType == "shader")
+        {
+            BrowserTitle = "Khám phá & Tải Shaders";
+            SearchPlaceholder = "Tìm kiếm shaders (ví dụ: bsl, complementary, seus)...";
+        }
+        else
+        {
+            BrowserTitle = "Khám phá & Cài đặt Mods";
+            SearchPlaceholder = "Tìm kiếm mods (ví dụ: sodium, iris, fabric)...";
+        }
+
+        UpdateFilterChips(string.Empty);
+    }
+
     public void UpdateFilterChips(string query)
     {
-        var suggestions = _searchService.GetSuggestedCategories(query);
         FilterChips.Clear();
-        foreach (var c in suggestions)
+        if (ProjectType == "resourcepack")
         {
-            FilterChips.Add(c);
+            FilterChips.Add("Tất cả");
+            FilterChips.Add("16x");
+            FilterChips.Add("32x");
+            FilterChips.Add("64x");
+            FilterChips.Add("Modern");
+            FilterChips.Add("Medieval");
+            FilterChips.Add("Realistic");
+            FilterChips.Add("Faithful");
+        }
+        else if (ProjectType == "shader")
+        {
+            FilterChips.Add("Tất cả");
+            FilterChips.Add("Fantasy");
+            FilterChips.Add("Realistic");
+            FilterChips.Add("Performance");
+            FilterChips.Add("Vibrant");
+            FilterChips.Add("Atmospheric");
+        }
+        else
+        {
+            var suggestions = _searchService.GetSuggestedCategories(query);
+            foreach (var c in suggestions)
+            {
+                FilterChips.Add(c);
+            }
         }
 
         if (!FilterChips.Contains(SelectedCategory))
@@ -335,6 +385,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
             var filterOptions = new SearchFilterOptions
             {
                 Query = SearchText,
+                ProjectType = ProjectType,
                 Category = SelectedCategory,
                 Loaders = loaders,
                 GameVersions = gameVersions,
@@ -487,6 +538,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
             var filterOptions = new SearchFilterOptions
             {
                 Query = SearchText,
+                ProjectType = ProjectType,
                 Category = SelectedCategory,
                 Loaders = loaders,
                 GameVersions = gameVersions,
@@ -548,7 +600,9 @@ public sealed partial class ModBrowserViewModel : ObservableObject
             HasResults = Results.Count > 0;
             HasMoreResults = _tailOffset < _totalHits;
             StatusMessage = Results.Count == 0
-                ? (isBrowseMode ? "Không có mod nào phù hợp bộ lọc." : "Không tìm thấy kết quả. Thử từ khóa tiếng Anh (ví dụ: sodium, iris, fabric)...")
+                ? (isBrowseMode
+                    ? (ProjectType == "resourcepack" ? "Không có resource pack nào phù hợp bộ lọc." : ProjectType == "shader" ? "Không có shader nào phù hợp bộ lọc." : "Không có mod nào phù hợp bộ lọc.")
+                    : "Không tìm thấy kết quả. Thử từ khóa khác...")
                 : $"{Results.Count} / {_totalHits} kết quả (đang xem #{_headOffset + 1} - #{_tailOffset})";
 
             if (inst != null && rows.Count > 0)
@@ -592,6 +646,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
 
     private string[]? ResolveLoaders(MinecraftInstance? inst)
     {
+        if (ProjectType != "mod") return null;
         if (SelectedLoader == "All") return null;
         if (SelectedLoader != "Auto")
         {
@@ -622,7 +677,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
             var checkTasks = rows.Select(async row =>
             {
                 if (requestId != _currentRequestId) return;
-                var state = await _downloadManager.CheckInstallStateAsync(instanceId, row.ProjectId, row.Slug, CancellationToken.None);
+                var state = await _downloadManager.CheckInstallStateAsync(instanceId, row.ProjectId, row.Slug, ProjectType, CancellationToken.None);
                 if (requestId != _currentRequestId) return;
                 if (state != ModInstallState.Idle && row.InstallState != state)
                 {
@@ -656,16 +711,16 @@ public sealed partial class ModBrowserViewModel : ObservableObject
         if (inst == null)
         {
             HasError = true;
-            ErrorMessage = "Chưa chọn instance để cài mod.";
+            ErrorMessage = "Chưa chọn instance để cài đặt.";
             return;
         }
 
-        // Kiểm tra xem mod đã có trên đĩa chưa; nếu đã có, giữ trạng thái Installed và không tải lại
-        var alreadyInstalled = await _downloadManager.IsModInstalledOnDiskAsync(inst.Id, row.ProjectId, row.Slug);
+        // Kiểm tra xem item đã có trên đĩa chưa; nếu đã có, giữ trạng thái Installed và không tải lại
+        var alreadyInstalled = await _downloadManager.IsModInstalledOnDiskAsync(inst.Id, row.ProjectId, row.Slug, ProjectType);
         if (alreadyInstalled)
         {
             row.InstallState = ModInstallState.Installed;
-            StatusMessage = $"Mod {row.Title} đã được cài đặt.";
+            StatusMessage = $"{row.Title} đã được cài đặt.";
             return;
         }
 
@@ -698,7 +753,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
             });
 
             var result = await _downloadManager.InstallModAsync(
-                inst.Id, row.Slug, includeDependencies: IncludeDependencies, progress: progress);
+                inst.Id, row.Slug, includeDependencies: IncludeDependencies, progress: progress, projectType: ProjectType);
 
             if (result.Success)
             {
@@ -710,7 +765,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
             else
             {
                 // Kiểm tra lại trên đĩa phòng khi đã cài trước đó
-                var onDisk = await _downloadManager.IsModInstalledOnDiskAsync(inst.Id, row.ProjectId, row.Slug);
+                var onDisk = await _downloadManager.IsModInstalledOnDiskAsync(inst.Id, row.ProjectId, row.Slug, ProjectType);
                 row.InstallState = onDisk ? ModInstallState.Installed : ModInstallState.Idle;
                 StatusMessage = $"Cài thất bại: {result.ModName ?? row.Title}";
             }

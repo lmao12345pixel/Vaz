@@ -13,23 +13,24 @@ namespace Vaz.WinUI.Services;
 public interface IModDownloadManager
 {
     /// <summary>
-    /// Kiểm tra trạng thái cài đặt (Idle, Installing, Installed) cho một mod.
+    /// Kiểm tra trạng thái cài đặt (Idle, Installing, Installed) cho một mod / resource pack / shader.
     /// </summary>
-    Task<ModInstallState> CheckInstallStateAsync(string instanceId, string projectId, string slug, CancellationToken ct = default);
+    Task<ModInstallState> CheckInstallStateAsync(string instanceId, string projectId, string slug, string projectType = "mod", CancellationToken ct = default);
 
     /// <summary>
-    /// Kiểm tra xem mod đã tồn tại file thực tế trên đĩa trong thư mục mods/ của instance hay chưa.
+    /// Kiểm tra xem item đã tồn tại file thực tế trên đĩa (mods/, resourcepacks/, shaderpacks/) hay chưa.
     /// </summary>
-    Task<bool> IsModInstalledOnDiskAsync(string instanceId, string projectId, string slug, CancellationToken ct = default);
+    Task<bool> IsModInstalledOnDiskAsync(string instanceId, string projectId, string slug, string projectType = "mod", CancellationToken ct = default);
 
     /// <summary>
-    /// Bắt đầu cài đặt mod từ Modrinth.
+    /// Bắt đầu cài đặt mod / resource pack / shader từ Modrinth.
     /// </summary>
     Task<InstallModResult> InstallModAsync(
         string instanceId,
         string projectSlug,
         bool includeDependencies = true,
         IProgress<InstallProgress>? progress = null,
+        string projectType = "mod",
         CancellationToken ct = default);
 
     /// <summary>

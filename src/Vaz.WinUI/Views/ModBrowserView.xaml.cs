@@ -58,13 +58,15 @@ public sealed partial class ModBrowserView : UserControl
         };
     }
 
-    public async Task InitializeForInstanceAsync(string? instanceId)
+    public async Task InitializeForInstanceAsync(string? instanceId, string projectType = "mod")
     {
         if (ViewModel != null)
         {
             ViewModel.HasChanges = false;
+            bool typeChanged = !string.Equals(ViewModel.ProjectType, projectType, StringComparison.OrdinalIgnoreCase);
+            ViewModel.SetProjectType(projectType);
             await ViewModel.RefreshInstanceContextAsync();
-            if (ViewModel.Results.Count == 0)
+            if (typeChanged || ViewModel.Results.Count == 0)
             {
                 await ViewModel.SearchAsync();
             }

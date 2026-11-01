@@ -11,6 +11,7 @@ namespace Vaz.WinUI.Services;
 public sealed record SearchFilterOptions
 {
     public string? Query { get; init; }
+    public string? ProjectType { get; init; }
     public string[]? Loaders { get; init; }
     public string[]? GameVersions { get; init; }
     public string? Category { get; init; }

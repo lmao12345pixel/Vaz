@@ -120,6 +120,12 @@ public sealed partial class InstanceDetailPage : Page
         }
     }
 
+    protected override void OnNavigatedFrom(NavigationEventArgs e)
+    {
+        base.OnNavigatedFrom(e);
+        ViewModel?.DisposeFileSystemWatchers();
+    }
+
     private void DetailTabView_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         try
@@ -267,7 +273,19 @@ public sealed partial class InstanceDetailPage : Page
     private async void DownloadMods_Click(object sender, RoutedEventArgs e)
     {
         if (ViewModel == null || ViewModel.IsGameRunning) return;
-        await OpenModBrowserAsync();
+        await OpenModBrowserAsync("mod");
+    }
+
+    private async void DownloadResourcePacks_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel == null || ViewModel.IsGameRunning) return;
+        await OpenModBrowserAsync("resourcepack");
+    }
+
+    private async void DownloadShaders_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel == null || ViewModel.IsGameRunning) return;
+        await OpenModBrowserAsync("shader");
     }
 
     private ScrollViewer? _installedModsScrollViewer;
@@ -294,7 +312,7 @@ public sealed partial class InstanceDetailPage : Page
         return null;
     }
 
-    private async Task OpenModBrowserAsync()
+    private async Task OpenModBrowserAsync(string projectType = "mod")
     {
         if (ViewModel?.Current == null) return;
 
@@ -310,7 +328,7 @@ public sealed partial class InstanceDetailPage : Page
 
         OpenModBrowserStoryboard.Begin();
 
-        await EmbeddedModBrowser.InitializeForInstanceAsync(ViewModel.Current.Id);
+        await EmbeddedModBrowser.InitializeForInstanceAsync(ViewModel.Current.Id, projectType);
         EmbeddedModBrowser.FocusSearchBox();
     }
 
@@ -333,13 +351,25 @@ public sealed partial class InstanceDetailPage : Page
 
         if (ViewModel != null && EmbeddedModBrowser.HasChanges)
         {
+            var projType = EmbeddedModBrowser.ViewModel?.ProjectType ?? "mod";
             DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, async () =>
             {
-                await ViewModel.LoadAsync();
-                if (_savedModsScrollOffset > 0)
+                if (string.Equals(projType, "resourcepack", StringComparison.OrdinalIgnoreCase))
                 {
-                    var sv = GetInstalledModsScrollViewer();
-                    sv?.ChangeView(null, _savedModsScrollOffset, null, disableAnimation: true);
+                    ViewModel.LoadResourcePacks();
+                }
+                else if (string.Equals(projType, "shader", StringComparison.OrdinalIgnoreCase))
+                {
+                    ViewModel.LoadShaders();
+                }
+                else
+                {
+                    await ViewModel.LoadAsync();
+                    if (_savedModsScrollOffset > 0)
+                    {
+                        var sv = GetInstalledModsScrollViewer();
+                        sv?.ChangeView(null, _savedModsScrollOffset, null, disableAnimation: true);
+                    }
                 }
             });
         }

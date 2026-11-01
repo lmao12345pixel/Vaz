@@ -293,7 +293,8 @@ public sealed class ModrinthClient : IModrinthClient
 
     internal static string BuildFacets(SearchQuery query)
     {
-        var facets = new List<string> { "[\"project_type:mod\"]" };
+        var projectType = !string.IsNullOrWhiteSpace(query.ProjectType) ? query.ProjectType : "mod";
+        var facets = new List<string> { $"[\"project_type:{projectType}\"]" };
 
         if (query.Loaders is { Length: > 0 })
             foreach (var l in query.Loaders)

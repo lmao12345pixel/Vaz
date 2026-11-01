@@ -109,6 +109,7 @@ public sealed class ModrinthSearchService : IModrinthSearchService
         return new SearchQuery
         {
             Query = isBrowseMode ? null : options.Query?.Trim(),
+            ProjectType = options.ProjectType,
             Loaders = options.Loaders,
             GameVersions = options.GameVersions,
             Categories = categories,

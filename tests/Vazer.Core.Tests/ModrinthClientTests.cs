@@ -307,6 +307,17 @@ public sealed class ModrinthClientTests : IDisposable
     // ── 10. SM-13/14: LimitClamp_Boundaries ──
 
     [Theory]
+    [InlineData("resourcepack", "[\"project_type:resourcepack\"]")]
+    [InlineData("shader", "[\"project_type:shader\"]")]
+    [InlineData(null, "[\"project_type:mod\"]")]
+    public void BuildFacets_CustomProjectType_IncludesCorrectFacet(string? projectType, string expectedFacet)
+    {
+        var query = new SearchQuery { ProjectType = projectType };
+        var facets = ModrinthClient.BuildFacets(query);
+        facets.Should().Contain(expectedFacet);
+    }
+
+    [Theory]
     [InlineData(0, 1)]
     [InlineData(1, 1)]
     [InlineData(100, 100)]

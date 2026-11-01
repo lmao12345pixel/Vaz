@@ -34,6 +34,7 @@ public sealed record SearchQuery
     private readonly int _limit = 20;
 
     public string? Query { get; init; }
+    public string? ProjectType { get; init; } // mod, resourcepack, shader
     public string[]? Loaders { get; init; }
     public string[]? GameVersions { get; init; }
     public string[]? Categories { get; init; }

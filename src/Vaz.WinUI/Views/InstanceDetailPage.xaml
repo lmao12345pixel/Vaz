@@ -820,6 +820,12 @@
                                 <!-- Toolbar -->
                                 <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,*,Auto">
                                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                                        <Button Click="DownloadResourcePacks_Click" Style="{StaticResource AccentButtonStyle}">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <FontIcon Glyph="&#xE896;" FontSize="13" />
+                                                <TextBlock Text="Tải Resource Packs" />
+                                            </StackPanel>
+                                        </Button>
                                         <Button Click="ImportResourcePack_Click">
                                             <StackPanel Orientation="Horizontal" Spacing="6">
                                                 <FontIcon Glyph="&#xE898;" FontSize="13" />
@@ -1187,6 +1193,12 @@
                             <!-- Toolbar -->
                             <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto">
                                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                                    <Button Click="DownloadShaders_Click" Style="{StaticResource AccentButtonStyle}">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <FontIcon Glyph="&#xE896;" FontSize="13" />
+                                            <TextBlock Text="Tải Shaders" />
+                                        </StackPanel>
+                                    </Button>
                                     <Button Click="ImportShader_Click">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <FontIcon Glyph="&#xE898;" FontSize="13" />

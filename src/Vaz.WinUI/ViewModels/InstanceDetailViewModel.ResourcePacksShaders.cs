@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -17,6 +18,10 @@ public sealed partial class ResourcePackRow : ObservableObject
     [ObservableProperty] private int priority;
     [ObservableProperty] private bool canMoveUp;
     [ObservableProperty] private bool canMoveDown;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IconImageSource))]
+    private Microsoft.UI.Xaml.Media.ImageSource? customIconSource;
 
     public string Id => Pack.Id;
     public string Name => Pack.Name;
@@ -49,6 +54,11 @@ public sealed partial class ResourcePackRow : ObservableObject
     {
         get
         {
+            if (CustomIconSource != null)
+            {
+                return CustomIconSource;
+            }
+
             if (!string.IsNullOrWhiteSpace(IconUri))
             {
                 if (Uri.TryCreate(IconUri, UriKind.RelativeOrAbsolute, out var uri))
@@ -187,6 +197,7 @@ public sealed partial class InstanceDetailViewModel
         LoadResourcePacks();
         LoadShaders();
         RefreshShaderLoaderStatus();
+        StartFileSystemWatchers(Current.Path);
     }
 
     public void RefreshShaderLoaderStatus()
@@ -226,7 +237,7 @@ public sealed partial class InstanceDetailViewModel
         StatusMessage = "Đang mở trang tải Iris Shaders trên Modrinth...";
     }
 
-    private void LoadResourcePacks()
+    public void LoadResourcePacks()
     {
         ResourcePacks.Clear();
         var defaults = ResourcePackShaderData.DefaultResourcePacks;
@@ -249,6 +260,15 @@ public sealed partial class InstanceDetailViewModel
         {
             var row = new ResourcePackRow(p);
             ResourcePacks.Add(row);
+
+            if (!string.IsNullOrEmpty(instancePath) && !string.IsNullOrEmpty(p.FileName))
+            {
+                var potentialZip = Path.Combine(instancePath, "resourcepacks", p.FileName);
+                if (File.Exists(potentialZip))
+                {
+                    LoadThumbnailInBackground(row, potentialZip);
+                }
+            }
         }
 
         // Đọc thêm file zip từ thư mục resourcepacks của instance nếu có
@@ -280,7 +300,9 @@ public sealed partial class InstanceDetailViewModel
                             Priority = 99,
                             IsCompatible = true
                         };
-                        ResourcePacks.Add(new ResourcePackRow(customItem));
+                        var row = new ResourcePackRow(customItem);
+                        ResourcePacks.Add(row);
+                        LoadThumbnailInBackground(row, zip);
                     }
                 }
             }
@@ -518,7 +540,9 @@ public sealed partial class InstanceDetailViewModel
                     Enabled = false,
                     IsCompatible = isCompat
                 };
-                ResourcePacks.Add(new ResourcePackRow(newItem));
+                var row = new ResourcePackRow(newItem);
+                ResourcePacks.Add(row);
+                LoadThumbnailInBackground(row, dest);
                 count++;
             }
         }
@@ -535,7 +559,7 @@ public sealed partial class InstanceDetailViewModel
     }
 
     // --- Shaders Management ---
-    private void LoadShaders()
+    public void LoadShaders()
     {
         Shaders.Clear();
         var defaults = ResourcePackShaderData.DefaultShaders;
@@ -545,14 +569,45 @@ public sealed partial class InstanceDetailViewModel
         {
             var shDir = Path.Combine(instancePath, "shaderpacks");
             Directory.CreateDirectory(shDir);
+
+            if (Directory.Exists(shDir))
+            {
+                var zipFiles = Directory.GetFiles(shDir, "*.zip");
+                foreach (var zip in zipFiles)
+                {
+                    var fName = Path.GetFileName(zip);
+                    if (!Shaders.Any(s => string.Equals(s.Name + ".zip", fName, StringComparison.OrdinalIgnoreCase) ||
+                                          string.Equals(s.Id, Path.GetFileNameWithoutExtension(fName), StringComparison.OrdinalIgnoreCase)))
+                    {
+                        var customShader = new ShaderPackItem
+                        {
+                            Id = Path.GetFileNameWithoutExtension(fName).ToLowerInvariant(),
+                            Name = Path.GetFileNameWithoutExtension(fName),
+                            Author = "Tùy biến",
+                            Description = "Shader pack từ thư mục shaderpacks.",
+                            Style = "fantasy",
+                            StyleLabel = "Tùy biến",
+                            Version = Current?.MinecraftVersion ?? "1.21.1",
+                            Size = $"{new FileInfo(zip).Length / 1024 / 1024:N1} MB",
+                            ImageUri = "ms-appx:///Assets/shaders/bsl-preview.png",
+                            AccentColor = "#6366F1",
+                            Features = new System.Collections.Generic.List<string> { "Custom Shader", "Tùy biến" }
+                        };
+                        Shaders.Add(new ShaderPackRow(customShader, false));
+                    }
+                }
+            }
         }
 
         foreach (var s in defaults)
         {
-            bool isCur = s.Id == "complementary-reimagined"; // Default active
-            var row = new ShaderPackRow(s, isCur);
-            Shaders.Add(row);
-            if (isCur) CurrentActiveShader = row;
+            if (!Shaders.Any(sh => sh.Id == s.Id))
+            {
+                bool isCur = s.Id == "complementary-reimagined"; // Default active
+                var row = new ShaderPackRow(s, isCur);
+                Shaders.Add(row);
+                if (isCur) CurrentActiveShader = row;
+            }
         }
 
         ApplyShaderFilter();
@@ -686,6 +741,164 @@ public sealed partial class InstanceDetailViewModel
         else if (errorCount > 0)
         {
             // StatusMessage already set
+        }
+    }
+
+    private void LoadThumbnailInBackground(ResourcePackRow row, string zipPath)
+    {
+        if (string.IsNullOrEmpty(zipPath) || !File.Exists(zipPath)) return;
+
+        _ = Task.Run(async () =>
+        {
+            byte[]? pngBytes = null;
+            try
+            {
+                using var archive = ZipFile.OpenRead(zipPath);
+                var entry = archive.GetEntry("pack.png") ?? archive.Entries.FirstOrDefault(e =>
+                    string.Equals(e.FullName, "pack.png", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(Path.GetFileName(e.FullName), "pack.png", StringComparison.OrdinalIgnoreCase));
+
+                if (entry != null)
+                {
+                    using var stream = entry.Open();
+                    using var ms = new MemoryStream();
+                    await stream.CopyToAsync(ms);
+                    pngBytes = ms.ToArray();
+                }
+            }
+            catch
+            {
+                // File unreadable or invalid zip
+            }
+
+            if (pngBytes != null && pngBytes.Length > 0)
+            {
+                App.Dispatcher?.TryEnqueue(async () =>
+                {
+                    try
+                    {
+                        var ras = new Windows.Storage.Streams.InMemoryRandomAccessStream();
+                        using (var writer = ras.AsStreamForWrite())
+                        {
+                            await writer.WriteAsync(pngBytes, 0, pngBytes.Length);
+                            await writer.FlushAsync();
+                        }
+                        ras.Seek(0);
+                        var bmp = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage();
+                        await bmp.SetSourceAsync(ras);
+                        row.CustomIconSource = bmp;
+                    }
+                    catch
+                    {
+                        row.CustomIconSource = Vaz.WinUI.Helpers.UiPlaceholders.Image;
+                    }
+                });
+            }
+        });
+    }
+
+    private FileSystemWatcher? _resourcePacksWatcher;
+    private FileSystemWatcher? _shaderPacksWatcher;
+    private System.Threading.Timer? _resourcePacksDebounceTimer;
+    private System.Threading.Timer? _shadersDebounceTimer;
+    private readonly object _watcherLock = new();
+
+    public void StartFileSystemWatchers(string? instancePath)
+    {
+        DisposeFileSystemWatchers();
+
+        if (string.IsNullOrEmpty(instancePath) || !Directory.Exists(instancePath)) return;
+
+        try
+        {
+            var rpDir = Path.Combine(instancePath, "resourcepacks");
+            Directory.CreateDirectory(rpDir);
+            _resourcePacksWatcher = new FileSystemWatcher(rpDir, "*.zip")
+            {
+                NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite,
+                EnableRaisingEvents = true
+            };
+            _resourcePacksWatcher.Created += OnResourcePacksDirectoryChanged;
+            _resourcePacksWatcher.Deleted += OnResourcePacksDirectoryChanged;
+            _resourcePacksWatcher.Renamed += OnResourcePacksDirectoryChanged;
+        }
+        catch { }
+
+        try
+        {
+            var shDir = Path.Combine(instancePath, "shaderpacks");
+            Directory.CreateDirectory(shDir);
+            _shaderPacksWatcher = new FileSystemWatcher(shDir, "*.zip")
+            {
+                NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite,
+                EnableRaisingEvents = true
+            };
+            _shaderPacksWatcher.Created += OnShadersDirectoryChanged;
+            _shaderPacksWatcher.Deleted += OnShadersDirectoryChanged;
+            _shaderPacksWatcher.Renamed += OnShadersDirectoryChanged;
+        }
+        catch { }
+    }
+
+    private void OnResourcePacksDirectoryChanged(object sender, FileSystemEventArgs e)
+    {
+        lock (_watcherLock)
+        {
+            _resourcePacksDebounceTimer?.Dispose();
+            _resourcePacksDebounceTimer = new System.Threading.Timer(_ =>
+            {
+                App.Dispatcher?.TryEnqueue(() =>
+                {
+                    LoadResourcePacks();
+                });
+            }, null, 400, System.Threading.Timeout.Infinite);
+        }
+    }
+
+    private void OnShadersDirectoryChanged(object sender, FileSystemEventArgs e)
+    {
+        lock (_watcherLock)
+        {
+            _shadersDebounceTimer?.Dispose();
+            _shadersDebounceTimer = new System.Threading.Timer(_ =>
+            {
+                App.Dispatcher?.TryEnqueue(() =>
+                {
+                    LoadShaders();
+                });
+            }, null, 400, System.Threading.Timeout.Infinite);
+        }
+    }
+
+    public void DisposeFileSystemWatchers()
+    {
+        lock (_watcherLock)
+        {
+            _resourcePacksDebounceTimer?.Dispose();
+            _resourcePacksDebounceTimer = null;
+
+            _shadersDebounceTimer?.Dispose();
+            _shadersDebounceTimer = null;
+
+            if (_resourcePacksWatcher != null)
+            {
+                _resourcePacksWatcher.EnableRaisingEvents = false;
+                _resourcePacksWatcher.Created -= OnResourcePacksDirectoryChanged;
+                _resourcePacksWatcher.Deleted -= OnResourcePacksDirectoryChanged;
+                _resourcePacksWatcher.Renamed -= OnResourcePacksDirectoryChanged;
+                _resourcePacksWatcher.Dispose();
+                _resourcePacksWatcher = null;
+            }
+
+            if (_shaderPacksWatcher != null)
+            {
+                _shaderPacksWatcher.EnableRaisingEvents = false;
+                _shaderPacksWatcher.Created -= OnShadersDirectoryChanged;
+                _shaderPacksWatcher.Deleted -= OnShadersDirectoryChanged;
+                _shaderPacksWatcher.Renamed -= OnShadersDirectoryChanged;
+                _shaderPacksWatcher.Dispose();
+                _shaderPacksWatcher = null;
+            }
         }
     }
 }
