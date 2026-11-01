@@ -39,6 +39,7 @@
             <SolidColorBrush x:Key="VazAccentHoverBrush" Color="#3FCB99" />
             <SolidColorBrush x:Key="VazAccentPressedBrush" Color="#0D9C6E" />
             <SolidColorBrush x:Key="VazAccentSubtleBrush" Color="#2610B981" />
+            <SolidColorBrush x:Key="ModrinthAccentBrush" Color="#1BD96A" />
 
             <!-- Surface toàn shell. AppThemeManager đổi màu theo theme (dark/light/obsidian)
                  ngay khi khởi động và khi người dùng đổi theme. -->

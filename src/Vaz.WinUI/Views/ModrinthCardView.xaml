@@ -68,17 +68,17 @@
             <ScaleTransform x:Name="CardScale" ScaleX="1.0" ScaleY="1.0" />
         </Grid.RenderTransform>
 
-        <!-- Base Background & Border (Nền xám đen #262626, bo góc 8px) -->
+        <!-- Base Background & Border (Tuân thủ ThemeResource của WinUI 3: CardBackgroundFillColorDefaultBrush & CardStrokeColorDefaultBrush) -->
         <Border
-            Background="#262626"
-            BorderBrush="#383838"
+            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
             BorderThickness="1"
             CornerRadius="8" />
 
-        <!-- Accent Border on Hover (#1bd96a) -->
+        <!-- Accent Border on Hover (ModrinthAccentBrush #1bd96a) -->
         <Border
             x:Name="HoverBorder"
-            BorderBrush="#1bd96a"
+            BorderBrush="{StaticResource ModrinthAccentBrush}"
             BorderThickness="1.5"
             CornerRadius="8"
             Opacity="0"
@@ -96,7 +96,7 @@
 
             <!-- 1. Cover Image Container (16:9, bo góc trên) -->
             <Grid Grid.Row="0" CornerRadius="8,8,0,0">
-                <Border Background="#1c1c1c" CornerRadius="8,8,0,0">
+                <Border Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}" CornerRadius="8,8,0,0">
                     <Image
                         x:Name="CoverImage"
                         Stretch="UniformToFill"
@@ -109,8 +109,8 @@
                     VerticalAlignment="Top"
                     Margin="10"
                     Padding="8,3"
-                    Background="#cc1a1a1a"
-                    BorderBrush="#1bd96a"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{StaticResource ModrinthAccentBrush}"
                     BorderThickness="1"
                     CornerRadius="4"
                     Visibility="{x:Bind Item.OverlayTagVisibility, Mode=OneWay}">
@@ -118,43 +118,43 @@
                         Text="{x:Bind Item.OverlayTag, Mode=OneWay}"
                         FontSize="11"
                         FontWeight="SemiBold"
-                        Foreground="#1bd96a" />
+                        Foreground="{StaticResource ModrinthAccentBrush}" />
                 </Border>
             </Grid>
 
             <!-- 2. Card Content Body (Padding 12px) -->
             <StackPanel Grid.Row="1" Padding="12,10,12,6" Spacing="4">
-                <!-- Tên Project (Trắng, In đậm, 16px) + Tên tác giả (Xám nhạt, 13px) nằm cùng hàng -->
+                <!-- Tên Project (In đậm, 16px) + Tên tác giả (13px) nằm cùng hàng -->
                 <Grid ColumnDefinitions="*,Auto">
                     <TextBlock
                         Grid.Column="0"
                         Text="{x:Bind Item.Title, Mode=OneWay}"
                         FontSize="16"
                         FontWeight="Bold"
-                        Foreground="#ffffff"
+                        Foreground="{ThemeResource TextFillColorPrimaryBrush}"
                         TextTrimming="CharacterEllipsis"
                         MaxLines="1" />
                     <TextBlock
                         Grid.Column="1"
                         Text="{x:Bind Item.AuthorText, Mode=OneWay}"
                         FontSize="13"
-                        Foreground="#9e9e9e"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                         TextTrimming="CharacterEllipsis"
                         VerticalAlignment="Center"
                         Margin="8,0,0,0" />
                 </Grid>
 
-                <!-- Mô tả ngắn (Xám, 14px, cắt dòng bằng TextTrimming="CharacterEllipsis", tối đa 2 dòng) -->
+                <!-- Mô tả ngắn (14px, cắt dòng bằng TextTrimming="CharacterEllipsis", tối đa 2 dòng) -->
                 <TextBlock
                     Text="{x:Bind Item.Description, Mode=OneWay}"
                     FontSize="14"
-                    Foreground="#b0b0b0"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                     TextTrimming="CharacterEllipsis"
                     MaxLines="2"
                     TextWrapping="Wrap"
                     Height="38" />
 
-                <!-- Tags (Pill shape): Nền #404040, chữ trắng #cccccc, bo tròn hoàn toàn CornerRadius=10 -->
+                <!-- Tags (Pill shape): Nền SubtleFillColorSecondaryBrush, chữ TextFillColorSecondaryBrush, CornerRadius=10 -->
                 <ItemsControl ItemsSource="{x:Bind Item.DisplayTags, Mode=OneWay}" Margin="0,4,0,0">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -164,14 +164,14 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="x:String">
                             <Border
-                                Background="#404040"
+                                Background="{ThemeResource SubtleFillColorSecondaryBrush}"
                                 CornerRadius="10"
                                 Padding="8,2"
                                 VerticalAlignment="Center">
                                 <TextBlock
                                     Text="{x:Bind}"
                                     FontSize="11"
-                                    Foreground="#cccccc"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                     FontWeight="Medium" />
                             </Border>
                         </DataTemplate>
@@ -186,33 +186,33 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <!-- Footer Stats Group -->
+                <!-- Footer Stats Group (Dùng TextFillColorTertiaryBrush) -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
                     <!-- Icon Download + Số lượt tải -->
                     <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                        <FontIcon Glyph="&#xE896;" FontSize="12" Foreground="#9e9e9e" />
+                        <FontIcon Glyph="&#xE896;" FontSize="12" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
                         <TextBlock
                             Text="{x:Bind Item.DownloadsText, Mode=OneWay}"
                             FontSize="12"
-                            Foreground="#9e9e9e" />
+                            Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
                     </StackPanel>
 
                     <!-- Icon Heart + Số lượt thích -->
                     <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                        <FontIcon Glyph="&#xEB52;" FontSize="12" Foreground="#9e9e9e" />
+                        <FontIcon Glyph="&#xEB52;" FontSize="12" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
                         <TextBlock
                             Text="{x:Bind Item.FollowsText, Mode=OneWay}"
                             FontSize="12"
-                            Foreground="#9e9e9e" />
+                            Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
                     </StackPanel>
 
                     <!-- Icon Clock + Thời gian cập nhật -->
                     <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                        <FontIcon Glyph="&#xE823;" FontSize="12" Foreground="#9e9e9e" />
+                        <FontIcon Glyph="&#xE823;" FontSize="12" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
                         <TextBlock
                             Text="{x:Bind Item.UpdatedAtText, Mode=OneWay}"
                             FontSize="12"
-                            Foreground="#9e9e9e" />
+                            Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
                     </StackPanel>
                 </StackPanel>
 
@@ -222,15 +222,15 @@
                     <Button
                         x:Name="IdleButton"
                         Click="InstallButton_Click"
-                        Background="#333333"
-                        BorderBrush="#1bd96a"
+                        Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                        BorderBrush="{StaticResource ModrinthAccentBrush}"
                         BorderThickness="1"
                         CornerRadius="6"
                         Padding="8,4"
                         ToolTipService.ToolTip="Cài đặt">
                         <StackPanel Orientation="Horizontal" Spacing="4">
-                            <FontIcon Glyph="&#xE896;" FontSize="11" Foreground="#1bd96a" />
-                            <TextBlock Text="Cài đặt" FontSize="11" FontWeight="SemiBold" Foreground="#1bd96a" />
+                            <FontIcon Glyph="&#xE896;" FontSize="11" Foreground="{StaticResource ModrinthAccentBrush}" />
+                            <TextBlock Text="Cài đặt" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource ModrinthAccentBrush}" />
                         </StackPanel>
                     </Button>
 
@@ -246,22 +246,22 @@
                             Width="14"
                             Height="14"
                             IsActive="False"
-                            Foreground="#1bd96a" />
-                        <TextBlock Text="Đang tải..." FontSize="11" Foreground="#1bd96a" />
+                            Foreground="{StaticResource ModrinthAccentBrush}" />
+                        <TextBlock Text="Đang tải..." FontSize="11" Foreground="{StaticResource ModrinthAccentBrush}" />
                     </StackPanel>
 
                     <!-- Installed State Badge -->
                     <Border
                         x:Name="InstalledBadge"
-                        Background="#1b3826"
-                        BorderBrush="#1bd96a"
+                        Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                        BorderBrush="{StaticResource ModrinthAccentBrush}"
                         BorderThickness="1"
                         CornerRadius="6"
                         Padding="6,3"
                         Visibility="Collapsed">
                         <StackPanel Orientation="Horizontal" Spacing="4">
-                            <FontIcon Glyph="&#xE73E;" FontSize="11" Foreground="#1bd96a" />
-                            <TextBlock Text="Đã cài" FontSize="11" FontWeight="SemiBold" Foreground="#1bd96a" />
+                            <FontIcon Glyph="&#xE73E;" FontSize="11" Foreground="{StaticResource ModrinthAccentBrush}" />
+                            <TextBlock Text="Đã cài" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource ModrinthAccentBrush}" />
                         </StackPanel>
                     </Border>
                 </Grid>

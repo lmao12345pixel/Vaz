@@ -23,8 +23,8 @@
         </Storyboard>
     </UserControl.Resources>
 
-    <!-- Nền tổng thể #1a1a1a (Dark Theme toàn diện theo chuẩn Modrinth Web) -->
-    <Grid Background="#1a1a1a">
+    <!-- Nền tổng thể: Dùng ThemeResource ApplicationPageBackgroundThemeBrush tự động thích ứng Light/Dark theme -->
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
         <Grid.RowDefinitions>
             <!-- 0. Thanh Top Bar -->
             <RowDefinition Height="Auto" />
@@ -32,11 +32,11 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- THANH TOP BAR (Search + Filter + Phân trang) -->
+        <!-- THANH TOP BAR (Search + Filter + Phân trang - 100% ThemeResource) -->
         <Border
             Grid.Row="0"
-            Background="#1e1e1e"
-            BorderBrush="#2e2e2e"
+            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
             BorderThickness="0,0,0,1"
             Padding="24,14">
             <StackPanel Spacing="12">
@@ -51,23 +51,23 @@
                             BorderThickness="0"
                             Padding="8"
                             CornerRadius="6">
-                            <FontIcon Glyph="&#xE72B;" FontSize="16" Foreground="#ffffff" />
+                            <FontIcon Glyph="&#xE72B;" FontSize="16" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                         </Button>
 
                         <Border
-                            Background="#1b3826"
-                            BorderBrush="#1bd96a"
+                            Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                            BorderBrush="{StaticResource ModrinthAccentBrush}"
                             BorderThickness="1"
                             CornerRadius="4"
                             Padding="8,3"
                             VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <FontIcon Glyph="&#xE71E;" FontSize="12" Foreground="#1bd96a" />
+                                <FontIcon Glyph="&#xE71E;" FontSize="12" Foreground="{StaticResource ModrinthAccentBrush}" />
                                 <TextBlock
                                     Text="Modrinth"
                                     FontSize="12"
                                     FontWeight="Bold"
-                                    Foreground="#1bd96a" />
+                                    Foreground="{StaticResource ModrinthAccentBrush}" />
                             </StackPanel>
                         </Border>
 
@@ -75,7 +75,7 @@
                             Text="{x:Bind ViewModel.BrowserTitle, Mode=OneWay}"
                             FontSize="18"
                             FontWeight="Bold"
-                            Foreground="#ffffff"
+                            Foreground="{ThemeResource TextFillColorPrimaryBrush}"
                             VerticalAlignment="Center" />
                     </StackPanel>
 
@@ -84,12 +84,12 @@
                         <RadioButton
                             Content="Resource Packs"
                             IsChecked="{x:Bind ViewModel.IsResourcePacks, Mode=TwoWay}"
-                            Foreground="#d0d0d0"
+                            Foreground="{ThemeResource TextFillColorPrimaryBrush}"
                             FontSize="13" />
                         <RadioButton
                             Content="Shaders"
                             IsChecked="{x:Bind ViewModel.IsShaders, Mode=TwoWay}"
-                            Foreground="#d0d0d0"
+                            Foreground="{ThemeResource TextFillColorPrimaryBrush}"
                             FontSize="13" />
                     </StackPanel>
 
@@ -102,11 +102,11 @@
                         BorderThickness="0"
                         Padding="8"
                         CornerRadius="6">
-                        <FontIcon Glyph="&#xE711;" FontSize="16" Foreground="#888888" />
+                        <FontIcon Glyph="&#xE711;" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     </Button>
                 </Grid>
 
-                <!-- Search Box Row: Ô Search lớn, bo tròn, nền xám nhạt #2d2d2d -->
+                <!-- Search Box Row: Ô Search lớn, bo tròn, sử dụng TextControlBackground của Theme -->
                 <Grid HorizontalAlignment="Stretch">
                     <AutoSuggestBox
                         x:Name="SearchBox"
@@ -118,8 +118,7 @@
                         QuerySubmitted="SearchBox_QuerySubmitted"
                         Height="44"
                         CornerRadius="8"
-                        Background="#2d2d2d"
-                        Foreground="#ffffff"
+                        Background="{ThemeResource TextControlBackground}"
                         HorizontalAlignment="Stretch" />
                 </Grid>
 
@@ -129,26 +128,20 @@
                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
                         <!-- Sort by -->
                         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                            <TextBlock Text="Sort by:" Foreground="#9e9e9e" FontSize="13" VerticalAlignment="Center" />
+                            <TextBlock Text="Sort by:" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="13" VerticalAlignment="Center" />
                             <ComboBox
                                 ItemsSource="{x:Bind ViewModel.SortOptions}"
                                 SelectedItem="{x:Bind ViewModel.SelectedSort, Mode=TwoWay}"
-                                Background="#262626"
-                                BorderBrush="#383838"
-                                Foreground="#ffffff"
                                 CornerRadius="6"
                                 MinWidth="130" />
                         </StackPanel>
 
                         <!-- View: (ComboBox số lượng) -->
                         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                            <TextBlock Text="View:" Foreground="#9e9e9e" FontSize="13" VerticalAlignment="Center" />
+                            <TextBlock Text="View:" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="13" VerticalAlignment="Center" />
                             <ComboBox
                                 ItemsSource="{x:Bind ViewModel.ViewOptions}"
                                 SelectedItem="{x:Bind ViewModel.SelectedView, Mode=TwoWay}"
-                                Background="#262626"
-                                BorderBrush="#383838"
-                                Foreground="#ffffff"
                                 CornerRadius="6"
                                 MinWidth="75" />
                         </StackPanel>
@@ -159,13 +152,13 @@
                         <TextBlock
                             Text="{x:Bind ViewModel.StatusText, Mode=OneWay}"
                             FontSize="13"
-                            Foreground="#9e9e9e"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                             VerticalAlignment="Center" />
                         <ProgressRing
                             IsActive="{x:Bind ViewModel.IsBusy, Mode=OneWay}"
                             Width="14"
                             Height="14"
-                            Foreground="#1bd96a"
+                            Foreground="{StaticResource ModrinthAccentBrush}"
                             VerticalAlignment="Center" />
                     </StackPanel>
 
@@ -175,18 +168,19 @@
                         <Button
                             Command="{x:Bind ViewModel.PrevPageCommand}"
                             IsEnabled="{x:Bind ViewModel.CanGoPrev, Mode=OneWay}"
-                            Background="#262626"
-                            BorderBrush="#383838"
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
                             CornerRadius="6"
                             Padding="8,5"
                             ToolTipService.ToolTip="Trang trước">
-                            <FontIcon Glyph="&#xE76B;" FontSize="11" Foreground="#c0c0c0" />
+                            <FontIcon Glyph="&#xE76B;" FontSize="11" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                         </Button>
 
                         <!-- Page Indicator Pill (1, 2, ..., 1886) -->
                         <Border
-                            Background="#262626"
-                            BorderBrush="#383838"
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                             BorderThickness="1"
                             CornerRadius="6"
                             Padding="12,5">
@@ -194,19 +188,20 @@
                                 Text="{x:Bind ViewModel.PaginationText, Mode=OneWay}"
                                 FontSize="12"
                                 FontWeight="SemiBold"
-                                Foreground="#1bd96a" />
+                                Foreground="{StaticResource ModrinthAccentBrush}" />
                         </Border>
 
                         <!-- Next Page Button -->
                         <Button
                             Command="{x:Bind ViewModel.NextPageCommand}"
                             IsEnabled="{x:Bind ViewModel.CanGoNext, Mode=OneWay}"
-                            Background="#262626"
-                            BorderBrush="#383838"
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
                             CornerRadius="6"
                             Padding="8,5"
                             ToolTipService.ToolTip="Trang sau">
-                            <FontIcon Glyph="&#xE76C;" FontSize="11" Foreground="#c0c0c0" />
+                            <FontIcon Glyph="&#xE76C;" FontSize="11" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                         </Button>
                     </StackPanel>
                 </Grid>
@@ -256,12 +251,12 @@
                             <ItemsWrapGrid Orientation="Horizontal" ItemWidth="300" ItemHeight="310" />
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
-                    <Border Background="#262626" CornerRadius="8" Margin="8" Width="290" Height="300" />
-                    <Border Background="#262626" CornerRadius="8" Margin="8" Width="290" Height="300" />
-                    <Border Background="#262626" CornerRadius="8" Margin="8" Width="290" Height="300" />
-                    <Border Background="#262626" CornerRadius="8" Margin="8" Width="290" Height="300" />
-                    <Border Background="#262626" CornerRadius="8" Margin="8" Width="290" Height="300" />
-                    <Border Background="#262626" CornerRadius="8" Margin="8" Width="290" Height="300" />
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Margin="8" Width="290" Height="300" />
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Margin="8" Width="290" Height="300" />
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Margin="8" Width="290" Height="300" />
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Margin="8" Width="290" Height="300" />
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Margin="8" Width="290" Height="300" />
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Margin="8" Width="290" Height="300" />
                 </ItemsControl>
             </Grid>
 
@@ -273,25 +268,25 @@
                 Spacing="12"
                 Margin="0,40,0,0">
                 <Border
-                    Background="#262626"
-                    BorderBrush="#383838"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                     BorderThickness="1"
                     CornerRadius="36"
                     Width="72"
                     Height="72"
                     HorizontalAlignment="Center">
-                    <FontIcon Glyph="&#xE721;" FontSize="28" Foreground="#888888" />
+                    <FontIcon Glyph="&#xE721;" FontSize="28" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                 </Border>
                 <TextBlock
                     Text="Không tìm thấy kết quả"
                     FontSize="18"
                     FontWeight="SemiBold"
-                    Foreground="#ffffff"
+                    Foreground="{ThemeResource TextFillColorPrimaryBrush}"
                     HorizontalAlignment="Center" />
                 <TextBlock
                     Text="Thử thay đổi từ khóa hoặc bộ lọc để khám phá thêm nội dung."
                     FontSize="13"
-                    Foreground="#888888"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                     HorizontalAlignment="Center" />
             </StackPanel>
         </Grid>

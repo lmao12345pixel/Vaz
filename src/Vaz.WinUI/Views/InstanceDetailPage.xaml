@@ -1804,7 +1804,7 @@
             Grid.Row="0"
             Grid.RowSpan="3"
             Visibility="Collapsed"
-            Background="#1a1a1a"
+            Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
             Margin="-24,-16,-24,-16">
 
             <Grid.RenderTransform>
