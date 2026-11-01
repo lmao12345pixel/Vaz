@@ -31,7 +31,7 @@ public sealed partial class FilterCheckboxItem : ObservableObject
 /// Giao diện Dark Theme giống web modrinth.com với Sidebar Filter và 16:9 Grid Cards.
 /// Tái sử dụng toàn bộ logic Infinite Scroll, Sliding Window 100 items và Lazy Load từ ModBrowserViewModel.
 /// </summary>
-public sealed partial class ModrinthStyleBrowserViewModel : ModBrowserViewModel
+public partial class ModrinthStyleBrowserViewModel : ModBrowserViewModel
 {
     public ObservableCollection<FilterCheckboxItem> CategoryFilters { get; } = new();
     public ObservableCollection<FilterCheckboxItem> LoaderFilters { get; } = new();

@@ -65,6 +65,7 @@ public sealed partial class ModrinthCardView : UserControl
             newItem.PropertyChanged += Item_PropertyChanged;
             _lastKnownState = newItem.InstallState;
             UpdateState(newItem.InstallState);
+            LoadCoverImage();
         }
         else
         {

@@ -1798,20 +1798,20 @@
                 VerticalAlignment="Stretch" />
         </Grid>
 
-        <!-- Embedded Modrinth-Style Browser Host Grid (Đợt 14) -->
+        <!-- Embedded Modrinth-Style Catalog View (Đợt 14 Clone Web Modrinth) -->
         <Grid
             x:Name="ModrinthBrowserHostGrid"
             Grid.Row="0"
             Grid.RowSpan="3"
             Visibility="Collapsed"
-            Background="#121316"
+            Background="#1a1a1a"
             Margin="-24,-16,-24,-16">
 
             <Grid.RenderTransform>
                 <TranslateTransform x:Name="ModrinthBrowserTranslate" Y="50" />
             </Grid.RenderTransform>
 
-            <views:ModrinthStyleBrowserView
+            <views:ModrinthCatalogView
                 x:Name="EmbeddedModrinthBrowser"
                 CloseRequested="EmbeddedModrinthBrowser_CloseRequested"
                 HorizontalAlignment="Stretch"

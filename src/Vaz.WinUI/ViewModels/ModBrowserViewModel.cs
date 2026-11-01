@@ -218,11 +218,59 @@ public sealed partial class SearchHitRow : ObservableObject
 
     public string BadgeText => BadgeTags.Count > 0 ? string.Join("  •  ", BadgeTags) : string.Empty;
 
+    public string AuthorText => string.IsNullOrWhiteSpace(Author) ? string.Empty : $"by {Author}";
+
+    public string FollowsText => FormatCount(Hit.Follows);
+
+    public string UpdatedAtText
+    {
+        get
+        {
+            if (Hit.DateModified == null) return string.Empty;
+            var diff = DateTimeOffset.UtcNow - Hit.DateModified.Value;
+            if (diff.TotalMinutes < 1) return "just now";
+            if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}m ago";
+            if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h ago";
+            if (diff.TotalDays < 30) return $"{(int)diff.TotalDays}d ago";
+            if (diff.TotalDays < 365) return $"{(int)(diff.TotalDays / 30)}mo ago";
+            return $"{(int)(diff.TotalDays / 365)}y ago";
+        }
+    }
+
+    public IReadOnlyList<string> DisplayTags
+    {
+        get
+        {
+            var raw = new List<string>();
+            if (Hit.Categories != null)
+            {
+                foreach (var c in Hit.Categories)
+                {
+                    if (!string.IsNullOrWhiteSpace(c) && !raw.Contains(c, StringComparer.OrdinalIgnoreCase))
+                        raw.Add(c);
+                }
+            }
+            if (Hit.Versions != null && Hit.Versions.Length > 0)
+            {
+                var v = Hit.Versions[0];
+                if (!string.IsNullOrWhiteSpace(v) && !raw.Contains(v, StringComparer.OrdinalIgnoreCase))
+                    raw.Add(v);
+            }
+
+            const int maxTags = 3;
+            if (raw.Count <= maxTags) return raw;
+
+            var result = raw.Take(maxTags).ToList();
+            result.Add($"+{raw.Count - maxTags}");
+            return result;
+        }
+    }
+
     public static string FormatCount(long n) => n switch
     {
-        >= 1_000_000 => $"{n / 1_000_000.0:0.#}M",
+        >= 1_000_000 => $"{n / 1_000_000.0:0.##}M",
         >= 1_000 => $"{n / 1_000.0:0.#}K",
-        _ => n.ToString()
+        _ => n.ToString("N0")
     };
 }
 
@@ -243,6 +291,8 @@ public partial class ModBrowserViewModel : ObservableObject
     private int _totalHits;
     private int _currentRequestId;
     private int _debounceMs = 200; // 200ms debounce, fallback 250ms nếu gặp 429
+
+    public int TotalHits => _totalHits;
 
     public const int MaxItems = 100;
     private const int PageSize = 20;

@@ -50,6 +50,7 @@ public partial class App : Application
         services.AddTransient<InstancesViewModel>();
         services.AddTransient<ModBrowserViewModel>();
         services.AddTransient<ModrinthStyleBrowserViewModel>();
+        services.AddTransient<ModrinthCatalogViewModel>();
         services.AddTransient<InstanceDetailViewModel>();
         services.AddTransient<AccountViewModel>();
         services.AddTransient<CreateInstanceViewModel>();
