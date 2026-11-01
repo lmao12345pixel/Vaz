@@ -647,48 +647,6 @@ public sealed partial class InstanceDetailPage : Page
             _ = ViewModel.ImportResourcePackFilesAsync(new[] { tempInvalidZip });
             e.Handled = true;
         }
-        else if (e.Key == Windows.System.VirtualKey.F5)
-        {
-            foreach (var p in ViewModel.ResourcePacks) p.Enabled = false;
-            ViewModel.RefreshResourcePackLists();
-            e.Handled = true;
-        }
-        else if (e.Key == Windows.System.VirtualKey.F6)
-        {
-            ViewModel.ResourcePacks.Clear();
-            ViewModel.RefreshResourcePackLists();
-            e.Handled = true;
-        }
-        else if (e.Key == Windows.System.VirtualKey.Up && Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(Windows.System.VirtualKey.Menu).HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down))
-        {
-            var target = ViewModel.SelectedResourcePack ?? ViewModel.ActiveResourcePacks.FirstOrDefault();
-            if (target != null && ViewModel.ActiveResourcePacks.Contains(target))
-            {
-                ViewModel.MovePackUp(target);
-                ViewModel.SelectedResourcePack = target;
-                ActivePacksListView?.ScrollIntoView(target);
-                if (ActivePacksListView?.ContainerFromItem(target) is Control c)
-                {
-                    c.Focus(FocusState.Keyboard);
-                }
-                e.Handled = true;
-            }
-        }
-        else if (e.Key == Windows.System.VirtualKey.Down && Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(Windows.System.VirtualKey.Menu).HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down))
-        {
-            var target = ViewModel.SelectedResourcePack ?? ViewModel.ActiveResourcePacks.FirstOrDefault();
-            if (target != null && ViewModel.ActiveResourcePacks.Contains(target))
-            {
-                ViewModel.MovePackDown(target);
-                ViewModel.SelectedResourcePack = target;
-                ActivePacksListView?.ScrollIntoView(target);
-                if (ActivePacksListView?.ContainerFromItem(target) is Control c)
-                {
-                    c.Focus(FocusState.Keyboard);
-                }
-                e.Handled = true;
-            }
-        }
     }
 
     private void ModInspector_Click(object sender, RoutedEventArgs e)
@@ -914,35 +872,34 @@ public sealed partial class InstanceDetailPage : Page
         _lastPackInspectorTrigger?.Focus(FocusState.Programmatic);
     }
 
-    private void PackEnable_Click(object sender, RoutedEventArgs e)
+    private ResourcePackRow? FindResourcePack(object sender)
     {
-        if (sender is FrameworkElement elem && elem.DataContext is ResourcePackRow row)
+        if (sender is FrameworkElement elem)
         {
-            ViewModel.EnablePack(row);
+            if (elem.DataContext is ResourcePackRow row) return row;
+            if (elem.Tag is string id && !string.IsNullOrEmpty(id))
+            {
+                return ViewModel.ResourcePacks.FirstOrDefault(p => p.Id == id);
+            }
+        }
+        return null;
+    }
+
+    private void DeleteResourcePack_Click(object sender, RoutedEventArgs e)
+    {
+        var row = FindResourcePack(sender);
+        if (row != null)
+        {
+            ViewModel.DeleteResourcePack(row);
         }
     }
 
-    private void PackDisable_Click(object sender, RoutedEventArgs e)
+    private void OpenResourcePackFile_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement elem && elem.DataContext is ResourcePackRow row)
+        var row = FindResourcePack(sender);
+        if (row != null)
         {
-            ViewModel.DisablePack(row);
-        }
-    }
-
-    private void PackMoveUp_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement elem && elem.DataContext is ResourcePackRow row)
-        {
-            ViewModel.MovePackUp(row);
-        }
-    }
-
-    private void PackMoveDown_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement elem && elem.DataContext is ResourcePackRow row)
-        {
-            ViewModel.MovePackDown(row);
+            ViewModel.OpenResourcePackFile(row);
         }
     }
 
@@ -996,9 +953,35 @@ public sealed partial class InstanceDetailPage : Page
         });
     }
 
-    private void DeactivateShaders_Click(object sender, RoutedEventArgs e)
+    private ShaderPackRow? FindShader(object sender)
     {
-        ViewModel.DeactivateShaders();
+        if (sender is FrameworkElement elem)
+        {
+            if (elem.DataContext is ShaderPackRow row) return row;
+            if (elem.Tag is string id && !string.IsNullOrEmpty(id))
+            {
+                return ViewModel.Shaders.FirstOrDefault(s => s.Id == id);
+            }
+        }
+        return null;
+    }
+
+    private void DeleteShader_Click(object sender, RoutedEventArgs e)
+    {
+        var row = FindShader(sender);
+        if (row != null)
+        {
+            ViewModel.DeleteShader(row);
+        }
+    }
+
+    private void OpenShaderFile_Click(object sender, RoutedEventArgs e)
+    {
+        var row = FindShader(sender);
+        if (row != null)
+        {
+            ViewModel.OpenShaderFile(row);
+        }
     }
 
     private void RefreshShaders_Click(object sender, RoutedEventArgs e)
@@ -1016,9 +999,13 @@ public sealed partial class InstanceDetailPage : Page
 
     private void ShaderInspector_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement elem && elem.DataContext is ShaderPackRow row)
+        var row = FindShader(sender);
+        if (row != null)
         {
-            _lastShaderInspectorTrigger = elem;
+            if (sender is FrameworkElement elem)
+            {
+                _lastShaderInspectorTrigger = elem;
+            }
             ViewModel.OpenShaderInspector(row);
         }
     }
@@ -1027,22 +1014,6 @@ public sealed partial class InstanceDetailPage : Page
     {
         ViewModel.CloseShaderInspectorCommand.Execute(null);
         _lastShaderInspectorTrigger?.Focus(FocusState.Programmatic);
-    }
-
-    private void ActivateShader_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement elem && elem.DataContext is ShaderPackRow row)
-        {
-            ViewModel.ActivateShader(row);
-        }
-    }
-
-    private void ActivateInspectorShader_Click(object sender, RoutedEventArgs e)
-    {
-        if (ViewModel.SelectedShaderForInspector != null)
-        {
-            ViewModel.ActivateShader(ViewModel.SelectedShaderForInspector);
-        }
     }
 
     private void ShadersGrid_DragOver(object sender, DragEventArgs e)

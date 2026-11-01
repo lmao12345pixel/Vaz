@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -14,10 +15,6 @@ namespace Vaz.WinUI.ViewModels;
 public sealed partial class ResourcePackRow : ObservableObject
 {
     public ResourcePackItem Pack { get; }
-    [ObservableProperty] private bool enabled;
-    [ObservableProperty] private int priority;
-    [ObservableProperty] private bool canMoveUp;
-    [ObservableProperty] private bool canMoveDown;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IconImageSource))]
@@ -35,21 +32,19 @@ public sealed partial class ResourcePackRow : ObservableObject
     public string IconUri => Pack.IconUri;
     public string BannerUri => Pack.BannerUri;
     public bool HasBanner => !string.IsNullOrWhiteSpace(BannerUri);
+
     public Microsoft.UI.Xaml.Media.ImageSource BannerImageSource
     {
         get
         {
-            if (!string.IsNullOrWhiteSpace(BannerUri))
+            if (HasBanner && Uri.TryCreate(BannerUri, UriKind.RelativeOrAbsolute, out var uri))
             {
-                if (Uri.TryCreate(BannerUri, UriKind.RelativeOrAbsolute, out var uri))
-                {
-                    return new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(uri);
-                }
+                return new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(uri);
             }
-            // Không bao giờ trả về null cho binding ImageSource (crash.txt).
             return Vaz.WinUI.Helpers.UiPlaceholders.Image;
         }
     }
+
     public Microsoft.UI.Xaml.Media.ImageSource IconImageSource
     {
         get
@@ -59,55 +54,36 @@ public sealed partial class ResourcePackRow : ObservableObject
                 return CustomIconSource;
             }
 
-            if (!string.IsNullOrWhiteSpace(IconUri))
+            if (!string.IsNullOrWhiteSpace(IconUri) && Uri.TryCreate(IconUri, UriKind.RelativeOrAbsolute, out var uri))
             {
-                if (Uri.TryCreate(IconUri, UriKind.RelativeOrAbsolute, out var uri))
-                {
-                    return new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(uri);
-                }
+                return new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(uri);
             }
+
             return Vaz.WinUI.Helpers.UiPlaceholders.Image;
         }
     }
+
     public bool IsCompatible => Pack.IsCompatible && (PackFormat == 34 || PackFormat <= 0);
     public bool IsIncompatible => !IsCompatible;
     public string CompatibilityText => IsCompatible ? "Tương thích 1.21.1" : $"Sai phiên bản (Format {PackFormat})";
-    public string PriorityBadge => $"# {Priority + 1}";
 
     public string ViewDetailsAutomationName => $"Xem chi tiết {Name}";
-    public string EnablePackAutomationName => $"Bật gói {Name}";
-    public string DisablePackAutomationName => $"Tắt gói {Name}";
-    public string MoveUpAutomationName => $"Tăng mức ưu tiên {Name}";
-    public string MoveDownAutomationName => $"Giảm mức ưu tiên {Name}";
-    public string MoreOptionsAutomationName => $"Tùy chọn khác cho {Name}";
-
-    partial void OnPriorityChanged(int value)
-    {
-        OnPropertyChanged(nameof(PriorityBadge));
-    }
+    public string DeletePackAutomationName => $"Xóa gói {Name}";
+    public string OpenFileAutomationName => $"Mở vị trí tệp {Name}";
 
     public ResourcePackRow(ResourcePackItem pack)
     {
         Pack = pack;
-        enabled = pack.Enabled;
-        priority = pack.Priority;
     }
 }
 
 public sealed partial class ShaderPackRow : ObservableObject
 {
     public ShaderPackItem Shader { get; }
-    [ObservableProperty] private bool isCurrent;
-
-    public bool IsActive => IsCurrent;
-
-    partial void OnIsCurrentChanged(bool value)
-    {
-        OnPropertyChanged(nameof(IsActive));
-    }
 
     public string Id => Shader.Id;
     public string Name => Shader.Name;
+    public string FileName => Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) ? Name : (Name + ".zip");
     public string Author => Shader.Author;
     public string Description => Shader.Description;
     public string Style => Shader.Style;
@@ -115,12 +91,20 @@ public sealed partial class ShaderPackRow : ObservableObject
     public string Version => Shader.Version;
     public string Size => Shader.Size;
     public string ImageUri => Shader.ImageUri;
-    public Uri? ImageUriSource => !string.IsNullOrEmpty(Shader.ImageUri) ? new Uri(Shader.ImageUri) : null;
 
-    /// <summary>
-    /// Binding an toàn cho Image.Source trong shader inspector — fallback placeholder
-    /// thay vì chuỗi rỗng (lỗi crash.txt: "The value cannot be converted to ImageSource").
-    /// </summary>
+    public Uri? ImageUriSource
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(Shader.ImageUri) &&
+                Uri.TryCreate(Shader.ImageUri, UriKind.RelativeOrAbsolute, out var uri))
+            {
+                return uri;
+            }
+            return null;
+        }
+    }
+
     public Microsoft.UI.Xaml.Media.ImageSource ShaderImageSource
     {
         get
@@ -134,107 +118,57 @@ public sealed partial class ShaderPackRow : ObservableObject
             return Vaz.WinUI.Helpers.UiPlaceholders.Image;
         }
     }
+
     public string AccentColor => Shader.AccentColor;
     public System.Collections.Generic.List<string> Features => Shader.Features;
 
     public string ViewDetailsAutomationName => $"Xem chi tiết {Name}";
-    public string ActivateShaderAutomationName => $"Kích hoạt shader {Name}";
+    public string DeleteShaderAutomationName => $"Xóa shader {Name}";
+    public string OpenFileAutomationName => $"Mở vị trí tệp {Name}";
 
-    public ShaderPackRow(ShaderPackItem shader, bool current = false)
+    public ShaderPackRow(ShaderPackItem shader)
     {
         Shader = shader;
-        isCurrent = current;
     }
 }
 
-public sealed partial class InstanceDetailViewModel
+public partial class InstanceDetailViewModel
 {
-    // --- Resource Packs Properties ---
+    // --- Resource Packs Library ---
     public ObservableCollection<ResourcePackRow> ResourcePacks { get; } = new();
-    public ObservableCollection<ResourcePackRow> ActiveResourcePacks { get; } = new();
-    public ObservableCollection<ResourcePackRow> AvailableResourcePacks { get; } = new();
+    public ObservableCollection<ResourcePackRow> FilteredResourcePacks { get; } = new();
 
     [ObservableProperty] private ResourcePackRow? selectedResourcePack;
     [ObservableProperty] private ResourcePackRow? selectedPackForInspector;
     [ObservableProperty] private bool isPackInspectorOpen;
-    [ObservableProperty] private string packSummaryText = "Đang bật 0 gói tài nguyên";
-    public string ResourcePackSummaryText => PackSummaryText;
-
+    [ObservableProperty] private string resourcePackSummaryText = "Đã cài 0 gói tài nguyên";
+    [ObservableProperty] private string resourcePacksCountText = "0";
     [ObservableProperty] private string resourcePackSearchQuery = string.Empty;
+    [ObservableProperty] private bool hasNoPacks;
 
-    partial void OnResourcePackSearchQueryChanged(string value)
-    {
-        RefreshResourcePackLists();
-    }
+    partial void OnResourcePackSearchQueryChanged(string value) => RefreshResourcePackLists();
 
-    partial void OnPackSummaryTextChanged(string value)
-    {
-        OnPropertyChanged(nameof(ResourcePackSummaryText));
-    }
-
-    // --- Shaders Properties ---
+    // --- Shaders Library ---
     public ObservableCollection<ShaderPackRow> Shaders { get; } = new();
     public ObservableCollection<ShaderPackRow> FilteredShaders { get; } = new();
 
     [ObservableProperty] private string selectedShaderFilter = "all";
-    [ObservableProperty] private ShaderPackRow? currentActiveShader;
     [ObservableProperty] private ShaderPackRow? selectedShaderForInspector;
     [ObservableProperty] private bool isShaderInspectorOpen;
-    [ObservableProperty] private string shaderSummaryText = "Hiển thị 8 / 8 shaders";
-
+    [ObservableProperty] private string shaderSummaryText = "Đã cài 0 shaders";
     [ObservableProperty] private bool hasShaderLoader = true;
-    [ObservableProperty] private string shaderLoaderStatus = "Sẵn sàng hoạt động (Iris Shaders)";
-    [ObservableProperty] private string shaderLoaderBannerText = "Đã phát hiện shader loader tương thích. Shaders sẽ hoạt động bình thường trong game.";
+    [ObservableProperty] private string shaderLoaderStatus = "Đã phát hiện Iris Shader Loader";
+    [ObservableProperty] private string shaderLoaderBannerText = "Instance của bạn đang sử dụng Fabric + Iris Shaders tương thích hoàn hảo.";
+    [ObservableProperty] private bool hasNoShaders;
+    [ObservableProperty] private string shaderSearchQuery = string.Empty;
 
-    [ObservableProperty] private bool hasNoAvailablePacks;
-    [ObservableProperty] private bool hasNoActivePacks;
-    [ObservableProperty] private bool hasActiveShader = true;
+    partial void OnShaderSearchQueryChanged(string value) => FilterShaders();
 
     public void InitializeResourcePacksAndShaders()
     {
-        if (Current == null) return;
-
         LoadResourcePacks();
         LoadShaders();
-        RefreshShaderLoaderStatus();
-        StartFileSystemWatchers(Current.Path);
-    }
-
-    public void RefreshShaderLoaderStatus()
-    {
-        var modNames = Mods.Where(m => !m.IsMissingFile && m.Enabled).Select(m => m.FileName ?? m.DisplayName ?? m.Slug ?? string.Empty);
-        HasShaderLoader = Vazer.Core.Graphics.ShaderLoaderResolver.DetectShaderLoader(modNames);
-
-        if (HasShaderLoader)
-        {
-            ShaderLoaderStatus = "Sẵn sàng hoạt động (Iris Shaders)";
-            ShaderLoaderBannerText = "Đã phát hiện shader loader tương thích. Shaders sẽ hoạt động bình thường trong game.";
-        }
-        else
-        {
-            ShaderLoaderStatus = "Chưa cài đặt Shader Loader (Iris / OptiFine)";
-            ShaderLoaderBannerText = "Để sử dụng Shaders, instance cần có Iris hoặc OptiFine. Nhấn để mở trang tải Iris trên Modrinth.";
-        }
-    }
-
-    [RelayCommand]
-    public async Task OpenIrisDownloadPageAsync()
-    {
-        await Task.CompletedTask;
-        try
-        {
-            var uri = new Uri("https://modrinth.com/mod/iris");
-            await Windows.System.Launcher.LaunchUriAsync(uri);
-        }
-        catch
-        {
-            try
-            {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://modrinth.com/mod/iris") { UseShellExecute = true });
-            }
-            catch { }
-        }
-        StatusMessage = "Đang mở trang tải Iris Shaders trên Modrinth...";
+        StartFileSystemWatchers(Current?.Path);
     }
 
     public void LoadResourcePacks()
@@ -243,18 +177,6 @@ public sealed partial class InstanceDetailViewModel
         var defaults = ResourcePackShaderData.DefaultResourcePacks;
 
         var instancePath = Current?.Path;
-        System.Collections.Generic.List<string>? activeOptionsPacks = null;
-        if (!string.IsNullOrEmpty(instancePath))
-        {
-            var rpDir = Path.Combine(instancePath, "resourcepacks");
-            Directory.CreateDirectory(rpDir);
-
-            var optionsPath = Path.Combine(instancePath, "options.txt");
-            if (File.Exists(optionsPath))
-            {
-                activeOptionsPacks = Vazer.Core.GameOptions.ResourcePackOptionsHelper.ReadActivePacksFromOptionsFile(optionsPath);
-            }
-        }
 
         foreach (var p in defaults)
         {
@@ -283,53 +205,57 @@ public sealed partial class InstanceDetailViewModel
                     var fName = Path.GetFileName(zip);
                     if (!ResourcePacks.Any(rp => string.Equals(rp.FileName, fName, StringComparison.OrdinalIgnoreCase)))
                     {
-                        var customItem = new ResourcePackItem
+                        var fi = new FileInfo(zip);
+                        long sizeKb = fi.Length / 1024;
+                        string sizeStr = sizeKb > 1024 ? $"{(sizeKb / 1024.0):F1} MB" : $"{sizeKb} KB";
+
+                        string desc = "Gói tài nguyên đã cài đặt.";
+                        string res = "32x";
+                        int packFormat = 34;
+
+                        try
+                        {
+                            using var archive = ZipFile.OpenRead(zip);
+                            var mcmetaEntry = archive.GetEntry("pack.mcmeta");
+                            if (mcmetaEntry != null)
+                            {
+                                using var s = mcmetaEntry.Open();
+                                using var doc = JsonDocument.Parse(s);
+                                if (doc.RootElement.TryGetProperty("pack", out var packEl))
+                                {
+                                    if (packEl.TryGetProperty("description", out var dEl))
+                                    {
+                                        desc = dEl.ValueKind == JsonValueKind.String ? (dEl.GetString() ?? desc) : dEl.ToString();
+                                    }
+                                    if (packEl.TryGetProperty("pack_format", out var fEl) && fEl.TryGetInt32(out var pf))
+                                    {
+                                        packFormat = pf;
+                                    }
+                                }
+                            }
+                        }
+                        catch { }
+
+                        var item = new ResourcePackItem
                         {
                             Id = Path.GetFileNameWithoutExtension(fName).ToLowerInvariant(),
+                            Slug = Path.GetFileNameWithoutExtension(fName).ToLowerInvariant(),
                             Name = Path.GetFileNameWithoutExtension(fName),
                             FileName = fName,
                             Author = "Tùy biến",
-                            Description = "Gói tài nguyên từ thư mục resourcepacks.",
-                            Resolution = "32x",
-                            Size = $"{new FileInfo(zip).Length / 1024 / 1024:N1} MB",
-                            Version = Current?.MinecraftVersion ?? "1.21.1",
-                            PackFormat = 34,
-                            IconUri = "ms-appx:///Assets/resourcepacks/faithful-icon.png",
-                            BannerUri = "ms-appx:///Assets/resourcepacks/faithful-banner.png",
-                            Enabled = false,
-                            Priority = 99,
-                            IsCompatible = true
+                            Description = desc,
+                            Resolution = res,
+                            Size = sizeStr,
+                            Version = "1.21.1",
+                            PackFormat = packFormat,
+                            IsCompatible = packFormat == 34 || packFormat <= 0
                         };
-                        var row = new ResourcePackRow(customItem);
-                        ResourcePacks.Add(row);
-                        LoadThumbnailInBackground(row, zip);
+
+                        var newRow = new ResourcePackRow(item);
+                        ResourcePacks.Add(newRow);
+
+                        LoadThumbnailInBackground(newRow, zip);
                     }
-                }
-            }
-        }
-
-        // Khôi phục thứ tự và trạng thái từ options.txt nếu có
-        if (activeOptionsPacks != null && activeOptionsPacks.Count > 0)
-        {
-            foreach (var r in ResourcePacks)
-            {
-                r.Enabled = false;
-                r.Priority = 99;
-            }
-
-            for (int i = 0; i < activeOptionsPacks.Count; i++)
-            {
-                var optPack = activeOptionsPacks[i];
-                var found = ResourcePacks.FirstOrDefault(rp =>
-                    string.Equals(rp.FileName, optPack, StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(Path.GetFileName(rp.FileName), Path.GetFileName(optPack), StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(rp.Name, optPack, StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(rp.Name, Path.GetFileNameWithoutExtension(optPack), StringComparison.OrdinalIgnoreCase));
-
-                if (found != null)
-                {
-                    found.Enabled = true;
-                    found.Priority = i;
                 }
             }
         }
@@ -339,107 +265,27 @@ public sealed partial class InstanceDetailViewModel
 
     public void RefreshResourcePackLists()
     {
-        ActiveResourcePacks.Clear();
-        AvailableResourcePacks.Clear();
+        FilteredResourcePacks.Clear();
 
-        var active = ResourcePacks.Where(p => p.Enabled).OrderBy(p => p.Priority).ToList();
-        var available = ResourcePacks.Where(p => !p.Enabled).OrderBy(p => p.Name).ToList();
+        var query = ResourcePackSearchQuery?.Trim() ?? string.Empty;
+        var filtered = ResourcePacks.AsEnumerable();
 
-        if (!string.IsNullOrWhiteSpace(ResourcePackSearchQuery))
+        if (!string.IsNullOrEmpty(query))
         {
-            var q = ResourcePackSearchQuery.Trim();
-            active = active.Where(p => p.Name.Contains(q, StringComparison.OrdinalIgnoreCase) || p.Author.Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
-            available = available.Where(p => p.Name.Contains(q, StringComparison.OrdinalIgnoreCase) || p.Author.Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
+            filtered = filtered.Where(p =>
+                p.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                p.Description.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                p.Author.Contains(query, StringComparison.OrdinalIgnoreCase));
         }
 
-        for (int i = 0; i < active.Count; i++)
+        foreach (var p in filtered)
         {
-            active[i].Priority = i;
-            active[i].CanMoveUp = i > 0;
-            active[i].CanMoveDown = i < active.Count - 1;
-            ActiveResourcePacks.Add(active[i]);
+            FilteredResourcePacks.Add(p);
         }
 
-        foreach (var av in available)
-        {
-            AvailableResourcePacks.Add(av);
-        }
-
-        HasNoAvailablePacks = AvailableResourcePacks.Count == 0;
-        HasNoActivePacks = ActiveResourcePacks.Count == 0;
-        OnPropertyChanged(nameof(AvailableEmptyTitle));
-        OnPropertyChanged(nameof(AvailableEmptySubtitle));
-        PackSummaryText = $"Đang bật {ActiveResourcePacks.Count} gói tài nguyên (ưu tiên từ trên xuống)";
-
-        SyncOptionsTxt();
-    }
-
-    private void SyncOptionsTxt()
-    {
-        if (Current == null || string.IsNullOrEmpty(Current.Path)) return;
-        var optionsPath = Path.Combine(Current.Path, "options.txt");
-        var activePacks = ActiveResourcePacks.Select(p => !string.IsNullOrEmpty(p.FileName) ? p.FileName : p.Name).ToList();
-        try
-        {
-            Vazer.Core.GameOptions.ResourcePackOptionsHelper.SyncToOptionsFile(optionsPath, activePacks);
-        }
-        catch { }
-    }
-
-    public string AvailableEmptyTitle => string.IsNullOrWhiteSpace(ResourcePackSearchQuery)
-        ? (ResourcePacks.Count == 0 ? "Thư mục gói tài nguyên trống" : "Không có gói khả dụng")
-        : "Không tìm thấy gói tài nguyên nào";
-
-    public string AvailableEmptySubtitle => string.IsNullOrWhiteSpace(ResourcePackSearchQuery)
-        ? (ResourcePacks.Count == 0 ? "Kéo thả file .zip hoặc nhấn '+ Thêm .zip' để cài đặt" : "Tất cả các gói đã được kích hoạt ở cột bên phải")
-        : "Thử tìm kiếm với từ khóa khác";
-
-    [RelayCommand]
-    public void EnablePack(ResourcePackRow pack)
-    {
-        // Khi bật gói mới, đặt lên ưu tiên cao nhất (# 1, Priority 0)
-        foreach (var p in ResourcePacks.Where(x => x.Enabled && x != pack))
-        {
-            p.Priority += 1;
-        }
-        pack.Enabled = true;
-        pack.Priority = 0;
-        RefreshResourcePackLists();
-    }
-
-    [RelayCommand]
-    public void DisablePack(ResourcePackRow pack)
-    {
-        pack.Enabled = false;
-        RefreshResourcePackLists();
-    }
-
-    [RelayCommand]
-    public void MovePackUp(ResourcePackRow pack)
-    {
-        int index = ActiveResourcePacks.IndexOf(pack);
-        if (index > 0)
-        {
-            var prev = ActiveResourcePacks[index - 1];
-            int temp = pack.Priority;
-            pack.Priority = prev.Priority;
-            prev.Priority = temp;
-            RefreshResourcePackLists();
-        }
-    }
-
-    [RelayCommand]
-    public void MovePackDown(ResourcePackRow pack)
-    {
-        int index = ActiveResourcePacks.IndexOf(pack);
-        if (index >= 0 && index < ActiveResourcePacks.Count - 1)
-        {
-            var next = ActiveResourcePacks[index + 1];
-            int temp = pack.Priority;
-            pack.Priority = next.Priority;
-            next.Priority = temp;
-            RefreshResourcePackLists();
-        }
+        HasNoPacks = FilteredResourcePacks.Count == 0;
+        ResourcePacksCountText = ResourcePacks.Count.ToString();
+        ResourcePackSummaryText = $"Đã cài {ResourcePacks.Count} gói tài nguyên";
     }
 
     [RelayCommand]
@@ -454,95 +300,134 @@ public sealed partial class InstanceDetailViewModel
     public void ClosePackInspector()
     {
         IsPackInspectorOpen = false;
-        SelectedResourcePack = null;
         SelectedPackForInspector = null;
+    }
+
+    [RelayCommand]
+    public void OpenResourcePackFile(ResourcePackRow pack)
+    {
+        if (pack == null) return;
+        var instancePath = Current?.Path;
+        if (string.IsNullOrEmpty(instancePath)) return;
+
+        var filePath = Path.Combine(instancePath, "resourcepacks", pack.FileName);
+        if (File.Exists(filePath))
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"/select,\"{filePath}\"",
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Không thể mở vị trí tệp: {ex.Message}";
+            }
+        }
+        else
+        {
+            var rpDir = Path.Combine(instancePath, "resourcepacks");
+            Directory.CreateDirectory(rpDir);
+            try
+            {
+                Process.Start(new ProcessStartInfo { FileName = rpDir, UseShellExecute = true });
+            }
+            catch { }
+        }
+    }
+
+    [RelayCommand]
+    public void DeleteResourcePack(ResourcePackRow pack)
+    {
+        if (pack == null) return;
+        var instancePath = Current?.Path;
+        if (!string.IsNullOrEmpty(instancePath))
+        {
+            var filePath = Path.Combine(instancePath, "resourcepacks", pack.FileName);
+            if (File.Exists(filePath))
+            {
+                try
+                {
+                    File.Delete(filePath);
+                }
+                catch (Exception ex)
+                {
+                    StatusMessage = $"Không thể xóa tệp: {ex.Message}";
+                    return;
+                }
+            }
+        }
+
+        ResourcePacks.Remove(pack);
+        if (SelectedPackForInspector == pack)
+        {
+            ClosePackInspector();
+        }
+        RefreshResourcePackLists();
+        StatusMessage = $"Đã xóa gói {pack.Name}.";
     }
 
     public async Task ImportResourcePackFilesAsync(System.Collections.Generic.IEnumerable<string> filePaths)
     {
-        await Task.CompletedTask;
-        if (Current == null) return;
-        var rpDir = Path.Combine(Current.Path, "resourcepacks");
+        await Task.Yield();
+        var instancePath = Current?.Path;
+        if (string.IsNullOrEmpty(instancePath)) return;
+
+        var rpDir = Path.Combine(instancePath, "resourcepacks");
         Directory.CreateDirectory(rpDir);
 
         int count = 0;
         int errorCount = 0;
+
         foreach (var fp in filePaths)
         {
-            if (File.Exists(fp) && (fp.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) || fp.EndsWith(".jar", StringComparison.OrdinalIgnoreCase)))
+            if (File.Exists(fp) && fp.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
             {
                 var fn = Path.GetFileName(fp);
-                int packFormat = -1;
-                string packDesc = "Gói tài nguyên người dùng thêm vào.";
 
-                if (fp.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                try
                 {
-                    try
-                    {
-                        using var archive = System.IO.Compression.ZipFile.OpenRead(fp);
-                        var mcmeta = archive.GetEntry("pack.mcmeta");
-                        if (mcmeta == null)
-                        {
-                            errorCount++;
-                            StatusMessage = $"Lỗi tệp: '{fn}' không phải là Resource Pack hợp lệ (thiếu pack.mcmeta).";
-                            continue;
-                        }
-
-                        using var stream = mcmeta.Open();
-                        using var doc = System.Text.Json.JsonDocument.Parse(stream);
-                        if (doc.RootElement.TryGetProperty("pack", out var packObj))
-                        {
-                            if (packObj.TryGetProperty("pack_format", out var formatProp) && formatProp.TryGetInt32(out var fmt))
-                            {
-                                packFormat = fmt;
-                            }
-                            if (packObj.TryGetProperty("description", out var descProp))
-                            {
-                                packDesc = descProp.ValueKind == System.Text.Json.JsonValueKind.String ? descProp.GetString() ?? packDesc : descProp.ToString();
-                            }
-                        }
-
-                        if (packFormat <= 0)
-                        {
-                            errorCount++;
-                            StatusMessage = $"Lỗi tệp: '{fn}' có pack.mcmeta không chứa pack_format hợp lệ.";
-                            continue;
-                        }
-                    }
-                    catch
+                    using var archive = ZipFile.OpenRead(fp);
+                    var mcmetaEntry = archive.GetEntry("pack.mcmeta");
+                    if (mcmetaEntry == null)
                     {
                         errorCount++;
-                        StatusMessage = $"Lỗi tệp: '{fn}' bị hỏng hoặc không thể đọc cấu trúc ZIP/JSON.";
+                        StatusMessage = $"Lỗi tệp: '{fn}' không phải là Resource Pack hợp lệ (thiếu pack.mcmeta).";
                         continue;
                     }
                 }
+                catch
+                {
+                    errorCount++;
+                    StatusMessage = $"Lỗi tệp: '{fn}' bị hỏng hoặc không phải tệp ZIP hợp lệ.";
+                    continue;
+                }
 
-                // Chỉ sao chép sau khi đã kiểm tra tính hợp lệ thành công
                 var dest = Path.Combine(rpDir, fn);
                 File.Copy(fp, dest, overwrite: true);
-
-                int currentExpected = Vazer.Core.Graphics.ShaderLoaderResolver.GetExpectedPackFormat(Current.MinecraftVersion ?? "1.21.1");
-                bool isCompat = packFormat <= 0 || Vazer.Core.Graphics.ShaderLoaderResolver.IsPackFormatCompatible(packFormat, Current.MinecraftVersion ?? "1.21.1");
 
                 var newItem = new ResourcePackItem
                 {
                     Id = Path.GetFileNameWithoutExtension(fn).ToLowerInvariant(),
+                    Slug = Path.GetFileNameWithoutExtension(fn).ToLowerInvariant(),
                     Name = Path.GetFileNameWithoutExtension(fn),
                     FileName = fn,
                     Author = "Tùy biến",
-                    Description = packDesc,
-                    Resolution = "16x",
-                    Size = $"{new FileInfo(dest).Length / 1024 / 1024:N1} MB",
-                    Version = Current.MinecraftVersion ?? "1.21.1",
-                    PackFormat = packFormat > 0 ? packFormat : currentExpected,
-                    IconUri = "ms-appx:///Assets/resourcepacks/faithful-icon.png",
-                    BannerUri = "ms-appx:///Assets/resourcepacks/faithful-banner.png",
-                    Enabled = false,
-                    IsCompatible = isCompat
+                    Description = "Gói tài nguyên người dùng thêm vào.",
+                    Resolution = "32x",
+                    Size = "15 MB",
+                    Version = "1.21.1",
+                    PackFormat = 34,
+                    IsCompatible = true
                 };
-                var row = new ResourcePackRow(newItem);
-                ResourcePacks.Add(row);
-                LoadThumbnailInBackground(row, dest);
+
+                var newRow = new ResourcePackRow(newItem);
+                ResourcePacks.Add(newRow);
+
+                LoadThumbnailInBackground(newRow, dest);
                 count++;
             }
         }
@@ -550,11 +435,7 @@ public sealed partial class InstanceDetailViewModel
         if (count > 0)
         {
             RefreshResourcePackLists();
-            StatusMessage = $"Đã nhập {count} gói tài nguyên thành công.";
-        }
-        else if (errorCount > 0)
-        {
-            // StatusMessage already set with specific error
+            StatusMessage = $"Đã thêm {count} gói tài nguyên vào thư viện.";
         }
     }
 
@@ -576,24 +457,25 @@ public sealed partial class InstanceDetailViewModel
                 foreach (var zip in zipFiles)
                 {
                     var fName = Path.GetFileName(zip);
-                    if (!Shaders.Any(s => string.Equals(s.Name + ".zip", fName, StringComparison.OrdinalIgnoreCase) ||
-                                          string.Equals(s.Id, Path.GetFileNameWithoutExtension(fName), StringComparison.OrdinalIgnoreCase)))
+                    if (!Shaders.Any(s => string.Equals(s.FileName, fName, StringComparison.OrdinalIgnoreCase)))
                     {
-                        var customShader = new ShaderPackItem
+                        var fi = new FileInfo(zip);
+                        long sizeKb = fi.Length / 1024;
+                        string sizeStr = sizeKb > 1024 ? $"{(sizeKb / 1024.0):F1} MB" : $"{sizeKb} KB";
+
+                        var item = new ShaderPackItem
                         {
                             Id = Path.GetFileNameWithoutExtension(fName).ToLowerInvariant(),
                             Name = Path.GetFileNameWithoutExtension(fName),
                             Author = "Tùy biến",
-                            Description = "Shader pack từ thư mục shaderpacks.",
-                            Style = "fantasy",
-                            StyleLabel = "Tùy biến",
-                            Version = Current?.MinecraftVersion ?? "1.21.1",
-                            Size = $"{new FileInfo(zip).Length / 1024 / 1024:N1} MB",
-                            ImageUri = "ms-appx:///Assets/shaders/bsl-preview.png",
-                            AccentColor = "#6366F1",
-                            Features = new System.Collections.Generic.List<string> { "Custom Shader", "Tùy biến" }
+                            Description = "Shader pack đã cài đặt.",
+                            Style = "realistic",
+                            StyleLabel = "Thực tế",
+                            Version = "1.0.0",
+                            Size = sizeStr,
+                            AccentColor = "#3b82f6"
                         };
-                        Shaders.Add(new ShaderPackRow(customShader, false));
+                        Shaders.Add(new ShaderPackRow(item));
                     }
                 }
             }
@@ -601,64 +483,47 @@ public sealed partial class InstanceDetailViewModel
 
         foreach (var s in defaults)
         {
-            if (!Shaders.Any(sh => sh.Id == s.Id))
+            if (!Shaders.Any(existing => existing.Id == s.Id))
             {
-                bool isCur = s.Id == "complementary-reimagined"; // Default active
-                var row = new ShaderPackRow(s, isCur);
-                Shaders.Add(row);
-                if (isCur) CurrentActiveShader = row;
+                Shaders.Add(new ShaderPackRow(s));
             }
         }
 
-        ApplyShaderFilter();
+        FilterShaders();
     }
 
-    [RelayCommand]
     public void SelectShaderFilter(string filter)
     {
         SelectedShaderFilter = filter;
-        ApplyShaderFilter();
+        FilterShaders();
     }
 
-    private void ApplyShaderFilter()
+    private void FilterShaders()
     {
         FilteredShaders.Clear();
-        IEnumerable<ShaderPackRow> list = SelectedShaderFilter == "all"
-            ? Shaders
-            : Shaders.Where(s => s.Style.Equals(SelectedShaderFilter, StringComparison.OrdinalIgnoreCase));
+        var query = ShaderSearchQuery?.Trim() ?? string.Empty;
 
-        foreach (var s in list)
+        var items = Shaders.AsEnumerable();
+        if (SelectedShaderFilter != "all")
+        {
+            items = items.Where(s => s.Style.Equals(SelectedShaderFilter, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (!string.IsNullOrEmpty(query))
+        {
+            items = items.Where(s =>
+                s.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                s.Description.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                s.Author.Contains(query, StringComparison.OrdinalIgnoreCase));
+        }
+
+        foreach (var s in items)
         {
             FilteredShaders.Add(s);
         }
 
-        ShaderSummaryText = $"Hiển thị {FilteredShaders.Count} / {Shaders.Count} shaders";
-    }
-
-    [RelayCommand]
-    public void ActivateShader(ShaderPackRow shader)
-    {
-        foreach (var s in Shaders)
-        {
-            s.IsCurrent = false;
-        }
-
-        shader.IsCurrent = true;
-        CurrentActiveShader = shader;
-        HasActiveShader = true;
-        StatusMessage = $"Đã kích hoạt shader '{shader.Name}'.";
-    }
-
-    [RelayCommand]
-    public void DeactivateShaders()
-    {
-        foreach (var s in Shaders)
-        {
-            s.IsCurrent = false;
-        }
-        CurrentActiveShader = null;
-        HasActiveShader = false;
-        StatusMessage = "Đã tắt toàn bộ Shaders (sử dụng đồ họa Vanilla).";
+        ShaderSummaryText = $"Đã cài {Shaders.Count} shaders (Hiển thị {FilteredShaders.Count})";
+        HasNoShaders = FilteredShaders.Count == 0;
     }
 
     [RelayCommand]
@@ -675,27 +540,96 @@ public sealed partial class InstanceDetailViewModel
         SelectedShaderForInspector = null;
     }
 
+    [RelayCommand]
+    public void OpenShaderFile(ShaderPackRow shader)
+    {
+        if (shader == null) return;
+        var instancePath = Current?.Path;
+        if (string.IsNullOrEmpty(instancePath)) return;
+
+        var filePath = Path.Combine(instancePath, "shaderpacks", shader.FileName);
+        if (File.Exists(filePath))
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"/select,\"{filePath}\"",
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Không thể mở vị trí tệp: {ex.Message}";
+            }
+        }
+        else
+        {
+            var shDir = Path.Combine(instancePath, "shaderpacks");
+            Directory.CreateDirectory(shDir);
+            try
+            {
+                Process.Start(new ProcessStartInfo { FileName = shDir, UseShellExecute = true });
+            }
+            catch { }
+        }
+    }
+
+    [RelayCommand]
+    public void DeleteShader(ShaderPackRow shader)
+    {
+        if (shader == null) return;
+        var instancePath = Current?.Path;
+        if (!string.IsNullOrEmpty(instancePath))
+        {
+            var filePath = Path.Combine(instancePath, "shaderpacks", shader.FileName);
+            if (File.Exists(filePath))
+            {
+                try
+                {
+                    File.Delete(filePath);
+                }
+                catch (Exception ex)
+                {
+                    StatusMessage = $"Không thể xóa shader: {ex.Message}";
+                    return;
+                }
+            }
+        }
+
+        Shaders.Remove(shader);
+        if (SelectedShaderForInspector == shader)
+        {
+            CloseShaderInspector();
+        }
+        FilterShaders();
+        StatusMessage = $"Đã xóa shader {shader.Name}.";
+    }
+
     public async Task ImportShaderFilesAsync(System.Collections.Generic.IEnumerable<string> filePaths)
     {
-        await Task.CompletedTask;
-        if (Current == null) return;
-        var shDir = Path.Combine(Current.Path, "shaderpacks");
+        await Task.Yield();
+        var instancePath = Current?.Path;
+        if (string.IsNullOrEmpty(instancePath)) return;
+
+        var shDir = Path.Combine(instancePath, "shaderpacks");
         Directory.CreateDirectory(shDir);
 
         int count = 0;
         int errorCount = 0;
+
         foreach (var fp in filePaths)
         {
             if (File.Exists(fp) && fp.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
             {
                 var fn = Path.GetFileName(fp);
+
                 try
                 {
-                    using var archive = System.IO.Compression.ZipFile.OpenRead(fp);
-                    bool hasShaders = archive.Entries.Any(e =>
-                        e.FullName.StartsWith("shaders/", StringComparison.OrdinalIgnoreCase) ||
-                        e.FullName.Contains("/shaders/"));
-
+                    using var archive = ZipFile.OpenRead(fp);
+                    bool hasShaders = archive.Entries.Any(e => e.FullName.StartsWith("shaders/", StringComparison.OrdinalIgnoreCase) ||
+                                                               e.FullName.Contains("/shaders/"));
                     if (!hasShaders)
                     {
                         errorCount++;
@@ -710,7 +644,6 @@ public sealed partial class InstanceDetailViewModel
                     continue;
                 }
 
-                // Chỉ copy sau khi validate thành công
                 var dest = Path.Combine(shDir, fn);
                 File.Copy(fp, dest, overwrite: true);
 
@@ -722,11 +655,9 @@ public sealed partial class InstanceDetailViewModel
                     Description = "Shader pack người dùng thêm vào.",
                     Style = "realistic",
                     StyleLabel = "Thực tế",
-                    Version = "1.0",
-                    Size = $"{new FileInfo(dest).Length / 1024 / 1024} MB",
-                    ImageUri = "ms-appx:///Assets/shaders/bsl-shaders.jpg",
-                    AccentColor = "#22c55e",
-                    Features = new() { "Tùy biến", "User import" }
+                    Version = "1.0.0",
+                    Size = "8 MB",
+                    AccentColor = "#3b82f6"
                 };
                 Shaders.Add(new ShaderPackRow(newItem));
                 count++;
@@ -735,19 +666,24 @@ public sealed partial class InstanceDetailViewModel
 
         if (count > 0)
         {
-            ApplyShaderFilter();
-            StatusMessage = $"Đã nhập {count} shader pack thành công.";
-        }
-        else if (errorCount > 0)
-        {
-            // StatusMessage already set
+            FilterShaders();
+            StatusMessage = $"Đã thêm {count} shader pack vào thư viện.";
         }
     }
 
+    [RelayCommand]
+    public async Task OpenIrisDownloadPageAsync()
+    {
+        try
+        {
+            await Windows.System.Launcher.LaunchUriAsync(new Uri("https://modrinth.com/mod/iris"));
+        }
+        catch { }
+    }
+
+    // --- Thumbnail Background Loading ---
     private void LoadThumbnailInBackground(ResourcePackRow row, string zipPath)
     {
-        if (string.IsNullOrEmpty(zipPath) || !File.Exists(zipPath)) return;
-
         _ = Task.Run(async () =>
         {
             byte[]? pngBytes = null;
@@ -797,6 +733,7 @@ public sealed partial class InstanceDetailViewModel
         });
     }
 
+    // --- FileSystemWatchers for Hot-Reloading Folders ---
     private FileSystemWatcher? _resourcePacksWatcher;
     private FileSystemWatcher? _shaderPacksWatcher;
     private System.Threading.Timer? _resourcePacksDebounceTimer;
@@ -876,16 +813,12 @@ public sealed partial class InstanceDetailViewModel
         {
             _resourcePacksDebounceTimer?.Dispose();
             _resourcePacksDebounceTimer = null;
-
             _shadersDebounceTimer?.Dispose();
             _shadersDebounceTimer = null;
 
             if (_resourcePacksWatcher != null)
             {
                 _resourcePacksWatcher.EnableRaisingEvents = false;
-                _resourcePacksWatcher.Created -= OnResourcePacksDirectoryChanged;
-                _resourcePacksWatcher.Deleted -= OnResourcePacksDirectoryChanged;
-                _resourcePacksWatcher.Renamed -= OnResourcePacksDirectoryChanged;
                 _resourcePacksWatcher.Dispose();
                 _resourcePacksWatcher = null;
             }
@@ -893,9 +826,6 @@ public sealed partial class InstanceDetailViewModel
             if (_shaderPacksWatcher != null)
             {
                 _shaderPacksWatcher.EnableRaisingEvents = false;
-                _shaderPacksWatcher.Created -= OnShadersDirectoryChanged;
-                _shaderPacksWatcher.Deleted -= OnShadersDirectoryChanged;
-                _shaderPacksWatcher.Renamed -= OnShadersDirectoryChanged;
                 _shaderPacksWatcher.Dispose();
                 _shaderPacksWatcher = null;
             }
