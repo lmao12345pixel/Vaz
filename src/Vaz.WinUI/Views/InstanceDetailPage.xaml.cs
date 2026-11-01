@@ -284,18 +284,29 @@ public sealed partial class InstanceDetailPage : Page
         EmbeddedModBrowser.FocusSearchBox();
     }
 
+    private bool _isClosingModBrowser;
+
     private void CloseModBrowser()
     {
-        if (ModBrowserHostGrid.Visibility != Visibility.Visible) return;
+        if (ModBrowserHostGrid.Visibility != Visibility.Visible || _isClosingModBrowser) return;
+        _isClosingModBrowser = true;
+
+        DownloadModsButton?.Focus(FocusState.Programmatic);
         CloseModBrowserStoryboard.Begin();
     }
 
-    private async void CloseModBrowserStoryboard_Completed(object? sender, object e)
+    private void CloseModBrowserStoryboard_Completed(object? sender, object e)
     {
         ModBrowserHostGrid.Visibility = Visibility.Collapsed;
+        _isClosingModBrowser = false;
+        DownloadModsButton?.Focus(FocusState.Programmatic);
+
         if (ViewModel != null)
         {
-            await ViewModel.LoadAsync();
+            DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, async () =>
+            {
+                await ViewModel.LoadAsync();
+            });
         }
     }
 
@@ -397,6 +408,21 @@ public sealed partial class InstanceDetailPage : Page
         if (file != null)
         {
             await ViewModel.ExportOptionsAsync(file.Path);
+        }
+    }
+
+    private void Page_PreviewKeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key == Windows.System.VirtualKey.Escape && ModBrowserHostGrid.Visibility == Visibility.Visible)
+        {
+            if (EmbeddedModBrowser.HandleEscapeKey())
+            {
+                e.Handled = true;
+                return;
+            }
+
+            CloseModBrowser();
+            e.Handled = true;
         }
     }
 

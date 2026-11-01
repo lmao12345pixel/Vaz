@@ -86,14 +86,53 @@ public sealed partial class ModBrowserView : UserControl
         CloseRequested?.Invoke(this, EventArgs.Empty);
     }
 
+    public bool HandleEscapeKey()
+    {
+        if (DependencyPromptOverlay.Visibility == Visibility.Visible)
+        {
+            DependencyPromptOverlay.Visibility = Visibility.Collapsed;
+            _pendingRowForInstall = null;
+            return true;
+        }
+        return false;
+    }
+
+    private void UserControl_PreviewKeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key == VirtualKey.Escape)
+        {
+            if (HandleEscapeKey())
+            {
+                e.Handled = true;
+                return;
+            }
+
+            CloseRequested?.Invoke(this, EventArgs.Empty);
+            e.Handled = true;
+        }
+    }
+
+    private void SearchBox_PreviewKeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key == VirtualKey.Escape)
+        {
+            if (HandleEscapeKey())
+            {
+                e.Handled = true;
+                return;
+            }
+
+            CloseRequested?.Invoke(this, EventArgs.Empty);
+            e.Handled = true;
+        }
+    }
+
     private void UserControl_KeyDown(object sender, KeyRoutedEventArgs e)
     {
         if (e.Key == VirtualKey.Escape)
         {
-            if (DependencyPromptOverlay.Visibility == Visibility.Visible)
+            if (HandleEscapeKey())
             {
-                DependencyPromptOverlay.Visibility = Visibility.Collapsed;
-                _pendingRowForInstall = null;
                 e.Handled = true;
                 return;
             }

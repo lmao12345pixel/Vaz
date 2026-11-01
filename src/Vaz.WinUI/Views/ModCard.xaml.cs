@@ -31,6 +31,23 @@ public sealed partial class ModCard : UserControl
     public ModCard()
     {
         InitializeComponent();
+        Unloaded += ModCard_Unloaded;
+    }
+
+    private void ModCard_Unloaded(object sender, RoutedEventArgs e)
+    {
+        if (_observedItem != null)
+        {
+            _observedItem.PropertyChanged -= Item_PropertyChanged;
+            _observedItem = null;
+        }
+        ModIconImage.Source = null;
+        HoverExitStoryboard.Stop();
+        HoverEnterStoryboard.Stop();
+        EntranceStoryboard.Stop();
+        FadeToInstallingStoryboard.Stop();
+        FadeToInstalledStoryboard.Stop();
+        FadeToIdleStoryboard.Stop();
     }
 
     private void OnItemChanged(SearchHitRow? oldItem, SearchHitRow? newItem)

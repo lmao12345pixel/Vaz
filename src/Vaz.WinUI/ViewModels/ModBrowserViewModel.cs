@@ -44,6 +44,8 @@ public sealed class ModSearchCollection : ObservableCollection<SearchHitRow>, IS
     {
         return AsyncInfo.Run(async ct =>
         {
+            // Throttle rapid scroll requests to prevent stutter
+            await Task.Delay(100, ct);
             var loaded = await _loadMoreFunc(count);
             return new LoadMoreItemsResult { Count = loaded };
         });
@@ -279,6 +281,9 @@ public sealed partial class ModBrowserViewModel : ObservableObject
 
         try
         {
+            // Throttle rapid upward scrolling
+            await Task.Delay(100, ct);
+
             int countToFetch = Math.Min(PageSize, _headOffset);
             int fetchOffset = _headOffset - countToFetch;
 
@@ -320,20 +325,20 @@ public sealed partial class ModBrowserViewModel : ObservableObject
             ct.ThrowIfCancellationRequested();
             if (requestId != _currentRequestId) return;
 
-            var rows = new List<SearchHitRow>();
-            foreach (var hit in result.Hits)
+            var rowTasks = result.Hits.Select(async hit =>
             {
                 var state = ModInstallState.Idle;
                 if (inst != null)
                 {
                     state = await _downloadManager.CheckInstallStateAsync(inst.Id, hit.ProjectId, hit.Slug, ct);
                 }
-                rows.Add(new SearchHitRow
+                return new SearchHitRow
                 {
                     Hit = hit,
                     InstallState = state
-                });
-            }
+                };
+            });
+            var rows = (await Task.WhenAll(rowTasks)).ToList();
 
             ct.ThrowIfCancellationRequested();
             if (requestId != _currentRequestId) return;
@@ -486,8 +491,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
                 return 0;
             }
 
-            var rows = new List<SearchHitRow>();
-            foreach (var hit in result.Hits)
+            var rowTasks = result.Hits.Select(async hit =>
             {
                 var state = ModInstallState.Idle;
                 if (inst != null)
@@ -495,12 +499,13 @@ public sealed partial class ModBrowserViewModel : ObservableObject
                     state = await _downloadManager.CheckInstallStateAsync(inst.Id, hit.ProjectId, hit.Slug, ct);
                 }
 
-                rows.Add(new SearchHitRow
+                return new SearchHitRow
                 {
                     Hit = hit,
                     InstallState = state
-                });
-            }
+                };
+            });
+            var rows = (await Task.WhenAll(rowTasks)).ToList();
 
             ct.ThrowIfCancellationRequested();
             if (requestId != _currentRequestId)

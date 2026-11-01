@@ -7,6 +7,7 @@
     xmlns:controls="using:Vaz.WinUI.Controls"
     xmlns:views="using:Vaz.WinUI.Views"
     KeyDown="Page_KeyDown"
+    PreviewKeyDown="Page_PreviewKeyDown"
     NavigationCacheMode="Disabled">
 
     <Page.Resources>
@@ -263,6 +264,7 @@
                                         </StackPanel>
                                     </Button>
                                     <Button
+                                        x:Name="DownloadModsButton"
                                         Click="DownloadMods_Click"
                                         Style="{StaticResource VazAccentButtonStyle}"
                                         IsEnabled="{x:Bind ViewModel.CanManageMods, Mode=OneWay}"

@@ -5,7 +5,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="using:Vaz.WinUI.ViewModels"
     xmlns:views="using:Vaz.WinUI.Views"
-    KeyDown="UserControl_KeyDown">
+    KeyDown="UserControl_KeyDown"
+    PreviewKeyDown="UserControl_PreviewKeyDown">
 
     <UserControl.Resources>
         <!-- Shimmer pulse animation -->
@@ -124,6 +125,7 @@
                 PlaceholderText="Tìm mod trên Modrinth (ví dụ: sodium, iris, lithium)..."
                 QueryIcon="Find"
                 Text="{x:Bind ViewModel.SearchText, Mode=TwoWay}"
+                PreviewKeyDown="SearchBox_PreviewKeyDown"
                 TextChanged="SearchBox_TextChanged"
                 QuerySubmitted="SearchBox_QuerySubmitted"
                 GotFocus="SearchBox_GotFocus"
