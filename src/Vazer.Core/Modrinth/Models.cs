@@ -82,6 +82,12 @@ public sealed record SearchHit
     [JsonPropertyName("icon_url")]
     public string? IconUrl { get; init; }
 
+    [JsonPropertyName("gallery")]
+    public string[]? Gallery { get; init; }
+
+    [JsonPropertyName("featured_gallery")]
+    public string? FeaturedGallery { get; init; }
+
     [JsonPropertyName("downloads")]
     public long Downloads { get; init; }
 

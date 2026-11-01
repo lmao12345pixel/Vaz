@@ -100,7 +100,16 @@ public sealed class ModrinthSearchService : IModrinthSearchService
     private static SearchQuery BuildSearchQuery(SearchFilterOptions options, bool isBrowseMode)
     {
         string[]? categories = null;
-        if (!string.IsNullOrWhiteSpace(options.Category) &&
+        if (options.Categories is { Length: > 0 })
+        {
+            categories = options.Categories
+                .Where(c => !string.IsNullOrWhiteSpace(c) && !string.Equals(c, "Tất cả", StringComparison.OrdinalIgnoreCase))
+                .Select(c => c.Trim().ToLowerInvariant())
+                .Distinct()
+                .ToArray();
+            if (categories.Length == 0) categories = null;
+        }
+        else if (!string.IsNullOrWhiteSpace(options.Category) &&
             !string.Equals(options.Category, "Tất cả", StringComparison.OrdinalIgnoreCase))
         {
             categories = new[] { options.Category.Trim().ToLowerInvariant() };

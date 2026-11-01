@@ -15,6 +15,7 @@ public sealed record SearchFilterOptions
     public string[]? Loaders { get; init; }
     public string[]? GameVersions { get; init; }
     public string? Category { get; init; }
+    public string[]? Categories { get; init; }
     public string? SortIndex { get; init; }
     public int Offset { get; init; }
     public int Limit { get; init; } = 20;

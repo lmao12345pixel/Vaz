@@ -49,6 +49,7 @@ public partial class App : Application
         services.AddSingleton<MainViewModel>();
         services.AddTransient<InstancesViewModel>();
         services.AddTransient<ModBrowserViewModel>();
+        services.AddTransient<ModrinthStyleBrowserViewModel>();
         services.AddTransient<InstanceDetailViewModel>();
         services.AddTransient<AccountViewModel>();
         services.AddTransient<CreateInstanceViewModel>();

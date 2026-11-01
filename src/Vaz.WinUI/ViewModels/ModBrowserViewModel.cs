@@ -144,6 +144,80 @@ public sealed partial class SearchHitRow : ObservableObject
 
     public string DownloadsText => FormatCount(Hit.Downloads);
 
+    public string? FeaturedGallery => Hit.FeaturedGallery;
+    public string[]? Gallery => Hit.Gallery;
+
+    public string? CoverUrl
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(Hit.FeaturedGallery))
+                return Hit.FeaturedGallery;
+            if (Hit.Gallery is { Length: > 0 } && !string.IsNullOrWhiteSpace(Hit.Gallery[0]))
+                return Hit.Gallery[0];
+            return Hit.IconUrl;
+        }
+    }
+
+    private ImageSource? _coverImageSource;
+    public ImageSource CoverImageSource
+    {
+        get
+        {
+            if (_coverImageSource != null) return _coverImageSource;
+
+            var url = CoverUrl;
+            if (!string.IsNullOrWhiteSpace(url) &&
+                Uri.TryCreate(url, UriKind.RelativeOrAbsolute, out var uri))
+            {
+                var bitmap = new BitmapImage(uri)
+                {
+                    DecodePixelWidth = 400
+                };
+                _coverImageSource = bitmap;
+                return _coverImageSource;
+            }
+
+            _coverImageSource = Vaz.WinUI.Helpers.UiPlaceholders.Image;
+            return _coverImageSource;
+        }
+    }
+
+    public string OverlayTag
+    {
+        get
+        {
+            if (Hit.Follows > 500 || Hit.Downloads > 500_000) return "Featured";
+            if (Hit.Downloads > 50_000) return "Popular";
+            return string.Empty;
+        }
+    }
+
+    public bool HasOverlayTag => !string.IsNullOrEmpty(OverlayTag);
+    public Visibility OverlayTagVisibility => HasOverlayTag ? Visibility.Visible : Visibility.Collapsed;
+
+    public IReadOnlyList<string> BadgeTags
+    {
+        get
+        {
+            var list = new List<string>();
+            if (Hit.Categories != null)
+            {
+                foreach (var c in Hit.Categories.Take(2))
+                {
+                    list.Add(c);
+                }
+            }
+            if (Hit.Versions != null && Hit.Versions.Length > 0)
+            {
+                list.Add(Hit.Versions[0]);
+            }
+            return list;
+        }
+    }
+
+    public string BadgeText => BadgeTags.Count > 0 ? string.Join("  •  ", BadgeTags) : string.Empty;
+
     public static string FormatCount(long n) => n switch
     {
         >= 1_000_000 => $"{n / 1_000_000.0:0.#}M",
@@ -156,12 +230,12 @@ public sealed partial class SearchHitRow : ObservableObject
 /// ViewModel cho Mod Browser: chịu trách nhiệm UI binding, gọi Service tách biệt
 /// (IModrinthSearchService và IModDownloadManager), hỗ trợ Shimmer, Dynamic Chips và Infinite Scroll.
 /// </summary>
-public sealed partial class ModBrowserViewModel : ObservableObject
+public partial class ModBrowserViewModel : ObservableObject
 {
-    private readonly IModrinthSearchService _searchService;
-    private readonly IModDownloadManager _downloadManager;
-    private readonly ActiveInstanceService _activeInstance;
-    private readonly IModInstallService? _legacyModInstall;
+    protected readonly IModrinthSearchService _searchService;
+    protected readonly IModDownloadManager _downloadManager;
+    protected readonly ActiveInstanceService _activeInstance;
+    protected readonly IModInstallService? _legacyModInstall;
 
     private CancellationTokenSource? _searchCts;
     private int _headOffset;
@@ -175,11 +249,13 @@ public sealed partial class ModBrowserViewModel : ObservableObject
 
     public ModSearchCollection Results { get; }
     public ObservableCollection<string> FilterChips { get; } = new();
+    public ObservableCollection<string> SelectedCategories { get; } = new();
+    public ObservableCollection<string> SelectedLoaders { get; } = new();
 
     public event EventHandler<int>? ItemsTrimmedFromHead;
     public event EventHandler<int>? ItemsPrependedAtHead;
 
-    public string[] SortOptions { get; } = { "Relevance", "Downloads", "Updated", "Newest" };
+    public string[] SortOptions { get; } = { "Relevance", "Downloads", "Follows", "Updated", "Newest" };
     public string[] LoaderOptions { get; } = { "Auto", "All", "fabric", "neoforge" };
     public string[] VersionOptions { get; } =
         { "Auto", "All", "1.21.1", "1.21", "1.20.1", "1.20", "1.19.4", "1.19.2", "1.18.2", "1.16.5" };
@@ -195,7 +271,11 @@ public sealed partial class ModBrowserViewModel : ObservableObject
     [ObservableProperty] private bool isLoadingPrevious;
     [ObservableProperty] private bool hasError;
     [ObservableProperty] private string errorMessage = string.Empty;
-    [ObservableProperty] private string statusMessage = string.Empty;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StatusText))]
+    private string statusMessage = string.Empty;
+
+    public string StatusText => StatusMessage;
     [ObservableProperty] private int progressPercent;
     [ObservableProperty] private bool hasResults;
     [ObservableProperty] private bool hasMoreResults;
@@ -376,6 +456,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
             string? sort = SelectedSort switch
             {
                 "Downloads" => "downloads",
+                "Follows" => "follows",
                 "Updated" => "updated",
                 "Newest" => "newest",
                 _ => null
@@ -387,6 +468,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
                 Query = SearchText,
                 ProjectType = ProjectType,
                 Category = SelectedCategory,
+                Categories = ResolveCategories(),
                 Loaders = loaders,
                 GameVersions = gameVersions,
                 SortIndex = isBrowseMode ? (sort ?? "downloads") : sort,
@@ -528,6 +610,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
             string? sort = SelectedSort switch
             {
                 "Downloads" => "downloads",
+                "Follows" => "follows",
                 "Updated" => "updated",
                 "Newest" => "newest",
                 _ => null
@@ -540,6 +623,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
                 Query = SearchText,
                 ProjectType = ProjectType,
                 Category = SelectedCategory,
+                Categories = ResolveCategories(),
                 Loaders = loaders,
                 GameVersions = gameVersions,
                 SortIndex = isBrowseMode ? (sort ?? "downloads") : sort,
@@ -644,8 +728,25 @@ public sealed partial class ModBrowserViewModel : ObservableObject
         }
     }
 
-    private string[]? ResolveLoaders(MinecraftInstance? inst)
+    protected virtual string[]? ResolveCategories()
     {
+        if (SelectedCategories.Count > 0)
+        {
+            return SelectedCategories.ToArray();
+        }
+
+        return string.IsNullOrEmpty(SelectedCategory) || SelectedCategory == "Tất cả"
+            ? null
+            : new[] { SelectedCategory };
+    }
+
+    protected virtual string[]? ResolveLoaders(MinecraftInstance? inst)
+    {
+        if (SelectedLoaders.Count > 0)
+        {
+            return SelectedLoaders.ToArray();
+        }
+
         if (ProjectType != "mod") return null;
         if (SelectedLoader == "All") return null;
         if (SelectedLoader != "Auto")
@@ -662,7 +763,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
         return new[] { inst.LoaderType.ToLowerInvariant() };
     }
 
-    private string[]? ResolveGameVersions(MinecraftInstance? inst)
+    protected virtual string[]? ResolveGameVersions(MinecraftInstance? inst)
     {
         if (SelectedGameVersion == "All") return null;
         if (SelectedGameVersion != "Auto") return new[] { SelectedGameVersion };

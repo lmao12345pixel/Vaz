@@ -279,13 +279,25 @@ public sealed partial class InstanceDetailPage : Page
     private async void DownloadResourcePacks_Click(object sender, RoutedEventArgs e)
     {
         if (ViewModel == null || ViewModel.IsGameRunning) return;
-        await OpenModBrowserAsync("resourcepack");
+        await OpenModrinthBrowserAsync("resourcepack");
     }
 
     private async void DownloadShaders_Click(object sender, RoutedEventArgs e)
     {
         if (ViewModel == null || ViewModel.IsGameRunning) return;
-        await OpenModBrowserAsync("shader");
+        await OpenModrinthBrowserAsync("shader");
+    }
+
+    private async void BrowseModrinthResourcePacks_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel == null || ViewModel.IsGameRunning) return;
+        await OpenModrinthBrowserAsync("resourcepack");
+    }
+
+    private async void BrowseModrinthShaders_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel == null || ViewModel.IsGameRunning) return;
+        await OpenModrinthBrowserAsync("shader");
     }
 
     private ScrollViewer? _installedModsScrollViewer;
@@ -378,6 +390,76 @@ public sealed partial class InstanceDetailPage : Page
     private void EmbeddedModBrowser_CloseRequested(object? sender, EventArgs e)
     {
         CloseModBrowser();
+    }
+
+    private async Task OpenModrinthBrowserAsync(string projectType = "resourcepack")
+    {
+        if (ViewModel?.Current == null) return;
+
+        ModrinthBrowserHostGrid.Visibility = Visibility.Visible;
+        ModrinthBrowserHostGrid.Opacity = 0.0;
+        ModrinthBrowserTranslate.Y = 50;
+
+        OpenModrinthBrowserStoryboard.Begin();
+
+        await EmbeddedModrinthBrowser.InitializeForInstanceAsync(ViewModel.Current.Id, projectType);
+        EmbeddedModrinthBrowser.FocusSearchBox();
+    }
+
+    private bool _isClosingModrinthBrowser;
+
+    private void CloseModrinthBrowser()
+    {
+        if (ModrinthBrowserHostGrid.Visibility != Visibility.Visible || _isClosingModrinthBrowser) return;
+        _isClosingModrinthBrowser = true;
+
+        var projType = EmbeddedModrinthBrowser.ViewModel?.ProjectType ?? "resourcepack";
+        if (string.Equals(projType, "shader", StringComparison.OrdinalIgnoreCase))
+        {
+            BrowseModrinthShadersButton?.Focus(FocusState.Programmatic);
+        }
+        else
+        {
+            BrowseModrinthResourcePacksButton?.Focus(FocusState.Programmatic);
+        }
+
+        CloseModrinthBrowserStoryboard.Begin();
+    }
+
+    private void CloseModrinthBrowserStoryboard_Completed(object? sender, object e)
+    {
+        ModrinthBrowserHostGrid.Visibility = Visibility.Collapsed;
+        _isClosingModrinthBrowser = false;
+
+        var projType = EmbeddedModrinthBrowser.ViewModel?.ProjectType ?? "resourcepack";
+        if (string.Equals(projType, "shader", StringComparison.OrdinalIgnoreCase))
+        {
+            BrowseModrinthShadersButton?.Focus(FocusState.Programmatic);
+        }
+        else
+        {
+            BrowseModrinthResourcePacksButton?.Focus(FocusState.Programmatic);
+        }
+
+        if (ViewModel != null && EmbeddedModrinthBrowser.HasChanges)
+        {
+            DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+            {
+                if (string.Equals(projType, "shader", StringComparison.OrdinalIgnoreCase))
+                {
+                    ViewModel.LoadShaders();
+                }
+                else
+                {
+                    ViewModel.LoadResourcePacks();
+                }
+            });
+        }
+    }
+
+    private void EmbeddedModrinthBrowser_CloseRequested(object? sender, EventArgs e)
+    {
+        CloseModrinthBrowser();
     }
 
     private void ClearLog_Click(object sender, RoutedEventArgs e)
@@ -478,16 +560,32 @@ public sealed partial class InstanceDetailPage : Page
 
     private void Page_PreviewKeyDown(object sender, KeyRoutedEventArgs e)
     {
-        if (e.Key == Windows.System.VirtualKey.Escape && ModBrowserHostGrid.Visibility == Visibility.Visible)
+        if (e.Key == Windows.System.VirtualKey.Escape)
         {
-            if (EmbeddedModBrowser.HandleEscapeKey())
+            if (ModrinthBrowserHostGrid.Visibility == Visibility.Visible)
             {
+                if (EmbeddedModrinthBrowser.HandleEscapeKey())
+                {
+                    e.Handled = true;
+                    return;
+                }
+
+                CloseModrinthBrowser();
                 e.Handled = true;
                 return;
             }
 
-            CloseModBrowser();
-            e.Handled = true;
+            if (ModBrowserHostGrid.Visibility == Visibility.Visible)
+            {
+                if (EmbeddedModBrowser.HandleEscapeKey())
+                {
+                    e.Handled = true;
+                    return;
+                }
+
+                CloseModBrowser();
+                e.Handled = true;
+            }
         }
     }
 
@@ -495,6 +593,13 @@ public sealed partial class InstanceDetailPage : Page
     {
         if (e.Key == Windows.System.VirtualKey.Escape)
         {
+            if (ModrinthBrowserHostGrid.Visibility == Visibility.Visible)
+            {
+                CloseModrinthBrowser();
+                e.Handled = true;
+                return;
+            }
+
             if (ModBrowserHostGrid.Visibility == Visibility.Visible)
             {
                 CloseModBrowser();
