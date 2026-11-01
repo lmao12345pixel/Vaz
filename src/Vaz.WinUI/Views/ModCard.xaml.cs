@@ -41,6 +41,8 @@ public sealed partial class ModCard : UserControl
             _observedItem.PropertyChanged -= Item_PropertyChanged;
             _observedItem = null;
         }
+        InstallingProgressRing.IsActive = false;
+        InstallingProgressRing.Visibility = Visibility.Collapsed;
         ModIconImage.Source = null;
         HoverExitStoryboard.Stop();
         HoverEnterStoryboard.Stop();
@@ -88,6 +90,17 @@ public sealed partial class ModCard : UserControl
 
     private void UpdateState(ModInstallState state, bool animate)
     {
+        if (state == ModInstallState.Installing)
+        {
+            InstallingProgressRing.Visibility = Visibility.Visible;
+            InstallingProgressRing.IsActive = true;
+        }
+        else
+        {
+            InstallingProgressRing.IsActive = false;
+            InstallingProgressRing.Visibility = Visibility.Collapsed;
+        }
+
         if (animate)
         {
             switch (state)
@@ -179,8 +192,14 @@ public sealed partial class ModCard : UserControl
     public void Recycle()
     {
         ModIconImage.Source = null;
+        InstallingProgressRing.IsActive = false;
+        InstallingProgressRing.Visibility = Visibility.Collapsed;
         HoverExitStoryboard.Stop();
+        HoverEnterStoryboard.Stop();
         EntranceStoryboard.Stop();
+        FadeToInstallingStoryboard.Stop();
+        FadeToInstalledStoryboard.Stop();
+        FadeToIdleStoryboard.Stop();
         CardContainer.Opacity = 1;
         CardTranslate.Y = 0;
     }

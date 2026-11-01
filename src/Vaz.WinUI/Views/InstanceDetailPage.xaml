@@ -381,6 +381,7 @@
 
                             <!-- Mod List (MM-AC-01, MM-AC-02) -->
                             <ListView
+                                x:Name="InstalledModsListView"
                                 Grid.Row="3"
                                 ItemsSource="{x:Bind ViewModel.FilteredMods, Mode=OneWay}"
                                 SelectionMode="None">

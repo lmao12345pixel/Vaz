@@ -24,6 +24,8 @@ public sealed partial class ModBrowserView : UserControl
 {
     public ModBrowserViewModel ViewModel { get; }
 
+    public bool HasChanges => ViewModel?.HasChanges ?? false;
+
     public event EventHandler? CloseRequested;
 
     private ScrollViewer? _listScrollViewer;
@@ -58,16 +60,14 @@ public sealed partial class ModBrowserView : UserControl
 
     public async Task InitializeForInstanceAsync(string? instanceId)
     {
-        if (!string.IsNullOrEmpty(instanceId))
+        if (ViewModel != null)
         {
-            var active = ((App)Application.Current).Services
-                .GetRequiredService<ActiveInstanceService>();
-            active.SetCurrent(instanceId);
-        }
-        await ViewModel.RefreshInstanceContextAsync();
-        if (ViewModel.Results.Count == 0)
-        {
-            await ViewModel.SearchAsync();
+            ViewModel.HasChanges = false;
+            await ViewModel.RefreshInstanceContextAsync();
+            if (ViewModel.Results.Count == 0)
+            {
+                await ViewModel.SearchAsync();
+            }
         }
     }
 

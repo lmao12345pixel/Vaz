@@ -285,7 +285,12 @@
                         VerticalAlignment="Center"
                         Opacity="0"
                         IsHitTestVisible="False">
-                        <ProgressRing IsActive="True" Width="20" Height="20" />
+                        <ProgressRing
+                            x:Name="InstallingProgressRing"
+                            IsActive="False"
+                            Visibility="Collapsed"
+                            Width="20"
+                            Height="20" />
                         <TextBlock
                             Text="Đang cài..."
                             FontSize="12"

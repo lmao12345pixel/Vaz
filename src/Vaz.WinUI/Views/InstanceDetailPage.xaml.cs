@@ -270,9 +270,39 @@ public sealed partial class InstanceDetailPage : Page
         await OpenModBrowserAsync();
     }
 
+    private ScrollViewer? _installedModsScrollViewer;
+    private double _savedModsScrollOffset;
+
+    private ScrollViewer? GetInstalledModsScrollViewer()
+    {
+        if (_installedModsScrollViewer != null) return _installedModsScrollViewer;
+        if (InstalledModsListView == null) return null;
+        _installedModsScrollViewer = FindVisualChild<ScrollViewer>(InstalledModsListView);
+        return _installedModsScrollViewer;
+    }
+
+    private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+    {
+        int count = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChildrenCount(parent);
+        for (int i = 0; i < count; i++)
+        {
+            var child = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChild(parent, i);
+            if (child is T typed) return typed;
+            var sub = FindVisualChild<T>(child);
+            if (sub != null) return sub;
+        }
+        return null;
+    }
+
     private async Task OpenModBrowserAsync()
     {
         if (ViewModel?.Current == null) return;
+
+        var sv = GetInstalledModsScrollViewer();
+        if (sv != null)
+        {
+            _savedModsScrollOffset = sv.VerticalOffset;
+        }
 
         ModBrowserHostGrid.Visibility = Visibility.Visible;
         ModBrowserHostGrid.Opacity = 0.0;
@@ -301,11 +331,16 @@ public sealed partial class InstanceDetailPage : Page
         _isClosingModBrowser = false;
         DownloadModsButton?.Focus(FocusState.Programmatic);
 
-        if (ViewModel != null)
+        if (ViewModel != null && EmbeddedModBrowser.HasChanges)
         {
             DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, async () =>
             {
                 await ViewModel.LoadAsync();
+                if (_savedModsScrollOffset > 0)
+                {
+                    var sv = GetInstalledModsScrollViewer();
+                    sv?.ChangeView(null, _savedModsScrollOffset, null, disableAnimation: true);
+                }
             });
         }
     }

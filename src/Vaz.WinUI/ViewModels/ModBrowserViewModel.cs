@@ -45,10 +45,40 @@ public sealed class ModSearchCollection : ObservableCollection<SearchHitRow>, IS
         return AsyncInfo.Run(async ct =>
         {
             // Throttle rapid scroll requests to prevent stutter
-            await Task.Delay(100, ct);
+            await Task.Delay(80, ct);
             var loaded = await _loadMoreFunc(count);
             return new LoadMoreItemsResult { Count = loaded };
         });
+    }
+
+    public void AddRange(IEnumerable<SearchHitRow> items)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        foreach (var item in items)
+        {
+            Add(item);
+        }
+    }
+
+    public void InsertRange(int index, IEnumerable<SearchHitRow> items)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        int current = index;
+        foreach (var item in items)
+        {
+            Insert(current++, item);
+        }
+    }
+
+    public void RemoveRange(int index, int count)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            if (index < Count)
+            {
+                RemoveAt(index);
+            }
+        }
     }
 }
 
@@ -173,6 +203,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
     [ObservableProperty] private bool hasWarning;
     [ObservableProperty] private string warningMessage = string.Empty;
     [ObservableProperty] private bool includeDependencies = true;
+    [ObservableProperty] private bool hasChanges;
 
     public bool IsNotBusy => !IsBusy;
     public bool CanLoadMore => !IsBusy && !IsLoadingMore && HasMoreResults;
@@ -325,40 +356,25 @@ public sealed partial class ModBrowserViewModel : ObservableObject
             ct.ThrowIfCancellationRequested();
             if (requestId != _currentRequestId) return;
 
-            var rowTasks = result.Hits.Select(async hit =>
+            var rows = result.Hits.Select(hit => new SearchHitRow
             {
-                var state = ModInstallState.Idle;
-                if (inst != null)
-                {
-                    state = await _downloadManager.CheckInstallStateAsync(inst.Id, hit.ProjectId, hit.Slug, ct);
-                }
-                return new SearchHitRow
-                {
-                    Hit = hit,
-                    InstallState = state
-                };
-            });
-            var rows = (await Task.WhenAll(rowTasks)).ToList();
+                Hit = hit,
+                InstallState = ModInstallState.Idle
+            }).ToList();
 
             ct.ThrowIfCancellationRequested();
             if (requestId != _currentRequestId) return;
 
             if (rows.Count > 0)
             {
-                for (int i = 0; i < rows.Count; i++)
-                {
-                    Results.Insert(i, rows[i]);
-                }
+                Results.InsertRange(0, rows);
                 _headOffset -= rows.Count;
 
                 // Cắt bớt ở đuôi nếu vượt quá MaxItems
                 if (Results.Count > MaxItems)
                 {
                     int excess = Results.Count - MaxItems;
-                    for (int i = 0; i < excess; i++)
-                    {
-                        Results.RemoveAt(Results.Count - 1);
-                    }
+                    Results.RemoveRange(Results.Count - excess, excess);
                     _tailOffset -= excess;
                 }
 
@@ -366,6 +382,11 @@ public sealed partial class ModBrowserViewModel : ObservableObject
 
                 HasMoreResults = _tailOffset < _totalHits;
                 StatusMessage = $"{Results.Count} / {_totalHits} kết quả (đang xem #{_headOffset + 1} - #{_tailOffset})";
+
+                if (inst != null)
+                {
+                    _ = CheckInstallStatesInBackgroundAsync(inst.Id, rows, requestId);
+                }
             }
         }
         catch (OperationCanceledException)
@@ -491,21 +512,11 @@ public sealed partial class ModBrowserViewModel : ObservableObject
                 return 0;
             }
 
-            var rowTasks = result.Hits.Select(async hit =>
+            var rows = result.Hits.Select(hit => new SearchHitRow
             {
-                var state = ModInstallState.Idle;
-                if (inst != null)
-                {
-                    state = await _downloadManager.CheckInstallStateAsync(inst.Id, hit.ProjectId, hit.Slug, ct);
-                }
-
-                return new SearchHitRow
-                {
-                    Hit = hit,
-                    InstallState = state
-                };
-            });
-            var rows = (await Task.WhenAll(rowTasks)).ToList();
+                Hit = hit,
+                InstallState = ModInstallState.Idle
+            }).ToList();
 
             ct.ThrowIfCancellationRequested();
             if (requestId != _currentRequestId)
@@ -520,10 +531,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
                 _tailOffset = 0;
             }
 
-            foreach (var r in rows)
-            {
-                Results.Add(r);
-            }
+            Results.AddRange(rows);
 
             _tailOffset += rows.Count;
             _totalHits = result.TotalHits;
@@ -532,10 +540,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
             if (Results.Count > MaxItems)
             {
                 int excess = Results.Count - MaxItems;
-                for (int i = 0; i < excess; i++)
-                {
-                    Results.RemoveAt(0);
-                }
+                Results.RemoveRange(0, excess);
                 _headOffset += excess;
                 ItemsTrimmedFromHead?.Invoke(this, excess);
             }
@@ -545,6 +550,11 @@ public sealed partial class ModBrowserViewModel : ObservableObject
             StatusMessage = Results.Count == 0
                 ? (isBrowseMode ? "Không có mod nào phù hợp bộ lọc." : "Không tìm thấy kết quả. Thử từ khóa tiếng Anh (ví dụ: sodium, iris, fabric)...")
                 : $"{Results.Count} / {_totalHits} kết quả (đang xem #{_headOffset + 1} - #{_tailOffset})";
+
+            if (inst != null && rows.Count > 0)
+            {
+                _ = CheckInstallStatesInBackgroundAsync(inst.Id, rows, requestId);
+            }
 
             return (uint)rows.Count;
         }
@@ -602,6 +612,29 @@ public sealed partial class ModBrowserViewModel : ObservableObject
         if (SelectedGameVersion == "All") return null;
         if (SelectedGameVersion != "Auto") return new[] { SelectedGameVersion };
         return inst == null ? null : new[] { inst.MinecraftVersion };
+    }
+
+    private async Task CheckInstallStatesInBackgroundAsync(string instanceId, List<SearchHitRow> rows, int requestId)
+    {
+        try
+        {
+            await Task.Yield();
+            var checkTasks = rows.Select(async row =>
+            {
+                if (requestId != _currentRequestId) return;
+                var state = await _downloadManager.CheckInstallStateAsync(instanceId, row.ProjectId, row.Slug, CancellationToken.None);
+                if (requestId != _currentRequestId) return;
+                if (state != ModInstallState.Idle && row.InstallState != state)
+                {
+                    row.InstallState = state;
+                }
+            });
+            await Task.WhenAll(checkTasks);
+        }
+        catch
+        {
+            // Non-critical background verification
+        }
     }
 
     private void NotifyBusyChanged()
@@ -670,6 +703,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
             if (result.Success)
             {
                 row.InstallState = ModInstallState.Installed;
+                HasChanges = true;
                 ProgressPercent = 100;
                 StatusMessage = $"Đã cài {result.ModName ?? row.Title}";
             }
@@ -765,6 +799,11 @@ public sealed partial class ModBrowserViewModel : ObservableObject
             });
 
             var result = await _legacyModInstall.InstallPerformancePackAsync(inst.Id, progress);
+
+            if (result.Success)
+            {
+                HasChanges = true;
+            }
 
             StatusMessage = result.Success
                 ? "Đã cài Performance Pack"

@@ -321,14 +321,11 @@
                     <ItemsPanelTemplate>
                         <ItemsStackPanel
                             Orientation="Vertical"
-                            CacheLength="2.0" />
+                            CacheLength="4.0" />
                     </ItemsPanelTemplate>
                 </ListView.ItemsPanel>
                 <ListView.ItemContainerTransitions>
-                    <TransitionCollection>
-                        <AddDeleteThemeTransition />
-                        <ReorderThemeTransition />
-                    </TransitionCollection>
+                    <TransitionCollection />
                 </ListView.ItemContainerTransitions>
                 <ListView.ItemTemplate>
                     <DataTemplate x:DataType="vm:SearchHitRow">
