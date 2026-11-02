@@ -830,14 +830,26 @@ public sealed partial class InstanceDetailPage : Page
 
     private void AttachToolbarButtonAnimations()
     {
-        UiAnimationHelper.AttachButtonPressFeedback(BrowseModrinthResourcePacksButton);
-        UiAnimationHelper.AttachButtonPressFeedback(ImportResourcePackButton);
-        UiAnimationHelper.AttachButtonPressFeedback(OpenResourcePacksFolderButton);
-        UiAnimationHelper.AttachButtonPressFeedback(RefreshResourcePacksButton);
-        UiAnimationHelper.AttachButtonPressFeedback(BrowseModrinthShadersButton);
-        UiAnimationHelper.AttachButtonPressFeedback(ImportShaderButton);
-        UiAnimationHelper.AttachButtonPressFeedback(OpenShadersFolderButton);
-        UiAnimationHelper.AttachButtonPressFeedback(RefreshShadersButton);
+        var buttons = new Button?[]
+        {
+            BrowseModrinthResourcePacksButton,
+            ImportResourcePackButton,
+            OpenResourcePacksFolderButton,
+            RefreshResourcePacksButton,
+            BrowseModrinthShadersButton,
+            ImportShaderButton,
+            OpenShadersFolderButton,
+            RefreshShadersButton
+        };
+
+        foreach (var btn in buttons)
+        {
+            if (btn != null)
+            {
+                UiAnimationHelper.AttachButtonPressFeedback(btn, 0.95, 100, true);
+                UiAnimationHelper.AttachHoverFillSweep(btn);
+            }
+        }
     }
 
     private void OpenResourcePacksFolder_Click(object sender, RoutedEventArgs e)
@@ -845,6 +857,7 @@ public sealed partial class InstanceDetailPage : Page
         if (ResourcePacksFolderIcon != null)
         {
             UiAnimationHelper.AnimateFolderIconSpin(ResourcePacksFolderIcon);
+            UiAnimationHelper.AnimateIconMicroBounce(ResourcePacksFolderIcon);
         }
         if (string.IsNullOrEmpty(ViewModel?.Current?.Path)) return;
         var folder = System.IO.Path.Combine(ViewModel.Current.Path, "resourcepacks");
@@ -863,10 +876,26 @@ public sealed partial class InstanceDetailPage : Page
 
     private void PackInspector_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement elem && elem.DataContext is ResourcePackRow row)
+        var row = FindResourcePack(sender);
+        if (row != null && sender is FrameworkElement elem)
         {
             _lastPackInspectorTrigger = elem;
+            var card = FindCardElement(elem);
+            var thumb = FindDescendantByName<FrameworkElement>(card, "PackCardThumbnail");
+            if (thumb != null)
+            {
+                UiAnimationHelper.PrepareConnectedAnimation("PackCoverAnimation", thumb);
+            }
+
             ViewModel.OpenPackInspector(row);
+
+            DispatcherQueue?.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+            {
+                if (PackInspectorImage != null)
+                {
+                    UiAnimationHelper.TryStartConnectedAnimation("PackCoverAnimation", PackInspectorImage);
+                }
+            });
         }
     }
 
@@ -885,11 +914,23 @@ public sealed partial class InstanceDetailPage : Page
             cur = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(cur);
         }
 
-        if (sender is FrameworkElement elem && elem.DataContext is ResourcePackRow row)
+        PackInspector_Click(sender, new RoutedEventArgs());
+    }
+
+    private static T? FindDescendantByName<T>(DependencyObject? parent, string name) where T : FrameworkElement
+    {
+        if (parent == null) return null;
+        int count = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChildrenCount(parent);
+        for (int i = 0; i < count; i++)
         {
-            _lastPackInspectorTrigger = elem;
-            ViewModel.OpenPackInspector(row);
+            var child = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChild(parent, i);
+            if (child is T fe && fe.Name == name)
+                return fe;
+            var result = FindDescendantByName<T>(child, name);
+            if (result != null)
+                return result;
         }
+        return null;
     }
 
     private void ClosePackInspector_Click(object sender, RoutedEventArgs e)
@@ -939,7 +980,11 @@ public sealed partial class InstanceDetailPage : Page
             DefaultButton = ContentDialogButton.Close,
             XamlRoot = this.XamlRoot
         };
-        dialog.Opened += (s, args) => UiAnimationHelper.AnimateDialogEntrance(dialog);
+        dialog.Opened += (s, args) =>
+        {
+            UiAnimationHelper.AnimateDialogEntrance(dialog);
+            UiAnimationHelper.AnimateDialogContentStagger(dialog);
+        };
         var result = await dialog.ShowAsync();
         if (result == ContentDialogResult.Primary)
         {
@@ -1042,7 +1087,11 @@ public sealed partial class InstanceDetailPage : Page
             DefaultButton = ContentDialogButton.Close,
             XamlRoot = this.XamlRoot
         };
-        dialog.Opened += (s, args) => UiAnimationHelper.AnimateDialogEntrance(dialog);
+        dialog.Opened += (s, args) =>
+        {
+            UiAnimationHelper.AnimateDialogEntrance(dialog);
+            UiAnimationHelper.AnimateDialogContentStagger(dialog);
+        };
         var result = await dialog.ShowAsync();
         if (result == ContentDialogResult.Primary)
         {
@@ -1091,7 +1140,14 @@ public sealed partial class InstanceDetailPage : Page
 
     private void Repeater_ElementPrepared(ItemsRepeater sender, ItemsRepeaterElementPreparedEventArgs args)
     {
-        // Staggered entrance hook
+        if (args.Element is FrameworkElement elem)
+        {
+            UiAnimationHelper.EnableImplicitAnimations(elem);
+            if (args.Index < 12)
+            {
+                UiAnimationHelper.RunStaggeredEntrance(elem, args.Index * 30);
+            }
+        }
     }
 
     private void Card_PointerEntered(object sender, PointerRoutedEventArgs e)
@@ -1099,6 +1155,12 @@ public sealed partial class InstanceDetailPage : Page
         if (sender is FrameworkElement card)
         {
             UiAnimationHelper.AnimateCardHover(card, true);
+            var shine = FindDescendantByName<Border>(card, "CardShineSweepOverlay") ??
+                        FindDescendantByName<Border>(card, "ShaderCardShineSweepOverlay");
+            if (shine != null)
+            {
+                UiAnimationHelper.AnimateCardShineSweep(shine);
+            }
         }
     }
 
@@ -1147,14 +1209,43 @@ public sealed partial class InstanceDetailPage : Page
     private void ShaderInspector_Click(object sender, RoutedEventArgs e)
     {
         var row = FindShader(sender);
-        if (row != null)
+        if (row != null && sender is FrameworkElement elem)
         {
-            if (sender is FrameworkElement elem)
+            _lastShaderInspectorTrigger = elem;
+            var card = FindCardElement(elem);
+            var banner = FindDescendantByName<FrameworkElement>(card, "ShaderCardBanner");
+            if (banner != null)
             {
-                _lastShaderInspectorTrigger = elem;
+                UiAnimationHelper.PrepareConnectedAnimation("ShaderCoverAnimation", banner);
             }
+
             ViewModel.OpenShaderInspector(row);
+
+            DispatcherQueue?.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+            {
+                if (ShaderInspectorImage != null)
+                {
+                    UiAnimationHelper.TryStartConnectedAnimation("ShaderCoverAnimation", ShaderInspectorImage);
+                }
+            });
         }
+    }
+
+    private void ShaderCard_Tapped(object sender, Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
+    {
+        var cur = e.OriginalSource as Microsoft.UI.Xaml.DependencyObject;
+        while (cur != null && !ReferenceEquals(cur, sender))
+        {
+            if (cur is Microsoft.UI.Xaml.Controls.Primitives.ButtonBase ||
+                cur is Microsoft.UI.Xaml.Controls.ToggleSwitch)
+            {
+                e.Handled = true;
+                return;
+            }
+            cur = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(cur);
+        }
+
+        ShaderInspector_Click(sender, new RoutedEventArgs());
     }
 
     private void CloseShaderInspector_Click(object sender, RoutedEventArgs e)
