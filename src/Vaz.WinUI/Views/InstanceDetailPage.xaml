@@ -261,7 +261,7 @@
         </StackPanel>
 
         <!-- Tabs -->
-        <TabView x:Name="DetailTabView" Grid.Row="2" IsAddTabButtonVisible="False" Margin="0">
+        <TabView x:Name="DetailTabView" Grid.Row="2" IsAddTabButtonVisible="False" Margin="0" SelectionChanged="DetailTabView_SelectionChanged">
             <TabViewItem IsClosable="False">
                 <TabViewItem.Header>
                     <StackPanel Orientation="Horizontal" Spacing="8">
@@ -851,37 +851,32 @@
                     </StackPanel>
                 </TabViewItem.Header>
                 <TabViewItem.Content>
-                    <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                                  VerticalScrollBarVisibility="Disabled"
-                                  HorizontalScrollMode="Auto"
-                                  VerticalScrollMode="Disabled">
-                        <Grid x:Name="ResourcePacksContainerGrid"
-                              MinWidth="780"
-                              Padding="0,12,0,0"
-                              AllowDrop="True"
-                              DragOver="ResourcePacksGrid_DragOver"
-                              Drop="ResourcePacksGrid_Drop">
-                            
-                            <!-- Main Left Column -->
-                            <Grid RowDefinitions="Auto,*" RowSpacing="12">
+                    <Grid x:Name="ResourcePacksContainerGrid"
+                          Padding="0,12,0,0"
+                          AllowDrop="True"
+                          DragOver="ResourcePacksGrid_DragOver"
+                          Drop="ResourcePacksGrid_Drop">
+                        
+                        <!-- Main Left Column -->
+                        <Grid RowDefinitions="Auto,*" RowSpacing="12">
                                 <!-- Toolbar -->
                                 <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,*,Auto">
                                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
                                         <Button x:Name="BrowseModrinthResourcePacksButton" Click="BrowseModrinthResourcePacks_Click" Style="{StaticResource AccentButtonStyle}">
                                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                                <FontIcon Glyph="&#xE896;" FontSize="13" Foreground="#1bd96a" />
+                                                <FontIcon Glyph="&#xE896;" FontSize="13" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
                                                 <TextBlock Text="Browse Modrinth" />
                                             </StackPanel>
                                         </Button>
-                                        <Button Click="ImportResourcePack_Click">
+                                        <Button x:Name="ImportResourcePackButton" Click="ImportResourcePack_Click">
                                             <StackPanel Orientation="Horizontal" Spacing="6">
                                                 <FontIcon Glyph="&#xE898;" FontSize="13" />
                                                 <TextBlock Text="+ Thêm .zip" />
                                             </StackPanel>
                                         </Button>
-                                        <Button Click="OpenResourcePacksFolder_Click">
+                                        <Button x:Name="OpenResourcePacksFolderButton" Click="OpenResourcePacksFolder_Click">
                                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                                <FontIcon Glyph="&#xED25;" FontSize="13" />
+                                                <FontIcon x:Name="ResourcePacksFolderIcon" Glyph="&#xED25;" FontSize="13" />
                                                 <TextBlock Text="Mở thư mục" />
                                             </StackPanel>
                                         </Button>
@@ -892,6 +887,7 @@
                                              MaxWidth="220"
                                              Margin="12,0,0,0"
                                              PlaceholderText="Tìm resource pack..."
+                                             TextChanged="ResourcePackSearch_TextChanged"
                                              Text="{x:Bind ViewModel.ResourcePackSearchQuery, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
                                     <TextBlock Grid.Column="2"
@@ -902,7 +898,7 @@
                                                FontSize="12"
                                                TextTrimming="CharacterEllipsis" />
 
-                                    <Button Grid.Column="3" Click="RefreshResourcePacks_Click">
+                                    <Button x:Name="RefreshResourcePacksButton" Grid.Column="3" Click="RefreshResourcePacks_Click">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <FontIcon Glyph="&#xE72C;" FontSize="13" />
                                             <TextBlock Text="Làm mới" />
@@ -928,20 +924,22 @@
                                         </Grid>
 
                                         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                                            <ItemsControl ItemsSource="{x:Bind ViewModel.FilteredResourcePacks, Mode=OneWay}">
-                                                <ItemsControl.ItemsPanel>
-                                                    <ItemsPanelTemplate>
-                                                        <ItemsWrapGrid Orientation="Horizontal" ItemWidth="360" MaximumRowsOrColumns="3" />
-                                                    </ItemsPanelTemplate>
-                                                </ItemsControl.ItemsPanel>
-                                                <ItemsControl.ItemTemplate>
+                                            <ItemsRepeater x:Name="ResourcePacksRepeater"
+                                                           ItemsSource="{x:Bind ViewModel.FilteredResourcePacks, Mode=OneWay}"
+                                                           ElementPrepared="Repeater_ElementPrepared">
+                                                <ItemsRepeater.Layout>
+                                                    <UniformGridLayout MinItemWidth="340" MinRowSpacing="12" MinColumnSpacing="12" ItemsStretch="Uniform" />
+                                                </ItemsRepeater.Layout>
+                                                <ItemsRepeater.ItemTemplate>
                                                     <DataTemplate x:DataType="vm:ResourcePackRow">
                                                         <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                                                 BorderThickness="1"
                                                                 CornerRadius="8"
                                                                 Padding="12"
-                                                                Margin="6">
+                                                                Margin="4"
+                                                                PointerEntered="Card_PointerEntered"
+                                                                PointerExited="Card_PointerExited">
                                                             <Grid ColumnDefinitions="64,*,Auto" ColumnSpacing="12">
                                                                 <!-- Thumbnail -->
                                                                 <Border Grid.Column="0"
@@ -951,7 +949,8 @@
                                                                         Background="{ThemeResource SubtleFillColorSecondaryBrush}"
                                                                         VerticalAlignment="Center">
                                                                     <Image Source="{x:Bind IconImageSource, Mode=OneWay}"
-                                                                           Stretch="UniformToFill" />
+                                                                           Stretch="UniformToFill"
+                                                                           ImageOpened="Thumbnail_ImageOpened" />
                                                                 </Border>
 
                                                                 <!-- Metadata Info -->
@@ -975,12 +974,12 @@
                                                                             <TextBlock Text="{x:Bind Size}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                                                         </Border>
                                                                         <Border Visibility="{x:Bind IsIncompatible, Mode=OneWay, Converter={StaticResource BoolToVis}}"
-                                                                                Background="#33EAB308"
-                                                                                BorderBrush="#EAB308"
+                                                                                Background="{ThemeResource SystemFillColorCautionBackgroundBrush}"
+                                                                                BorderBrush="{ThemeResource SystemFillColorCautionBrush}"
                                                                                 BorderThickness="1"
                                                                                 CornerRadius="4"
                                                                                 Padding="5,1">
-                                                                            <TextBlock Text="Không tương thích" FontSize="10" Foreground="#EAB308" />
+                                                                            <TextBlock Text="Không tương thích" FontSize="10" Foreground="{ThemeResource SystemFillColorCautionBrush}" />
                                                                         </Border>
                                                                     </StackPanel>
                                                                 </StackPanel>
@@ -1004,14 +1003,14 @@
                                                                             Padding="8"
                                                                             Background="Transparent"
                                                                             BorderThickness="0">
-                                                                        <FontIcon Glyph="&#xE74D;" FontSize="14" Foreground="#EF4444" />
+                                                                        <FontIcon Glyph="&#xE74D;" FontSize="14" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
                                                                     </Button>
                                                                 </StackPanel>
                                                             </Grid>
                                                         </Border>
                                                     </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
+                                                </ItemsRepeater.ItemTemplate>
+                                            </ItemsRepeater>
                                         </ScrollViewer>
 
                                         <!-- Empty State -->
@@ -1020,7 +1019,7 @@
                                                     HorizontalAlignment="Center"
                                                     VerticalAlignment="Center"
                                                     Spacing="8">
-                                            <FontIcon Glyph="&#xE790;" FontSize="36" Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center" />
+                                            <FontIcon x:Name="ResourcePacksEmptyIcon" Glyph="&#xE790;" FontSize="36" Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center" Loaded="EmptyIcon_Loaded" />
                                             <TextBlock Text="Chưa có Resource Pack nào được cài"
                                                        FontWeight="SemiBold"
                                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -1038,7 +1037,7 @@
                         <Grid Visibility="{x:Bind ViewModel.IsPackInspectorOpen, Mode=OneWay, Converter={StaticResource BoolToVis}}"
                               Canvas.ZIndex="100">
                             <!-- Scrim for light dismiss -->
-                            <Border Background="#40000000" Tapped="ClosePackInspector_Click" />
+                            <Border Background="{ThemeResource SmokeFillColorDefaultBrush}" Tapped="ClosePackInspector_Click" />
 
                             <!-- Resource Pack Inspector Drawer -->
                             <Border Width="380"
@@ -1093,7 +1092,6 @@
                             </Border>
                         </Grid>
                     </Grid>
-                </ScrollViewer>
                 </TabViewItem.Content>
             </TabViewItem>
 
@@ -1149,19 +1147,19 @@
                                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
                                     <Button x:Name="BrowseModrinthShadersButton" Click="BrowseModrinthShaders_Click" Style="{StaticResource AccentButtonStyle}">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <FontIcon Glyph="&#xE896;" FontSize="13" Foreground="#1bd96a" />
+                                            <FontIcon Glyph="&#xE896;" FontSize="13" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
                                             <TextBlock Text="Browse Modrinth" />
                                         </StackPanel>
                                     </Button>
-                                    <Button Click="ImportShader_Click">
+                                    <Button x:Name="ImportShaderButton" Click="ImportShader_Click">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <FontIcon Glyph="&#xE898;" FontSize="13" />
                                             <TextBlock Text="+ Thêm .zip" />
                                         </StackPanel>
                                     </Button>
-                                    <Button Click="OpenShadersFolder_Click">
+                                    <Button x:Name="OpenShadersFolderButton" Click="OpenShadersFolder_Click">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <FontIcon Glyph="&#xED25;" FontSize="13" />
+                                            <FontIcon x:Name="ShadersFolderIcon" Glyph="&#xED25;" FontSize="13" />
                                             <TextBlock Text="Mở thư mục" />
                                         </StackPanel>
                                     </Button>
@@ -1175,7 +1173,7 @@
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                            FontSize="12" />
 
-                                <Button Grid.Column="2" Click="RefreshShaders_Click">
+                                <Button x:Name="RefreshShadersButton" Grid.Column="2" Click="RefreshShaders_Click">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <FontIcon Glyph="&#xE72C;" FontSize="13" />
                                         <TextBlock Text="Làm mới" />
@@ -1195,81 +1193,106 @@
 
                             <!-- Shaders Grid (Responsive UniformGridLayout with MinItemWidth 280) -->
                             <ScrollViewer Grid.Row="3">
-                                <ItemsRepeater ItemsSource="{x:Bind ViewModel.FilteredShaders, Mode=OneWay}">
-                                    <ItemsRepeater.Layout>
-                                        <UniformGridLayout MinItemWidth="280" MinRowSpacing="12" MinColumnSpacing="12" ItemsStretch="Uniform" />
-                                    </ItemsRepeater.Layout>
-                                    <ItemsRepeater.ItemTemplate>
-                                        <DataTemplate x:DataType="vm:ShaderPackRow">
-                                            <Border Height="220"
-                                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                                    BorderThickness="1"
-                                                    CornerRadius="10">
-                                                <Grid RowDefinitions="120,*">
-                                                    <!-- Banner Image -->
-                                                    <Grid Grid.Row="0">
-                                                        <Border CornerRadius="10,10,0,0">
-                                                            <Image Stretch="UniformToFill">
-                                                                <Image.Source>
-                                                                    <BitmapImage UriSource="{x:Bind ImageUriSource}" DecodePixelWidth="320" />
-                                                                </Image.Source>
-                                                            </Image>
-                                                        </Border>
-                                                        
-                                                        <!-- Style Badge -->
-                                                        <Border HorizontalAlignment="Right"
-                                                                VerticalAlignment="Top"
-                                                                Margin="10"
-                                                                Background="#80000000"
-                                                                CornerRadius="4"
-                                                                Padding="6,2">
-                                                            <TextBlock Text="{x:Bind StyleLabel}" FontSize="11" Foreground="White" />
-                                                        </Border>
+                                <Grid>
+                                    <ItemsRepeater x:Name="ShadersRepeater"
+                                                   ItemsSource="{x:Bind ViewModel.FilteredShaders, Mode=OneWay}"
+                                                   ElementPrepared="Repeater_ElementPrepared">
+                                        <ItemsRepeater.Layout>
+                                            <UniformGridLayout MinItemWidth="280" MinRowSpacing="12" MinColumnSpacing="12" ItemsStretch="Uniform" />
+                                        </ItemsRepeater.Layout>
+                                        <ItemsRepeater.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:ShaderPackRow">
+                                                <Border Height="220"
+                                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                        BorderThickness="1"
+                                                        CornerRadius="10"
+                                                        PointerEntered="Card_PointerEntered"
+                                                        PointerExited="Card_PointerExited">
+                                                    <Grid RowDefinitions="120,*">
+                                                        <!-- Banner Image -->
+                                                        <Grid Grid.Row="0">
+                                                            <Border CornerRadius="10,10,0,0">
+                                                                <Image Stretch="UniformToFill" ImageOpened="Thumbnail_ImageOpened">
+                                                                    <Image.Source>
+                                                                        <BitmapImage UriSource="{x:Bind ImageUriSource}" DecodePixelWidth="320" />
+                                                                    </Image.Source>
+                                                                </Image>
+                                                            </Border>
+                                                            
+                                                            <!-- Style Badge -->
+                                                            <Border HorizontalAlignment="Right"
+                                                                    VerticalAlignment="Top"
+                                                                    Margin="10"
+                                                                    Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="4"
+                                                                    Padding="6,2">
+                                                                <TextBlock Text="{x:Bind StyleLabel}" FontSize="11" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                                                            </Border>
+                                                        </Grid>
+
+                                                        <!-- Details & Action Buttons (Open File & Delete) -->
+                                                        <Grid Grid.Row="1" Padding="12,8,12,8" ColumnDefinitions="*,Auto">
+                                                            <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
+                                                                <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis" />
+                                                                <TextBlock Text="{x:Bind Author}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                            </StackPanel>
+
+                                                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                                <Button ToolTipService.ToolTip="Xem chi tiết"
+                                                                        AutomationProperties.Name="{x:Bind ViewDetailsAutomationName}"
+                                                                        Click="ShaderInspector_Click"
+                                                                        Tag="{x:Bind Id}"
+                                                                        Padding="6,4">
+                                                                    <FontIcon Glyph="&#xE946;" FontSize="12" />
+                                                                </Button>
+
+                                                                <Button ToolTipService.ToolTip="Mở vị trí file trong Explorer"
+                                                                        AutomationProperties.Name="Mở file"
+                                                                        Click="OpenShaderFile_Click"
+                                                                        Tag="{x:Bind Id}"
+                                                                        Padding="6,4"
+                                                                        Background="Transparent"
+                                                                        BorderThickness="0">
+                                                                    <FontIcon Glyph="&#xED25;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                                </Button>
+
+                                                                <Button ToolTipService.ToolTip="Xóa shader"
+                                                                        AutomationProperties.Name="Xóa shader"
+                                                                        Click="DeleteShader_Click"
+                                                                        Tag="{x:Bind Id}"
+                                                                        Padding="6,4"
+                                                                        Background="Transparent"
+                                                                        BorderThickness="0">
+                                                                    <FontIcon Glyph="&#xE74D;" FontSize="12" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                                                                </Button>
+                                                            </StackPanel>
+                                                        </Grid>
                                                     </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsRepeater.ItemTemplate>
+                                    </ItemsRepeater>
 
-                                                    <!-- Details & Action Buttons (Open File & Delete) -->
-                                                    <Grid Grid.Row="1" Padding="12,8,12,8" ColumnDefinitions="*,Auto">
-                                                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
-                                                            <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis" />
-                                                            <TextBlock Text="{x:Bind Author}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                                        </StackPanel>
-
-                                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                                            <Button ToolTipService.ToolTip="Xem chi tiết"
-                                                                    AutomationProperties.Name="{x:Bind ViewDetailsAutomationName}"
-                                                                    Click="ShaderInspector_Click"
-                                                                    Tag="{x:Bind Id}"
-                                                                    Padding="6,4">
-                                                                <FontIcon Glyph="&#xE946;" FontSize="12" />
-                                                            </Button>
-
-                                                            <Button ToolTipService.ToolTip="Mở vị trí file trong Explorer"
-                                                                    AutomationProperties.Name="Mở file"
-                                                                    Click="OpenShaderFile_Click"
-                                                                    Tag="{x:Bind Id}"
-                                                                    Padding="6,4"
-                                                                    Background="Transparent"
-                                                                    BorderThickness="0">
-                                                                <FontIcon Glyph="&#xED25;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                                            </Button>
-
-                                                            <Button ToolTipService.ToolTip="Xóa shader"
-                                                                    AutomationProperties.Name="Xóa shader"
-                                                                    Click="DeleteShader_Click"
-                                                                    Tag="{x:Bind Id}"
-                                                                    Padding="6,4"
-                                                                    Background="Transparent"
-                                                                    BorderThickness="0">
-                                                                <FontIcon Glyph="&#xE74D;" FontSize="12" Foreground="#EF4444" />
-                                                            </Button>
-                                                        </StackPanel>
-                                                    </Grid>
-                                                </Grid>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsRepeater.ItemTemplate>
-                                </ItemsRepeater>
+                                    <!-- Empty State -->
+                                    <StackPanel Visibility="{x:Bind ViewModel.HasNoShaders, Mode=OneWay, Converter={StaticResource BoolToVis}}"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Spacing="8"
+                                                Margin="0,48,0,0">
+                                        <FontIcon x:Name="ShadersEmptyIcon" Glyph="&#xE790;" FontSize="36" Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center" Loaded="EmptyIcon_Loaded" />
+                                        <TextBlock Text="Chưa có Shader nào được cài"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                   HorizontalAlignment="Center" />
+                                        <TextBlock Text="Nhấn &quot;+ Thêm .zip&quot;, &quot;Browse Modrinth&quot; hoặc kéo thả file .zip vào đây"
+                                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                                   FontSize="12"
+                                                   HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                </Grid>
                             </ScrollViewer>
                         </Grid>
 
@@ -1277,7 +1300,7 @@
                         <Grid Visibility="{x:Bind ViewModel.IsShaderInspectorOpen, Mode=OneWay, Converter={StaticResource BoolToVis}}"
                               Canvas.ZIndex="100">
                             <!-- Scrim for light dismiss -->
-                            <Border Background="#40000000" Tapped="CloseShaderInspector_Click" />
+                            <Border Background="{ThemeResource SmokeFillColorDefaultBrush}" Tapped="CloseShaderInspector_Click" />
 
                             <!-- Shader Inspector Drawer -->
                             <Border Width="380"

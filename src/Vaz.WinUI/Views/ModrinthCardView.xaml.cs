@@ -33,6 +33,7 @@ public sealed partial class ModrinthCardView : UserControl
     public ModrinthCardView()
     {
         InitializeComponent();
+        UiAnimationHelper.AttachButtonPressFeedback(IdleButton);
         Unloaded += ModrinthCardView_Unloaded;
     }
 
@@ -103,6 +104,7 @@ public sealed partial class ModrinthCardView : UserControl
                 InstallingPanel.Visibility = Visibility.Collapsed;
                 InstallingRing.IsActive = false;
                 InstalledBadge.Visibility = Visibility.Visible;
+                UiAnimationHelper.AnimateInstallSuccess(InstalledBadge, this);
                 break;
             default:
                 IdleButton.Visibility = Visibility.Visible;
@@ -174,5 +176,10 @@ public sealed partial class ModrinthCardView : UserControl
     private void CoverImage_Failed(object sender, ExceptionRoutedEventArgs e)
     {
         CoverImage.Source = UiPlaceholders.Image;
+    }
+
+    private void CoverImage_ImageOpened(object sender, RoutedEventArgs e)
+    {
+        UiAnimationHelper.AnimateThumbnailFadeIn(CoverImage);
     }
 }

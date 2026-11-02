@@ -100,7 +100,8 @@
                     <Image
                         x:Name="CoverImage"
                         Stretch="UniformToFill"
-                        ImageFailed="CoverImage_Failed" />
+                        ImageFailed="CoverImage_Failed"
+                        ImageOpened="CoverImage_ImageOpened" />
                 </Border>
 
                 <!-- Tag Overlay (Featured / Popular) -->

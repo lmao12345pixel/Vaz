@@ -25,7 +25,11 @@ public sealed partial class InstanceDetailPage : Page
         InitializeComponent();
         ViewModel.LogAppended += OnLogAppended;
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
-        Loaded += (s, e) => SyncGraphicsModeComboBox();
+        Loaded += (s, e) =>
+        {
+            SyncGraphicsModeComboBox();
+            AttachToolbarButtonAnimations();
+        };
         Unloaded += (s, e) =>
         {
             ViewModel.PropertyChanged -= OnViewModelPropertyChanged;
@@ -109,15 +113,18 @@ public sealed partial class InstanceDetailPage : Page
                 DetailTabView.SelectedIndex = 0;
         };
 
-        var startupTab = Environment.GetEnvironmentVariable("VAZER_STARTUP_TAB");
-        if (startupTab == "resourcepacks" && DetailTabView.TabItems.Count > 1)
+        Loaded += (s, e) =>
         {
-            DetailTabView.SelectedIndex = 1;
-        }
-        else if (startupTab == "shaders" && DetailTabView.TabItems.Count > 2)
-        {
-            DetailTabView.SelectedIndex = 2;
-        }
+            var startupTab = Environment.GetEnvironmentVariable("VAZER_STARTUP_TAB");
+            if (startupTab == "resourcepacks" && DetailTabView.TabItems.Count > 1)
+            {
+                DetailTabView.SelectedIndex = 1;
+            }
+            else if (startupTab == "shaders" && DetailTabView.TabItems.Count > 2)
+            {
+                DetailTabView.SelectedIndex = 2;
+            }
+        };
     }
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)
@@ -128,13 +135,6 @@ public sealed partial class InstanceDetailPage : Page
 
     private void DetailTabView_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        try
-        {
-            var logPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Vazer", "nav_log.txt");
-            System.IO.File.AppendAllText(logPath, $"DetailTabView_SelectionChanged: SelectedIndex={DetailTabView.SelectedIndex}\n");
-        }
-        catch { }
-
         // Khi chuyển tab, đóng các inspector tương ứng
         if (ViewModel != null)
         {
@@ -144,6 +144,16 @@ public sealed partial class InstanceDetailPage : Page
                 ViewModel.ClosePackInspector();
             if (DetailTabView.SelectedIndex != 2 && ViewModel.IsShaderInspectorOpen)
                 ViewModel.CloseShaderInspector();
+        }
+
+        if (e.RemovedItems != null && e.RemovedItems.Count > 0 &&
+            sender is TabView tabView &&
+            tabView.SelectedItem is TabViewItem selItem &&
+            selItem.Content is FrameworkElement content &&
+            content.IsLoaded)
+        {
+            var oldContent = (e.RemovedItems[0] as TabViewItem)?.Content as FrameworkElement;
+            UiAnimationHelper.AnimateTabTransition(oldContent, content);
         }
     }
 
@@ -818,8 +828,24 @@ public sealed partial class InstanceDetailPage : Page
         }
     }
 
+    private void AttachToolbarButtonAnimations()
+    {
+        UiAnimationHelper.AttachButtonPressFeedback(BrowseModrinthResourcePacksButton);
+        UiAnimationHelper.AttachButtonPressFeedback(ImportResourcePackButton);
+        UiAnimationHelper.AttachButtonPressFeedback(OpenResourcePacksFolderButton);
+        UiAnimationHelper.AttachButtonPressFeedback(RefreshResourcePacksButton);
+        UiAnimationHelper.AttachButtonPressFeedback(BrowseModrinthShadersButton);
+        UiAnimationHelper.AttachButtonPressFeedback(ImportShaderButton);
+        UiAnimationHelper.AttachButtonPressFeedback(OpenShadersFolderButton);
+        UiAnimationHelper.AttachButtonPressFeedback(RefreshShadersButton);
+    }
+
     private void OpenResourcePacksFolder_Click(object sender, RoutedEventArgs e)
     {
+        if (ResourcePacksFolderIcon != null)
+        {
+            UiAnimationHelper.AnimateFolderIconSpin(ResourcePacksFolderIcon);
+        }
         if (string.IsNullOrEmpty(ViewModel?.Current?.Path)) return;
         var folder = System.IO.Path.Combine(ViewModel.Current.Path, "resourcepacks");
         System.IO.Directory.CreateDirectory(folder);
@@ -885,11 +911,43 @@ public sealed partial class InstanceDetailPage : Page
         return null;
     }
 
-    private void DeleteResourcePack_Click(object sender, RoutedEventArgs e)
+    private FrameworkElement? FindCardElement(object sender)
+    {
+        var cur = sender as DependencyObject;
+        while (cur != null)
+        {
+            if (cur is Border b && (b.Name == "ResourcePackCardBorder" || b.Name == "ShaderCardBorder"))
+            {
+                return b;
+            }
+            cur = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(cur);
+        }
+        return sender as FrameworkElement;
+    }
+
+    private async void DeleteResourcePack_Click(object sender, RoutedEventArgs e)
     {
         var row = FindResourcePack(sender);
-        if (row != null)
+        if (row == null) return;
+
+        var dialog = new ContentDialog
         {
+            Title = "Xác nhận xóa gói tài nguyên",
+            Content = $"Bạn có chắc chắn muốn xóa '{row.Name}' không?\nTệp {row.FileName} sẽ bị xóa vĩnh viễn khỏi thư mục.",
+            PrimaryButtonText = "Xóa",
+            CloseButtonText = "Hủy",
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = this.XamlRoot
+        };
+        dialog.Opened += (s, args) => UiAnimationHelper.AnimateDialogEntrance(dialog);
+        var result = await dialog.ShowAsync();
+        if (result == ContentDialogResult.Primary)
+        {
+            var card = FindCardElement(sender);
+            if (card != null)
+            {
+                await UiAnimationHelper.AnimateCardDeleteAsync(card);
+            }
             ViewModel.DeleteResourcePack(row);
         }
     }
@@ -943,6 +1001,10 @@ public sealed partial class InstanceDetailPage : Page
 
     private void OpenShadersFolder_Click(object sender, RoutedEventArgs e)
     {
+        if (ShadersFolderIcon != null)
+        {
+            UiAnimationHelper.AnimateFolderIconSpin(ShadersFolderIcon);
+        }
         if (string.IsNullOrEmpty(ViewModel?.Current?.Path)) return;
         var folder = System.IO.Path.Combine(ViewModel.Current.Path, "shaderpacks");
         System.IO.Directory.CreateDirectory(folder);
@@ -966,11 +1028,29 @@ public sealed partial class InstanceDetailPage : Page
         return null;
     }
 
-    private void DeleteShader_Click(object sender, RoutedEventArgs e)
+    private async void DeleteShader_Click(object sender, RoutedEventArgs e)
     {
         var row = FindShader(sender);
-        if (row != null)
+        if (row == null) return;
+
+        var dialog = new ContentDialog
         {
+            Title = "Xác nhận xóa shader",
+            Content = $"Bạn có chắc chắn muốn xóa shader '{row.Name}' không?\nTệp {row.FileName} sẽ bị xóa vĩnh viễn khỏi thư mục.",
+            PrimaryButtonText = "Xóa",
+            CloseButtonText = "Hủy",
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = this.XamlRoot
+        };
+        dialog.Opened += (s, args) => UiAnimationHelper.AnimateDialogEntrance(dialog);
+        var result = await dialog.ShowAsync();
+        if (result == ContentDialogResult.Primary)
+        {
+            var card = FindCardElement(sender);
+            if (card != null)
+            {
+                await UiAnimationHelper.AnimateCardDeleteAsync(card);
+            }
             ViewModel.DeleteShader(row);
         }
     }
@@ -989,11 +1069,78 @@ public sealed partial class InstanceDetailPage : Page
         ViewModel.InitializeResourcePacksAndShaders();
     }
 
-    private void ShaderChip_Checked(object sender, RoutedEventArgs e)
+    private async void ShaderChip_Checked(object sender, RoutedEventArgs e)
     {
         if (sender is RadioButton rb && rb.Tag is string filter)
         {
-            ViewModel?.SelectShaderFilter(filter);
+            if (ShadersRepeater != null)
+            {
+                await UiAnimationHelper.AnimateFilterUpdateAsync(ShadersRepeater, () =>
+                {
+                    ViewModel?.SelectShaderFilter(filter);
+                });
+            }
+            else
+            {
+                ViewModel?.SelectShaderFilter(filter);
+            }
+        }
+    }
+
+    // --- Animations 1-11 Handlers ---
+
+    private void Repeater_ElementPrepared(ItemsRepeater sender, ItemsRepeaterElementPreparedEventArgs args)
+    {
+        // Staggered entrance hook
+    }
+
+    private void Card_PointerEntered(object sender, PointerRoutedEventArgs e)
+    {
+        if (sender is FrameworkElement card)
+        {
+            UiAnimationHelper.AnimateCardHover(card, true);
+        }
+    }
+
+    private void Card_PointerExited(object sender, PointerRoutedEventArgs e)
+    {
+        if (sender is FrameworkElement card)
+        {
+            UiAnimationHelper.AnimateCardHover(card, false);
+        }
+    }
+
+    private void Thumbnail_ImageOpened(object sender, RoutedEventArgs e)
+    {
+        if (sender is Image img)
+        {
+            UiAnimationHelper.AnimateThumbnailFadeIn(img);
+        }
+    }
+
+    private void EmptyIcon_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement icon)
+        {
+            UiAnimationHelper.StartEmptyStateFloatingAnimation(icon);
+        }
+    }
+
+    private async void ResourcePackSearch_TextChanged(object sender, TextChangedEventArgs args)
+    {
+        if (sender is TextBox textBox)
+        {
+            if (ResourcePacksRepeater != null)
+            {
+                await UiAnimationHelper.AnimateFilterUpdateAsync(ResourcePacksRepeater, () =>
+                {
+                    ViewModel.ResourcePackSearchQuery = textBox.Text;
+                });
+            }
+            else
+            {
+                ViewModel.ResourcePackSearchQuery = textBox.Text;
+            }
         }
     }
 
