@@ -409,7 +409,7 @@
                             Padding="14,6" />
                         <Button
                             x:Name="ConfirmDependencyPromptButton"
-                            Style="{StaticResource AccentButtonStyle}"
+                            Style="{StaticResource VazAccentButtonStyle}"
                             Content="Cài kèm dependencies"
                             Click="ConfirmDependencyPrompt_Click"
                             Padding="14,6" />

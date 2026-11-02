@@ -85,6 +85,24 @@ public static class UiAnimationHelper
     {
         if (card == null || card.XamlRoot == null) return;
 
+        if (card is Border border)
+        {
+            if (isHovered)
+            {
+                if (Application.Current?.Resources.TryGetValue("VazAccentBrush", out var accentObj) == true && accentObj is Brush accentBrush)
+                {
+                    border.BorderBrush = accentBrush;
+                }
+            }
+            else
+            {
+                if (Application.Current?.Resources.TryGetValue("CardStrokeColorDefaultBrush", out var defaultObj) == true && defaultObj is Brush defaultBrush)
+                {
+                    border.BorderBrush = defaultBrush;
+                }
+            }
+        }
+
         card.RenderTransformOrigin = new Point(0.5, 0.5);
         var scale = EnsureScaleTransform(card);
 

@@ -862,10 +862,10 @@
                                 <!-- Toolbar -->
                                 <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,*,Auto">
                                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
-                                        <Button x:Name="BrowseModrinthResourcePacksButton" Click="BrowseModrinthResourcePacks_Click" Style="{StaticResource AccentButtonStyle}">
+                                        <Button x:Name="BrowseModrinthResourcePacksButton" Click="BrowseModrinthResourcePacks_Click" Style="{StaticResource VazAccentButtonStyle}">
                                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                                <FontIcon Glyph="&#xE896;" FontSize="13" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
-                                                <TextBlock Text="Browse Modrinth" />
+                                                <FontIcon Glyph="&#xE896;" FontSize="13" Foreground="White" />
+                                                <TextBlock Text="Browse Modrinth" Foreground="White" />
                                             </StackPanel>
                                         </Button>
                                         <Button x:Name="ImportResourcePackButton" Click="ImportResourcePack_Click">
@@ -907,21 +907,15 @@
                                 </Grid>
 
                                 <!-- Library View: Single responsive grid of installed Resource Packs -->
-                                <Border Grid.Row="1"
-                                        Background="{ThemeResource LayerFillColorDefaultBrush}"
-                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                        BorderThickness="1"
-                                        CornerRadius="8"
-                                        Padding="16">
-                                    <Grid RowDefinitions="Auto,*">
-                                        <Grid Grid.Row="0" Margin="0,0,0,12" ColumnDefinitions="*,Auto">
-                                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                                <TextBlock Text="Resource Packs đã cài" FontWeight="SemiBold" FontSize="15" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
-                                                <Border Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="10" Padding="8,2" VerticalAlignment="Center">
-                                                    <TextBlock Text="{x:Bind ViewModel.ResourcePacksCountText, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                                </Border>
-                                            </StackPanel>
-                                        </Grid>
+                                <Grid Grid.Row="1" RowDefinitions="Auto,*">
+                                    <Grid Grid.Row="0" Margin="0,4,0,12" ColumnDefinitions="*,Auto">
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                            <TextBlock Text="Resource Packs đã cài" FontWeight="SemiBold" FontSize="15" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                                            <Border Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="10" Padding="8,2" VerticalAlignment="Center">
+                                                <TextBlock Text="{x:Bind ViewModel.ResourcePacksCountText, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                            </Border>
+                                        </StackPanel>
+                                    </Grid>
 
                                         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                                             <ItemsRepeater x:Name="ResourcePacksRepeater"
@@ -1030,7 +1024,6 @@
                                                        HorizontalAlignment="Center" />
                                         </StackPanel>
                                     </Grid>
-                                </Border>
                             </Grid>
 
                         <!-- Resource Pack Inspector Drawer Overlay -->
@@ -1145,10 +1138,10 @@
                             <!-- Toolbar -->
                             <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto">
                                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
-                                    <Button x:Name="BrowseModrinthShadersButton" Click="BrowseModrinthShaders_Click" Style="{StaticResource AccentButtonStyle}">
+                                    <Button x:Name="BrowseModrinthShadersButton" Click="BrowseModrinthShaders_Click" Style="{StaticResource VazAccentButtonStyle}">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <FontIcon Glyph="&#xE896;" FontSize="13" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
-                                            <TextBlock Text="Browse Modrinth" />
+                                            <FontIcon Glyph="&#xE896;" FontSize="13" Foreground="White" />
+                                            <TextBlock Text="Browse Modrinth" Foreground="White" />
                                         </StackPanel>
                                     </Button>
                                     <Button x:Name="ImportShaderButton" Click="ImportShader_Click">
@@ -1452,7 +1445,7 @@
                             <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8">
                                 <Button
                                     Command="{x:Bind ViewModel.SaveGameOptionsCommand}"
-                                    Style="{StaticResource AccentButtonStyle}">
+                                    Style="{StaticResource VazAccentButtonStyle}">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <SymbolIcon Symbol="Save" />
                                         <TextBlock Text="Lưu cấu hình" />
