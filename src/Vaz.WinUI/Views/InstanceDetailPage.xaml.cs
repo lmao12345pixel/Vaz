@@ -17,6 +17,8 @@ public sealed partial class InstanceDetailPage : Page
     public InstanceDetailViewModel ViewModel { get; }
     private UIElement? _lastPackInspectorTrigger;
     private UIElement? _lastShaderInspectorTrigger;
+    private bool _isImportingPack;
+    private bool _isImportingShader;
 
     public InstanceDetailPage()
     {
@@ -824,7 +826,9 @@ public sealed partial class InstanceDetailPage : Page
         var file = await picker.PickSingleFileAsync();
         if (file != null)
         {
-            await ViewModel.ImportResourcePackFilesAsync(new[] { file.Path });
+            _isImportingPack = true;
+            try { await ViewModel.ImportResourcePackFilesAsync(new[] { file.Path }); }
+            finally { _isImportingPack = false; }
         }
     }
 
@@ -1045,7 +1049,9 @@ public sealed partial class InstanceDetailPage : Page
 
             if (paths.Count > 0)
             {
-                await ViewModel.ImportResourcePackFilesAsync(paths);
+                _isImportingPack = true;
+                try { await ViewModel.ImportResourcePackFilesAsync(paths); }
+                finally { _isImportingPack = false; }
             }
         }
     }
@@ -1058,7 +1064,9 @@ public sealed partial class InstanceDetailPage : Page
         var file = await picker.PickSingleFileAsync();
         if (file != null)
         {
-            await ViewModel.ImportShaderFilesAsync(new[] { file.Path });
+            _isImportingShader = true;
+            try { await ViewModel.ImportShaderFilesAsync(new[] { file.Path }); }
+            finally { _isImportingShader = false; }
         }
     }
 
@@ -1161,7 +1169,14 @@ public sealed partial class InstanceDetailPage : Page
         if (args.Element is FrameworkElement elem)
         {
             UiAnimationHelper.EnableImplicitAnimations(elem);
-            if (args.Index < 12)
+            bool isNewImport = (sender == ResourcePacksRepeater && _isImportingPack) ||
+                               (sender == ShadersRepeater && _isImportingShader);
+            if (isNewImport)
+            {
+                // B5: Install Success — slide từ trên xuống (TranslateY -30→0) + Fade-in
+                UiAnimationHelper.AnimateCardInsert(elem, 350);
+            }
+            else if (args.Index < 12)
             {
                 UiAnimationHelper.RunStaggeredEntrance(elem, args.Index * 30);
             }
@@ -1293,7 +1308,9 @@ public sealed partial class InstanceDetailPage : Page
 
             if (paths.Count > 0)
             {
-                await ViewModel.ImportShaderFilesAsync(paths);
+                _isImportingShader = true;
+                try { await ViewModel.ImportShaderFilesAsync(paths); }
+                finally { _isImportingShader = false; }
             }
         }
     }
