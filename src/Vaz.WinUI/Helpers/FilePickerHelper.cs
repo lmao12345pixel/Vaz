@@ -26,9 +26,28 @@ public static class FilePickerHelper
         {
             foreach (var ext in extensions)
             {
-                picker.FileTypeFilter.Add(ext.StartsWith('.') ? ext : "." + ext);
+                string filter = (ext == "*" || ext.StartsWith('.')) ? ext : "." + ext;
+                picker.FileTypeFilter.Add(filter);
             }
         }
+
+        return picker;
+    }
+
+    /// <summary>
+    /// Tạo FileSavePicker đã gắn vào window hiện tại.
+    /// </summary>
+    public static FileSavePicker CreateSavePicker(Window window, string defaultFileName, string ext, string description)
+    {
+        var picker = new FileSavePicker();
+        var hwnd = WindowNative.GetWindowHandle(window);
+        InitializeWithWindow.Initialize(picker, hwnd);
+
+        picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
+        picker.SuggestedFileName = defaultFileName;
+
+        var cleanExt = ext.StartsWith('.') ? ext : "." + ext;
+        picker.FileTypeChoices.Add(description, new List<string> { cleanExt });
 
         return picker;
     }

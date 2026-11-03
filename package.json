@@ -1,0 +1,22 @@
+{
+  "name": "vaz-check-runner",
+  "private": true,
+  "description": "Script runner for V.A.Z checks. Static checks need no Node install; runtime Playwright checks need npm install.",
+  "scripts": {
+    "check": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check.ps1",
+    "check:static": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check.ps1 -Scope static",
+    "check:web": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-web.ps1",
+    "check:runtime": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-runtime.ps1",
+    "check:all": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check.ps1 -Scope all",
+    "web:dev": "node tests/web-e2e/serve.mjs",
+    "web:test": "npx playwright test",
+    "web:test:headed": "npx playwright test --headed",
+    "web:report": "npx playwright show-report",
+    "build": "dotnet build Vaz.sln",
+    "test": "dotnet test Vaz.sln",
+    "validate:agents": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validate-agents.ps1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1"
+  }
+}

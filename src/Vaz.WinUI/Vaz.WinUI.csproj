@@ -42,4 +42,10 @@
   <ItemGroup>
     <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- Assets for Discord Preview, Mod icons, etc.
+         Unpackaged WinUI load qua ms-appx:///Assets/... → file phải nằm cạnh exe. -->
+    <Content Include="Assets\**\*.png;Assets\**\*.webp;Assets\**\*.jpg" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

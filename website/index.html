@@ -1,0 +1,686 @@
+<!doctype html>
+<html lang="vi" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+  <!-- SEO & Primary Meta Tags -->
+  <title>V.A.Z Launcher — Minecraft Client & Launcher Thế Hệ Mới cho Windows</title>
+  <meta name="title" content="V.A.Z Launcher — Minecraft Client & Launcher Thế Hệ Mới cho Windows" />
+  <meta name="description" content="Trải nghiệm Minecraft Launcher thuần bản địa Windows với C# .NET 8 và WinUI 3. Tốc độ cực nhanh, phân tích crash thông minh, Mod Content Hub Modrinth & CurseForge, phòng thay đồ 3D chuẩn game." />
+  <meta name="keywords" content="Minecraft Launcher, VAZ Launcher, Minecraft Client, WinUI 3, .NET 8, Modrinth, CurseForge, Minecraft 3D Skin, Fabric, NeoForge" />
+  <meta name="author" content="V.A.Z Team" />
+
+  <!-- OpenGraph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://vazlauncher.github.io/" />
+  <meta property="og:title" content="V.A.Z Launcher — Minecraft Client & Launcher Thế Hệ Mới cho Windows" />
+  <meta property="og:description" content="Thuần bản địa C# .NET 8 & WinUI 3. Siêu nhẹ, khởi động tức thì, phân tích crash tự động, Mod Hub Modrinth & CurseForge song song." />
+  <meta property="og:image" content="assets/blocks/grass_block.png" />
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:title" content="V.A.Z Launcher — Minecraft Client & Launcher Thế Hệ Mới cho Windows" />
+  <meta property="twitter:description" content="Thuần bản địa C# .NET 8 & WinUI 3. Không Electron, siêu mượt, phân tích crash và hỗ trợ mod toàn diện." />
+  <meta property="twitter:image" content="assets/blocks/grass_block.png" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="assets/blocks/grass_block.png" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap" rel="stylesheet" />
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- ==================== Header & Navbar ==================== -->
+  <header class="navbar" id="top">
+    <div class="container nav-container">
+      <a href="#top" class="brand" aria-label="Trang chủ V.A.Z Launcher">
+        <img src="assets/blocks/grass_block.png" alt="V.A.Z Logo" class="brand-icon" />
+        <span class="brand-title">V.A.Z</span>
+        <span class="brand-edition">WinUI 3</span>
+      </a>
+
+      <nav class="nav-menu-desktop" aria-label="Điều hướng chính">
+        <ul class="nav-links">
+          <li><a href="#features" class="nav-link">Tính năng</a></li>
+          <li><a href="#showcase" class="nav-link">Trải nghiệm</a></li>
+          <li><a href="#compare" class="nav-link">So sánh</a></li>
+          <li><a href="#download" class="nav-link">Tải về</a></li>
+          <li><a href="#faq" class="nav-link">Hỏi đáp</a></li>
+        </ul>
+      </nav>
+
+      <div class="nav-actions">
+        <a href="https://github.com/vaz-launcher/vaz" target="_blank" rel="noopener noreferrer" class="btn-github" title="Mã nguồn GitHub">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
+          </svg>
+          <span>Star</span>
+        </a>
+        <a href="#download" class="btn-primary">Tải ngay</a>
+        <button class="nav-toggle" id="navToggle" aria-label="Mở menu" aria-expanded="false" aria-controls="mobileMenu">
+          ☰
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Drawer -->
+    <div class="mobile-menu" id="mobileMenu">
+      <ul class="mobile-nav-links">
+        <li><a href="#features" class="nav-link mobile-link">Tính năng</a></li>
+        <li><a href="#showcase" class="nav-link mobile-link">Trải nghiệm</a></li>
+        <li><a href="#compare" class="nav-link mobile-link">So sánh</a></li>
+        <li><a href="#download" class="nav-link mobile-link">Tải về</a></li>
+        <li><a href="#faq" class="nav-link mobile-link">Hỏi đáp</a></li>
+      </ul>
+      <a href="#download" class="btn-primary mobile-link" style="width: 100%;">Tải V.A.Z Launcher</a>
+    </div>
+  </header>
+
+  <main>
+    <!-- ==================== Section 1: Hero ==================== -->
+    <section class="hero-section" id="hero">
+      <div class="container hero-grid">
+        <!-- Hero Text -->
+        <div class="hero-content">
+          <div class="hero-badge">
+            <span class="pulse-dot"></span>
+            <span>Native WinUI 3 · C# .NET 8 · Open Source</span>
+          </div>
+          <h1 class="hero-title">
+            Minecraft Launcher <br />
+            <span class="text-gradient">Thuần Bản Địa Siêu Tốc</span>
+          </h1>
+          <p class="hero-desc">
+            V.A.Z được kiến tạo từ C# .NET 8 hiện đại và Windows App SDK. Tạm biệt Electron nặng nề, khởi động game dưới 1.2 giây, tích hợp kho Modrinth & CurseForge trực tiếp cùng chẩn đoán lỗi crash thông minh.
+          </p>
+
+          <div class="hero-cta-group">
+            <a href="#download" class="btn-primary">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              <span>Tải về cho Windows x64</span>
+            </a>
+            <a href="https://github.com/vaz-launcher/vaz" target="_blank" rel="noopener noreferrer" class="btn-secondary">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+              <span>Khám phá GitHub</span>
+            </a>
+          </div>
+
+          <div class="hero-stats">
+            <div class="stat-item">
+              <span class="stat-num">~35 MB</span>
+              <span class="stat-label">RAM Tiêu Thụ</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-num">&lt; 1.2s</span>
+              <span class="stat-label">Thời Gian Khởi Động</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-num">100%</span>
+              <span class="stat-label">Mã Nguồn Mở</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hero 3D Wardrobe Interactive Card -->
+        <div class="hero-viewer-card">
+          <div class="viewer-header">
+            <div class="viewer-title-group">
+              <span class="viewer-title">3D Wardrobe Studio</span>
+              <span class="viewer-chip">60 FPS</span>
+            </div>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">WebGL Engine</span>
+          </div>
+
+          <div class="viewer-canvas-wrap">
+            <canvas id="heroSkinCanvas" aria-label="Mô hình nhân vật Minecraft 3D"></canvas>
+            <div class="viewer-fallback" id="viewerFallback">
+              <img src="assets/skins/steve.png" alt="Steve fallback" style="width: 64px; height: 64px; image-rendering: pixelated;" />
+              <p>Trình duyệt chưa bật tăng tốc WebGL hoặc WebGL bị vô hiệu hóa.</p>
+            </div>
+          </div>
+
+          <div class="viewer-controls-bar">
+            <!-- Preset Selector -->
+            <div class="skin-selector-group" role="group" aria-label="Chọn Skin">
+              <button class="skin-btn is-active" data-skin="steve">Steve</button>
+              <button class="skin-btn" data-skin="alex">Alex</button>
+              <button class="skin-btn" data-skin="ari">Ari</button>
+              <button class="skin-btn" data-skin="kai">Kai</button>
+            </div>
+
+            <!-- Animation & Rotate Controls -->
+            <div class="anim-selector-group">
+              <button class="tool-btn is-active" id="btnAnimToggle" title="Đổi chuyển động">
+                <span>Đi bộ</span>
+              </button>
+              <button class="tool-btn is-active" id="btnRotateToggle" title="Bật/Tắt tự xoay">
+                <span>Xoay 360°</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== Section 2: 3 Core Pillars ==================== -->
+    <section class="section" id="features">
+      <div class="container">
+        <div class="section-header" data-reveal>
+          <span class="section-tag">Công Nghệ Đột Phá</span>
+          <h2 class="section-title">3 Trụ Cột Tối Ưu Trải Nghiệm Minecraft</h2>
+          <p class="section-desc">Không chỉ là bộ khởi chạy, V.A.Z là công cụ hoàn chỉnh được tối ưu chuyên biệt cho game thủ và modder.</p>
+        </div>
+
+        <div class="pillars-grid">
+          <!-- Pillar 1 -->
+          <div class="pillar-card" data-reveal>
+            <div class="pillar-icon-box">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                <path d="m9 12 2 2 4-4" />
+              </svg>
+            </div>
+            <h3 class="pillar-title">Diagnostics & Crash Analyzer</h3>
+            <p class="pillar-desc">
+              Tự động phân tích stacktrace và crash report bằng thuật toán chẩn đoán thông minh. Chỉ trong 0.2 giây, launcher chỉ rõ mod gây lỗi, thiếu dependencies hay không tương thích phiên bản Java.
+            </p>
+            <div class="pillar-mock">
+              <div class="mock-badge error">⚠ CRASH DETECTED · Exit Code -1</div>
+              <div class="mock-line">Incompatible mod: Sodium 0.5.8 conflicts with EntityCulling 1.6.2</div>
+              <div class="mock-solution">✔ Khuyến nghị: Cập nhật EntityCulling lên phiên bản 1.7.0+</div>
+            </div>
+          </div>
+
+          <!-- Pillar 2 -->
+          <div class="pillar-card" data-reveal>
+            <div class="pillar-icon-box">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                <line x1="8" y1="21" x2="16" y2="21" />
+                <line x1="12" y1="17" x2="12" y2="21" />
+              </svg>
+            </div>
+            <h3 class="pillar-title">Universal Mod Content Hub</h3>
+            <p class="pillar-desc">
+              Tích hợp đồng thời cả Modrinth và CurseForge API. Dễ dàng tìm kiếm hàng nghìn mod, gói tài nguyên, shaders và datapacks với khả năng tự động giải quyết dependencies chỉ trong 1 cú nhấp chuột.
+            </p>
+            <div class="pillar-mock">
+              <div class="mock-badge">✦ MODRINTH + CURSEFORGE SYNC</div>
+              <div class="mock-line">Đã phân giải: Sodium, Iris Shaders, Fabric API, Lithium</div>
+              <div class="mock-solution">✔ Tự động tải 4 tệp phụ thuộc tương thích Fabric 1.21.1</div>
+            </div>
+          </div>
+
+          <!-- Pillar 3 -->
+          <div class="pillar-card" data-reveal>
+            <div class="pillar-icon-box">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="7" r="4" />
+                <path d="M5.5 21v-2a6.5 6.5 0 0 1 13 0v2" />
+              </svg>
+            </div>
+            <h3 class="pillar-title">3D Wardrobe Studio</h3>
+            <p class="pillar-desc">
+              Phòng thay đồ 3D chuẩn xác 1:1 với Minecraft. Hỗ trợ đầy đủ model Classic (4px) và Slim (3px), áo choàng (Capes) chính chủ Mojang, tư thế động linh hoạt (Đi bộ, Chạy, Lượn Elytra) mượt mà 60 FPS.
+            </p>
+            <div class="pillar-mock">
+              <div class="mock-badge">✦ 3D SKIN & CAPE RENDERER</div>
+              <div class="mock-line">Model: Classic · Cape: 15th Anniversary · Pose: Walking</div>
+              <div class="mock-solution">✔ Đồng bộ ngay lập tức vào hồ sơ tài khoản game</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== Section 3: Interactive Showcase Tabs ==================== -->
+    <section class="section" id="showcase">
+      <div class="container">
+        <div class="section-header" data-reveal>
+          <span class="section-tag">Trực Quan Hóa</span>
+          <h2 class="section-title">Khám Phá Giao Diện & Tính Năng</h2>
+          <p class="section-desc">Trải nghiệm tương tác sống động các công cụ độc quyền có trên V.A.Z Launcher.</p>
+        </div>
+
+        <!-- Tab Switcher -->
+        <div class="showcase-nav" role="tablist" aria-label="Showcase Tabs">
+          <button class="showcase-tab-btn is-active" role="tab" aria-selected="true" data-tab="dock">
+            <span>Emerald Play Dock</span>
+          </button>
+          <button class="showcase-tab-btn" role="tab" aria-selected="false" data-tab="options">
+            <span>Visual options.txt Editor</span>
+          </button>
+          <button class="showcase-tab-btn" role="tab" aria-selected="false" data-tab="importer">
+            <span>Importer Wizard</span>
+          </button>
+        </div>
+
+        <!-- Tab 1: Emerald Play Dock -->
+        <div class="tab-pane is-active" id="tabContent-dock" role="tabpanel">
+          <div class="showcase-grid" data-reveal>
+            <div class="showcase-info">
+              <h3>Emerald Play Dock — Bảng Điều Khiển Nhanh</h3>
+              <p>
+                Không cần mở nhiều cửa sổ rườm rà. Bảng điều khiển tích hợp cho phép bạn chọn instance, theo dõi dung lượng RAM thực tế, mở thư mục game hoặc khởi chạy với một cú nhấp chuột.
+              </p>
+              <ul class="showcase-features-list">
+                <li><span class="check-icon">✔</span> Quản lý độc lập thư mục game cho từng instance (không bị trộn lẫn mods).</li>
+                <li><span class="check-icon">✔</span> Tự động phát hiện và cấu hình đường dẫn Java runtime tối ưu nhất.</li>
+                <li><span class="check-icon">✔</span> Kill switch khẩn cấp tắt nhanh game khi bị treo hoặc out of memory.</li>
+              </ul>
+            </div>
+
+            <div class="dock-ui-box">
+              <div class="dock-header-mock">
+                <div class="dock-instance-badge">
+                  <img src="assets/blocks/grass_block.png" width="24" height="24" alt="Instance" style="image-rendering: pixelated;" />
+                  <div>
+                    <div class="dock-instance-title">Origins SMP · Season 4</div>
+                    <div class="dock-instance-meta">Fabric 1.21.1 · Java 21 LTS</div>
+                  </div>
+                </div>
+                <span class="format-badge">Sẵn sàng</span>
+              </div>
+
+              <div class="dock-ram-meter">
+                <div class="meter-labels">
+                  <span>RAM Phân Bổ: 4096 MB</span>
+                  <span>Tổng Hệ Thống: 16384 MB</span>
+                </div>
+                <div class="meter-track">
+                  <div class="meter-fill"></div>
+                </div>
+              </div>
+
+              <div class="dock-action-bar">
+                <button class="dock-play-btn" id="interactivePlayBtn">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="5 3 19 12 5 21 5 3" />
+                  </svg>
+                  <span id="playBtnText">CHƠI NGAY (PLAY)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Visual options.txt Editor -->
+        <div class="tab-pane" id="tabContent-options" role="tabpanel">
+          <div class="showcase-grid" data-reveal>
+            <div class="showcase-info">
+              <h3>Visual options.txt Editor — Chỉnh Cấu Hình Ngoài Game</h3>
+              <p>
+                Không còn cảnh phải khởi động game chỉ để hạ cấu hình khi bị giật lag. V.A.Z cho phép chỉnh sửa trực quan file <code>options.txt</code> với các thanh trượt an toàn, bảo vệ chống crash do đặt nhầm giá trị.
+              </p>
+              <ul class="showcase-features-list">
+                <li><span class="check-icon">✔</span> Tùy biến FOV, Render Distance, GUI Scale ngay trên Launcher.</li>
+                <li><span class="check-icon">✔</span> Chế độ Gamma sáng tối (Fullbright) an toàn mà không cần cài thêm mod.</li>
+                <li><span class="check-icon">✔</span> Tự động sao lưu bản cấu hình trước khi lưu thay đổi mới.</li>
+              </ul>
+            </div>
+
+            <div class="options-editor-box">
+              <div class="editor-field">
+                <div class="field-header">
+                  <span>Góc nhìn (FOV)</span>
+                  <span class="field-value" id="fovVal">90°</span>
+                </div>
+                <input type="range" min="30" max="110" value="90" class="field-slider" id="fovSlider" />
+              </div>
+
+              <div class="editor-field">
+                <div class="field-header">
+                  <span>Khoảng cách hiển thị (Render Distance)</span>
+                  <span class="field-value" id="renderVal">12 Chunks</span>
+                </div>
+                <input type="range" min="2" max="32" value="12" class="field-slider" id="renderSlider" />
+              </div>
+
+              <div class="editor-field">
+                <div class="field-header">
+                  <span>Độ sáng (Gamma)</span>
+                  <span class="field-value" id="gammaVal">100% (Bright)</span>
+                </div>
+                <input type="range" min="0" max="100" value="100" class="field-slider" id="gammaSlider" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: Importer Wizard -->
+        <div class="tab-pane" id="tabContent-importer" role="tabpanel">
+          <div class="showcase-grid" data-reveal>
+            <div class="showcase-info">
+              <h3>Importer Wizard — Chuyển Đổi Dữ Liệu Dễ Dàng</h3>
+              <p>
+                Bạn đang dùng Prism Launcher, CurseForge hay Modrinth App? Trình hướng dẫn thông minh sẽ tự động nhập toàn bộ thư mục thế giới, mods và cấu hình chỉ với một thao tác kéo thả.
+              </p>
+              <ul class="showcase-features-list">
+                <li><span class="check-icon">✔</span> Hỗ trợ định dạng <code>.mrpack</code>, <code>.zip</code>, và modpack CurseForge.</li>
+                <li><span class="check-icon">✔</span> Tự động quét và phát hiện các launcher đã cài trên máy tính.</li>
+                <li><span class="check-icon">✔</span> Giữ nguyên 100% keybinds, thành tựu (advancements) và file save.</li>
+              </ul>
+            </div>
+
+            <div class="importer-wizard-box">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              <div style="font-weight: 700; font-size: 1.1rem; color: var(--text-main);">Kéo thả file modpack vào đây</div>
+              <p style="font-size: 0.85rem; color: var(--text-muted);">Hoặc bấm để duyệt tệp từ máy tính</p>
+              <div class="wizard-formats">
+                <span class="format-badge">.mrpack</span>
+                <span class="format-badge">.zip (CurseForge)</span>
+                <span class="format-badge">MultiMC / Prism Zip</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== Section 4: Comparison Matrix ==================== -->
+    <section class="section" id="compare">
+      <div class="container">
+        <div class="section-header" data-reveal>
+          <span class="section-tag">Đối Chiếu Khách Quan</span>
+          <h2 class="section-title">Vượt Trội Trên Từng Chỉ Số</h2>
+          <p class="section-desc">So sánh trực tiếp V.A.Z Launcher với các giải pháp phổ biến hiện nay.</p>
+        </div>
+
+        <div class="comparison-wrap" data-reveal>
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th style="width: 28%;">Tiêu chí so sánh</th>
+                <th class="vaz-col" style="width: 24%;">
+                  V.A.Z Launcher
+                  <span class="recommended-pill">Khuyên Dùng</span>
+                </th>
+                <th style="width: 16%;">Prism Launcher</th>
+                <th style="width: 16%;">Vanilla Launcher</th>
+                <th style="width: 16%;">Lunar / Badlion</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Nền tảng công nghệ</strong></td>
+                <td class="vaz-col"><strong>C# .NET 8 + WinUI 3</strong></td>
+                <td>C++ / Qt6</td>
+                <td>CEF / Chromium</td>
+                <td>Electron / Java Swing</td>
+              </tr>
+              <tr>
+                <td><strong>Mức chiếm RAM chạy nền</strong></td>
+                <td class="vaz-col"><strong style="color: #4ade80;">~35 MB</strong></td>
+                <td>~60 MB</td>
+                <td>~350 MB+</td>
+                <td>~500 MB+</td>
+              </tr>
+              <tr>
+                <td><strong>Giao diện chuẩn Fluent 2</strong></td>
+                <td class="vaz-col"><span class="status-badge yes">✔ Hoàn toàn (Mica/Acrylic)</span></td>
+                <td><span class="status-badge partial">~ Qt cơ bản</span></td>
+                <td><span class="status-badge no">✖ Webview</span></td>
+                <td><span class="status-badge no">✖ Custom UI nặng</span></td>
+              </tr>
+              <tr>
+                <td><strong>Hub Modrinth + CurseForge song song</strong></td>
+                <td class="vaz-col"><span class="status-badge yes">✔ Có (1-click cài đặt)</span></td>
+                <td><span class="status-badge yes">✔ Có</span></td>
+                <td><span class="status-badge no">✖ Không hỗ trợ</span></td>
+                <td><span class="status-badge partial">~ Chỉ mod nội bộ</span></td>
+              </tr>
+              <tr>
+                <td><strong>Chẩn đoán Crash Log thông minh</strong></td>
+                <td class="vaz-col"><span class="status-badge yes">✔ Có (Gợi ý cách sửa)</span></td>
+                <td><span class="status-badge partial">~ Xem log thô</span></td>
+                <td><span class="status-badge no">✖ Không hỗ trợ</span></td>
+                <td><span class="status-badge no">✖ Không hỗ trợ</span></td>
+              </tr>
+              <tr>
+                <td><strong>Chỉnh sửa options.txt trực quan</strong></td>
+                <td class="vaz-col"><span class="status-badge yes">✔ Có (Visual Editor)</span></td>
+                <td><span class="status-badge no">✖ Không hỗ trợ</span></td>
+                <td><span class="status-badge no">✖ Không hỗ trợ</span></td>
+                <td><span class="status-badge partial">~ Trong game</span></td>
+              </tr>
+              <tr>
+                <td><strong>Phòng thay đồ 3D Skin & Cape</strong></td>
+                <td class="vaz-col"><span class="status-badge yes">✔ Có (Full 3D thời gian thực)</span></td>
+                <td><span class="status-badge no">✖ Không</span></td>
+                <td><span class="status-badge partial">~ 2D tĩnh</span></td>
+                <td><span class="status-badge yes">✔ Có (Riêng client)</span></td>
+              </tr>
+              <tr>
+                <td><strong>Mã nguồn mở & Miễn phí</strong></td>
+                <td class="vaz-col"><span class="status-badge yes">✔ 100% Open Source</span></td>
+                <td><span class="status-badge yes">✔ 100% Open Source</span></td>
+                <td><span class="status-badge no">✖ Đóng mã nguồn</span></td>
+                <td><span class="status-badge no">✖ Đóng mã nguồn</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== Section 5: Download & System Requirements ==================== -->
+    <section class="section" id="download">
+      <div class="container">
+        <div class="section-header" data-reveal>
+          <span class="section-tag">Trải Nghiệm Ngay</span>
+          <h2 class="section-title">Tải V.A.Z Launcher Cho Windows</h2>
+          <p class="section-desc">Chọn gói cài đặt phù hợp với nhu cầu của bạn. Hoàn toàn miễn phí và không có quảng cáo.</p>
+        </div>
+
+        <div class="download-grid">
+          <!-- Option 1: MSIX (Recommended) -->
+          <div class="download-card highlight" data-reveal>
+            <span class="card-ribbon">Khuyên Dùng</span>
+            <div class="download-icon-box">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                <line x1="12" y1="22.08" x2="12" y2="12" />
+              </svg>
+            </div>
+            <h3>Gói Windows App (.msix)</h3>
+            <p class="download-sub">Cài đặt an toàn trong sandbox Windows, tự động cập nhật khi có phiên bản mới.</p>
+            <div class="download-meta">Windows 10/11 x64 · 65 MB</div>
+            <a href="https://github.com/vaz-launcher/vaz/releases" class="btn-primary download-btn">Tải Gói .MSIX</a>
+          </div>
+
+          <!-- Option 2: Setup EXE -->
+          <div class="download-card" data-reveal>
+            <div class="download-icon-box">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="4 17 10 11 4 5" />
+                <line x1="12" y1="19" x2="20" y2="19" />
+              </svg>
+            </div>
+            <h3>Bộ Cài Đặt (.exe)</h3>
+            <p class="download-sub">Trình cài đặt truyền thống, cho phép chọn thư mục đích và tạo shortcut desktop.</p>
+            <div class="download-meta">Windows 10/11 x64 · 58 MB</div>
+            <a href="https://github.com/vaz-launcher/vaz/releases" class="btn-secondary download-btn">Tải Installer .EXE</a>
+          </div>
+
+          <!-- Option 3: Portable ZIP -->
+          <div class="download-card" data-reveal>
+            <div class="download-icon-box">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+              </svg>
+            </div>
+            <h3>Bản Portable (.zip)</h3>
+            <p class="download-sub">Không cần quyền Admin. Giải nén và sử dụng ngay trực tiếp trên USB hoặc ổ di động.</p>
+            <div class="download-meta">Windows 10/11 x64 · 72 MB</div>
+            <a href="https://github.com/vaz-launcher/vaz/releases" class="btn-secondary download-btn">Tải Tệp .ZIP</a>
+          </div>
+        </div>
+
+        <!-- System Requirements Hub -->
+        <div class="sys-req-box">
+          <div class="viewer-title-group" style="margin-bottom: var(--space-sm);">
+            <h3 style="font-size: 1.25rem; font-weight: 700;">Yêu Cầu Hệ Thống</h3>
+            <span class="viewer-chip">Windows x64 Architecture</span>
+          </div>
+          <div class="sys-req-grid">
+            <div class="req-col">
+              <h4>Cấu hình tối thiểu</h4>
+              <ul class="req-list">
+                <li><span class="req-key">Hệ điều hành:</span><span>Windows 10 x64 (Build 1809 trở lên)</span></li>
+                <li><span class="req-key">Vi xử lý:</span><span>Intel Core 2 Duo / AMD Athlon 64 tương đương</span></li>
+                <li><span class="req-key">RAM:</span><span>4 GB (Dành tối thiểu 2 GB cho Minecraft)</span></li>
+                <li><span class="req-key">Đồ họa:</span><span>Hỗ trợ OpenGL 4.4 / DirectX 11</span></li>
+                <li><span class="req-key">Lưu trữ:</span><span>150 MB trống cho launcher</span></li>
+              </ul>
+            </div>
+
+            <div class="req-col rec">
+              <h4>Cấu hình khuyến nghị</h4>
+              <ul class="req-list">
+                <li><span class="req-key">Hệ điều hành:</span><span>Windows 11 x64 (Phiên bản 22H2 trở lên)</span></li>
+                <li><span class="req-key">Vi xử lý:</span><span>Intel Core i5 Gen 10 / AMD Ryzen 5 3600 trở lên</span></li>
+                <li><span class="req-key">RAM:</span><span>16 GB (Dành 6-8 GB cho Shaders / Modpacks nặng)</span></li>
+                <li><span class="req-key">Đồ họa:</span><span>NVIDIA GTX 1060 / AMD Radeon RX 580 trở lên</span></li>
+                <li><span class="req-key">Lưu trữ:</span><span>Ổ cứng thể rắn SSD NVMe</span></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== Section 6: FAQ Accordion ==================== -->
+    <section class="section" id="faq">
+      <div class="container">
+        <div class="section-header" data-reveal>
+          <span class="section-tag">Giải Đáp Thắc Mắc</span>
+          <h2 class="section-title">Câu Hỏi Thường Gặp (FAQ)</h2>
+          <p class="section-desc">Những điều bạn cần biết trước khi bắt đầu hành trình cùng V.A.Z Launcher.</p>
+        </div>
+
+        <div class="faq-accordion" id="faqAccordion">
+          <!-- Item 1 -->
+          <div class="faq-item" data-reveal>
+            <button class="faq-question" aria-expanded="false">
+              <span>V.A.Z Launcher có an toàn và bảo mật tài khoản Microsoft không?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>Hoàn toàn an toàn. V.A.Z Launcher sử dụng luồng xác thực chuẩn OAuth 2.0 trực tiếp từ máy chủ Microsoft và Xbox Live. Mật khẩu của bạn không bao giờ đi qua bất kỳ máy chủ trung gian nào. Mã nguồn mở 100% trên GitHub cho phép cộng đồng kiểm tra minh bạch.</p>
+            </div>
+          </div>
+
+          <!-- Item 2 -->
+          <div class="faq-item" data-reveal>
+            <button class="faq-question" aria-expanded="false">
+              <span>Tại sao V.A.Z lại nhẹ và khởi động nhanh hơn launcher khác?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>Khác với các launcher xây dựng trên Electron (vốn phải đóng gói cả trình duyệt Chromium và Node.js nặng hàng trăm MB), V.A.Z được viết thuần bằng ngôn ngữ C# trên nền tảng .NET 8 và giao diện WinUI 3 bản địa của Windows. Điều này giúp launcher đạt hiệu năng tối đa và tiêu thụ RAM chỉ khoảng ~35 MB khi chạy nền.</p>
+            </div>
+          </div>
+
+          <!-- Item 3 -->
+          <div class="faq-item" data-reveal>
+            <button class="faq-question" aria-expanded="false">
+              <span>Tôi có thể chuyển thế giới và mod từ Prism hay CurseForge sang không?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>Có. Bạn chỉ cần dùng tính năng Importer Wizard có sẵn, kéo thả tệp .mrpack, .zip hoặc chỉ định thư mục instance cũ. V.A.Z sẽ giữ nguyên toàn bộ mods, saves, options và keybinds mà không làm mất dữ liệu.</p>
+            </div>
+          </div>
+
+          <!-- Item 4 -->
+          <div class="faq-item" data-reveal>
+            <button class="faq-question" aria-expanded="false">
+              <span>V.A.Z Launcher có cần cài đặt Java trước không?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>Không nhất thiết. Launcher tích hợp bộ phân giải Java tự động (Java Resolver), có thể tự động tải và cấu hình phiên bản Java phù hợp (Java 8, 17, hoặc 21 LTS) tương ứng với từng phiên bản Minecraft mà bạn khởi chạy.</p>
+            </div>
+          </div>
+
+          <!-- Item 5 -->
+          <div class="faq-item" data-reveal>
+            <button class="faq-question" aria-expanded="false">
+              <span>Launcher có hỗ trợ các Mod Loader phổ biến không?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>V.A.Z hỗ trợ đầy đủ mọi Mod Loader hiện đại: Fabric, NeoForge, Minecraft Forge, Quilt và OptiFine, với khả năng tự động cập nhật phiên bản loader mới nhất chỉ bằng 1 cú nhấp chuột.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ==================== Footer ==================== -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="brand">
+            <img src="assets/blocks/grass_block.png" alt="V.A.Z Logo" class="brand-icon" />
+            <span class="brand-title">V.A.Z</span>
+            <span class="brand-edition">Launcher</span>
+          </div>
+          <p>Minecraft Launcher thế hệ mới thuần bản địa Windows với C# .NET 8 và WinUI 3. Tối ưu tối đa cho trải nghiệm mượt mà, ổn định và tự do tùy biến.</p>
+        </div>
+
+        <div class="footer-col">
+          <h5>Liên Kết</h5>
+          <ul class="footer-links">
+            <li><a href="#features">Tính năng</a></li>
+            <li><a href="#showcase">Trải nghiệm</a></li>
+            <li><a href="#compare">So sánh</a></li>
+            <li><a href="#download">Tải về</a></li>
+            <li><a href="https://github.com/vaz-launcher/vaz/releases" target="_blank" rel="noopener noreferrer">Nhật ký cập nhật</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h5>Cộng Đồng</h5>
+          <ul class="footer-links">
+            <li><a href="https://github.com/vaz-launcher/vaz" target="_blank" rel="noopener noreferrer">GitHub Repository</a></li>
+            <li><a href="https://github.com/vaz-launcher/vaz/issues" target="_blank" rel="noopener noreferrer">Báo cáo lỗi (Issues)</a></li>
+            <li><a href="https://discord.gg/minecraft" target="_blank" rel="noopener noreferrer">Discord Server</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p class="mojang-disclaimer">
+          V.A.Z Launcher không phải là sản phẩm chính thức của Minecraft. Không được phê duyệt bởi hoặc liên kết với Mojang Studios hoặc Microsoft Corporation. Minecraft là thương hiệu đã đăng ký của Mojang Synergies AB.
+        </p>
+        <p>© 2026 V.A.Z Launcher Contributors. Được phát hành theo giấy phép mã nguồn mở.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="vendor/skinview3d.bundle.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

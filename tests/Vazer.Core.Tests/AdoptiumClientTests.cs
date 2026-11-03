@@ -77,6 +77,16 @@ public sealed class AdoptiumClientTests : IDisposable
     }
 
     [Fact]
+    public async Task GetLatestJdkAsync_NullAssetElement_Throws()
+    {
+        _http.MapJson(HttpMethod.Get, ApiPath, HttpStatusCode.OK, "[null]");
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => CreateClient().GetLatestJdkAsync(21));
+
+        ex.Message.Should().Contain("Invalid Adoptium response");
+    }
+
+    [Fact]
     public async Task GetLatestJdkAsync_RetriesOn500_ThenSucceeds()
     {
         var calls = 0;

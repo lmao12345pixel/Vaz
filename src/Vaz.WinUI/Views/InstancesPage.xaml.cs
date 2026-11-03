@@ -1,7 +1,9 @@
+using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
+using Vaz.WinUI.Messages;
 using Vaz.WinUI.ViewModels;
 
 namespace Vaz.WinUI.Views;
@@ -16,18 +18,7 @@ public sealed partial class InstancesPage : Page
             .GetRequiredService<InstancesViewModel>();
         InitializeComponent();
 
-        ViewModel.RequireAccountAction = async () =>
-        {
-            var dialog = new ContentDialog
-            {
-                XamlRoot = XamlRoot,
-                Title = "Chưa có tài khoản",
-                Content = "Vui lòng chọn hoặc thêm tài khoản ở trang Accounts trước khi khởi chạy.",
-                CloseButtonText = "Đóng",
-                DefaultButton = ContentDialogButton.Close
-            };
-            await dialog.ShowAsync();
-        };
+        Unloaded += (s, e) => ViewModel.Dispose();
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -43,19 +34,36 @@ public sealed partial class InstancesPage : Page
         var dialog = new CreateInstanceDialog(vm) { XamlRoot = XamlRoot };
         var result = await dialog.ShowAsync();
         if (result == ContentDialogResult.Primary && dialog.CreatedInstanceId != null)
-            _ = ViewModel.LoadCommand.ExecuteAsync(null);
+        {
+            await ViewModel.LoadCommand.ExecuteAsync(null);
+            ViewModel.SetActiveTarget(dialog.CreatedInstanceId);
+            WeakReferenceMessenger.Default.Send(new InstancesChangedMessage());
+        }
     }
 
     private void Instance_Click(object sender, ItemClickEventArgs e)
     {
         if (e.ClickedItem is InstanceCardItem card)
+        {
+            ViewModel.SetActiveTarget(card.Id);
             NavigateToDetail(card.Id);
+        }
     }
 
     private void Edit_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement fe && fe.DataContext is InstanceCardItem card)
-            NavigateToDetail(card.Id);
+        if (sender is FrameworkElement fe)
+        {
+            var card = fe.DataContext as InstanceCardItem ?? (fe.Tag is string tag ? ViewModel.Instances.FirstOrDefault(i => i.Id == tag) : null);
+            if (card != null)
+            {
+                NavigateToDetail(card.Id);
+            }
+            else if (ViewModel.Instances.Count > 0)
+            {
+                NavigateToDetail(ViewModel.Instances[0].Id);
+            }
+        }
     }
 
     private void Play_Click(object sender, RoutedEventArgs e)
@@ -63,6 +71,14 @@ public sealed partial class InstancesPage : Page
         if (sender is FrameworkElement fe && fe.DataContext is InstanceCardItem card)
         {
             _ = ViewModel.PlayCommand.ExecuteAsync(card);
+        }
+    }
+
+    private void CardFolder_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.DataContext is InstanceCardItem card)
+        {
+            InstancesViewModel.OpenFolder(card);
         }
     }
 
@@ -113,8 +129,20 @@ public sealed partial class InstancesPage : Page
 
     private void NavigateToDetail(string instanceId)
     {
-        var frame = ((App.MainWindow?.Content as NavigationView)
-            ?.Content as Frame) ?? Frame;
-        frame.Navigate(typeof(InstanceDetailPage), instanceId);
+        try
+        {
+            var logPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Vazer", "nav_log.txt");
+            System.IO.File.AppendAllText(logPath, $"NavigateToDetail called for {instanceId}\n");
+        }
+        catch { }
+
+        if (App.MainWindow is MainWindow mw)
+        {
+            mw.NavigateTo(typeof(InstanceDetailPage), instanceId);
+        }
+        else
+        {
+            Frame?.Navigate(typeof(InstanceDetailPage), instanceId);
+        }
     }
 }

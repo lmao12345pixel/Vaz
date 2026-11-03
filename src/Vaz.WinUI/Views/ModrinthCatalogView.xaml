@@ -1,0 +1,294 @@
+<UserControl
+    x:Class="Vaz.WinUI.Views.ModrinthCatalogView"
+    x:Name="ModrinthCatalogRoot"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:Vaz.WinUI.ViewModels"
+    xmlns:views="using:Vaz.WinUI.Views"
+    KeyDown="UserControl_KeyDown"
+    PreviewKeyDown="UserControl_PreviewKeyDown">
+
+    <UserControl.Resources>
+        <Storyboard x:Name="ShimmerStoryboard">
+            <DoubleAnimation
+                Storyboard.TargetName="ShimmerPanel"
+                Storyboard.TargetProperty="Opacity"
+                From="0.3" To="0.8" Duration="0:0:0.75" />
+        </Storyboard>
+        <Storyboard x:Name="FadeInResultsStoryboard">
+            <DoubleAnimation
+                Storyboard.TargetName="CatalogScrollViewer"
+                Storyboard.TargetProperty="Opacity"
+                From="0.0" To="1.0" Duration="0:0:0.25" />
+        </Storyboard>
+    </UserControl.Resources>
+
+    <!-- Nền tổng thể: Dùng ThemeResource ApplicationPageBackgroundThemeBrush tự động thích ứng Light/Dark theme -->
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <Grid.RowDefinitions>
+            <!-- 0. Thanh Top Bar -->
+            <RowDefinition Height="Auto" />
+            <!-- 1. Nội dung Lưới Cards (ItemsRepeater + UniformGridLayout) -->
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- THANH TOP BAR (Search + Filter + Phân trang - 100% ThemeResource) -->
+        <Border
+            Grid.Row="0"
+            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+            BorderThickness="0,0,0,1"
+            Padding="24,14">
+            <StackPanel Spacing="12">
+                <!-- Top Header: Back, Badge, Title, Project Type Switch, Close -->
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                    <!-- Left: Back Button & Title -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                        <Button
+                            Click="Back_Click"
+                            ToolTipService.ToolTip="Quay lại (Esc)"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Padding="8"
+                            CornerRadius="6">
+                            <FontIcon Glyph="&#xE72B;" FontSize="16" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                        </Button>
+
+                        <Border
+                            Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                            BorderBrush="{StaticResource ModrinthAccentBrush}"
+                            BorderThickness="1"
+                            CornerRadius="4"
+                            Padding="8,3"
+                            VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE71E;" FontSize="12" Foreground="{StaticResource ModrinthAccentBrush}" />
+                                <TextBlock
+                                    Text="Modrinth"
+                                    FontSize="12"
+                                    FontWeight="Bold"
+                                    Foreground="{StaticResource ModrinthAccentBrush}" />
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock
+                            Text="{x:Bind ViewModel.BrowserTitle, Mode=OneWay}"
+                            FontSize="18"
+                            FontWeight="Bold"
+                            Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                            VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <!-- Center: Quick Switch Radio (Resource Packs / Shaders) -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="16" VerticalAlignment="Center">
+                        <RadioButton
+                            Content="Resource Packs"
+                            IsChecked="{x:Bind ViewModel.IsResourcePacks, Mode=TwoWay}"
+                            Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                            FontSize="13" />
+                        <RadioButton
+                            Content="Shaders"
+                            IsChecked="{x:Bind ViewModel.IsShaders, Mode=TwoWay}"
+                            Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                            FontSize="13" />
+                    </StackPanel>
+
+                    <!-- Right: Close Button -->
+                    <Button
+                        Grid.Column="2"
+                        Click="Close_Click"
+                        ToolTipService.ToolTip="Đóng trình duyệt (Esc)"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Padding="8"
+                        CornerRadius="6">
+                        <FontIcon Glyph="&#xE711;" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </Button>
+                </Grid>
+
+                <!-- Search Box Row: Ô Search lớn, bo tròn, sử dụng TextControlBackground của Theme -->
+                <Grid HorizontalAlignment="Stretch">
+                    <AutoSuggestBox
+                        x:Name="SearchBox"
+                        PlaceholderText="{x:Bind ViewModel.SearchPlaceholder, Mode=OneWay}"
+                        QueryIcon="Find"
+                        Text="{x:Bind ViewModel.SearchText, Mode=TwoWay}"
+                        PreviewKeyDown="SearchBox_PreviewKeyDown"
+                        TextChanged="SearchBox_TextChanged"
+                        QuerySubmitted="SearchBox_QuerySubmitted"
+                        Height="44"
+                        CornerRadius="8"
+                        Background="{ThemeResource TextControlBackground}"
+                        HorizontalAlignment="Stretch" />
+                </Grid>
+
+                <!-- Filter & Pagination Bar: Sort by, View, Phân trang (1, 2, ..., 1886, >) -->
+                <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
+                    <!-- Left: Sort by & View count -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+                        <!-- Sort by -->
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <TextBlock Text="Sort by:" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="13" VerticalAlignment="Center" />
+                            <ComboBox
+                                ItemsSource="{x:Bind ViewModel.SortOptions}"
+                                SelectedItem="{x:Bind ViewModel.SelectedSort, Mode=TwoWay}"
+                                CornerRadius="6"
+                                MinWidth="130" />
+                        </StackPanel>
+
+                        <!-- View: (ComboBox số lượng) -->
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <TextBlock Text="View:" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="13" VerticalAlignment="Center" />
+                            <ComboBox
+                                ItemsSource="{x:Bind ViewModel.ViewOptions}"
+                                SelectedItem="{x:Bind ViewModel.SelectedView, Mode=TwoWay}"
+                                CornerRadius="6"
+                                MinWidth="75" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Center: Status / Hit Count -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                        <TextBlock
+                            Text="{x:Bind ViewModel.StatusText, Mode=OneWay}"
+                            FontSize="13"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            VerticalAlignment="Center" />
+                        <ProgressRing
+                            IsActive="{x:Bind ViewModel.IsBusy, Mode=OneWay}"
+                            Width="14"
+                            Height="14"
+                            Foreground="{StaticResource ModrinthAccentBrush}"
+                            VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <!-- Right: Phân trang (1, 2, ..., 1886, >) -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <!-- Previous Page Button -->
+                        <Button
+                            Command="{x:Bind ViewModel.PrevPageCommand}"
+                            IsEnabled="{x:Bind ViewModel.CanGoPrev, Mode=OneWay}"
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="8,5"
+                            ToolTipService.ToolTip="Trang trước">
+                            <FontIcon Glyph="&#xE76B;" FontSize="11" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                        </Button>
+
+                        <!-- Page Indicator Pill (1, 2, ..., 1886) -->
+                        <Border
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="12,5">
+                            <TextBlock
+                                Text="{x:Bind ViewModel.PaginationText, Mode=OneWay}"
+                                FontSize="12"
+                                FontWeight="SemiBold"
+                                Foreground="{StaticResource ModrinthAccentBrush}" />
+                        </Border>
+
+                        <!-- Next Page Button -->
+                        <Button
+                            Command="{x:Bind ViewModel.NextPageCommand}"
+                            IsEnabled="{x:Bind ViewModel.CanGoNext, Mode=OneWay}"
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="8,5"
+                            ToolTipService.ToolTip="Trang sau">
+                            <FontIcon Glyph="&#xE76C;" FontSize="11" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- NỘI DUNG LƯỚI CARDS (ItemsRepeater + UniformGridLayout) -->
+        <Grid Grid.Row="1">
+            <ScrollViewer
+                x:Name="CatalogScrollViewer"
+                Loaded="CatalogScrollViewer_Loaded"
+                VerticalScrollBarVisibility="Auto"
+                HorizontalScrollBarVisibility="Disabled"
+                Padding="24,16,24,24">
+                <ItemsRepeater
+                    x:Name="CatalogItemsRepeater"
+                    ItemsSource="{x:Bind ViewModel.Results, Mode=OneWay}"
+                    ElementPrepared="CatalogItemsRepeater_ElementPrepared"
+                    ElementClearing="CatalogItemsRepeater_ElementClearing">
+                    <ItemsRepeater.Layout>
+                        <!-- 2 cột màn hình nhỏ, 3-4 cột màn hình lớn -->
+                        <UniformGridLayout
+                            Orientation="Horizontal"
+                            MinItemWidth="300"
+                            MinRowSpacing="16"
+                            MinColumnSpacing="16" />
+                    </ItemsRepeater.Layout>
+                    <ItemsRepeater.ItemTemplate>
+                        <DataTemplate x:DataType="vm:SearchHitRow">
+                            <views:ModrinthCardView
+                                Item="{x:Bind}"
+                                InstallClick="ModrinthCard_InstallClick" />
+                        </DataTemplate>
+                    </ItemsRepeater.ItemTemplate>
+                </ItemsRepeater>
+            </ScrollViewer>
+
+            <!-- Shimmer Loading Skeleton -->
+            <Grid
+                x:Name="ShimmerPanel"
+                Visibility="{x:Bind ViewModel.IsShimmerLoading, Mode=OneWay, Converter={StaticResource BoolToVis}}"
+                Padding="24,16,24,24"
+                IsHitTestVisible="False">
+                <ItemsControl>
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <ItemsWrapGrid Orientation="Horizontal" ItemWidth="300" ItemHeight="310" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Margin="8" Width="290" Height="300" />
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Margin="8" Width="290" Height="300" />
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Margin="8" Width="290" Height="300" />
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Margin="8" Width="290" Height="300" />
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Margin="8" Width="290" Height="300" />
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Margin="8" Width="290" Height="300" />
+                </ItemsControl>
+            </Grid>
+
+            <!-- Empty State -->
+            <StackPanel
+                Visibility="{x:Bind ViewModel.ShowEmptyState, Mode=OneWay, Converter={StaticResource BoolToVis}}"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Spacing="12"
+                Margin="0,40,0,0">
+                <Border
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="36"
+                    Width="72"
+                    Height="72"
+                    HorizontalAlignment="Center">
+                    <FontIcon Glyph="&#xE721;" FontSize="28" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                </Border>
+                <TextBlock
+                    Text="Không tìm thấy kết quả"
+                    FontSize="18"
+                    FontWeight="SemiBold"
+                    Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                    HorizontalAlignment="Center" />
+                <TextBlock
+                    Text="Thử thay đổi từ khóa hoặc bộ lọc để khám phá thêm nội dung."
+                    FontSize="13"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    HorizontalAlignment="Center" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

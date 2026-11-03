@@ -47,7 +47,7 @@ jobs:
       - name: Verify test count
         shell: pwsh
         env:
-          MIN_TESTS: '119'
+          MIN_TESTS: '320'
         run: |
           $trx = Get-ChildItem -Path tests -Recurse -Filter '*.trx' -ErrorAction SilentlyContinue
           if (-not $trx) {

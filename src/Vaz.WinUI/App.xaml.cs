@@ -2,10 +2,12 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
+using Vaz.WinUI.Helpers;
 using Vaz.WinUI.Services;
 using Vaz.WinUI.ViewModels;
 using Vaz.WinUI.Views;
 using Vazer.Core.Extensions;
+using Vazer.Core.Settings;
 
 namespace Vaz.WinUI;
 
@@ -40,18 +42,26 @@ public partial class App : Application
 
         // UI services (singletons)
         services.AddSingleton<ActiveInstanceService>();
+        services.AddSingleton<IModrinthSearchService, ModrinthSearchService>();
+        services.AddSingleton<IModDownloadManager, ModDownloadManager>();
+        services.AddSingleton<INotificationService, NotificationService>();
 
         // ViewModels
+        services.AddSingleton<MainViewModel>();
         services.AddTransient<InstancesViewModel>();
         services.AddTransient<ModBrowserViewModel>();
+        services.AddTransient<ModrinthStyleBrowserViewModel>();
+        services.AddTransient<ModrinthCatalogViewModel>();
         services.AddTransient<InstanceDetailViewModel>();
         services.AddTransient<AccountViewModel>();
         services.AddTransient<CreateInstanceViewModel>();
+        services.AddTransient<SettingsViewModel>();
 
         // Pages / window
         services.AddTransient<InstancesPage>();
         services.AddTransient<InstanceDetailPage>();
         services.AddTransient<AccountPage>();
+        services.AddTransient<SettingsPage>();
         services.AddSingleton<MainWindow>();
 
         Services = services.BuildServiceProvider();
@@ -59,7 +69,27 @@ public partial class App : Application
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
+        UnhandledException += (s, e) =>
+        {
+            try
+            {
+                var errPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Vazer", "crash.txt");
+                File.AppendAllText(errPath, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [FATAL] {e.Message}: {e.Exception}\n{e.Exception?.StackTrace}\n\n");
+            }
+            catch { }
+            e.Handled = true;
+        };
+
         Dispatcher = DispatcherQueue.GetForCurrentThread();
+
+        // SET-AC-04: nạp settings trước khi tạo MainWindow để theme/accent đã lưu được áp
+        // TRƯỚC ContentFrame.Navigate — tránh nháy theme mặc định ở frame đầu tiên.
+        var settings = Services.GetRequiredService<ISettingsService>()
+            .LoadAsync()
+            .GetAwaiter()
+            .GetResult();
+        AppThemeManager.Initialize(settings);
+
         var window = Services.GetRequiredService<MainWindow>();
         MainWindow = window;
         window.Activate();

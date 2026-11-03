@@ -92,12 +92,41 @@ public sealed class CmlGameLauncher : IGameLauncher
     {
         _logger.LogInformation("Launching instance {InstanceId} with account {Account}", parameters.InstanceId, parameters.Account.DisplayName);
 
-        // Get version trước để biết Minecraft version thật của instance -
-        // RequiredJava phải theo version này, không hard-code "1.21.1".
-        var version = await _launcher.GetVersionAsync(parameters.InstanceId, ct);
+        // CmlLib tra version theo TÊN VERSION, không phải instance id. Dùng
+        // LaunchVersionName của instance; sai tên này gây lỗi
+        // "Cannot find {id}" khi bấm Chơi (instance cũ trước 11/2026).
+        if (string.IsNullOrEmpty(parameters.LaunchVersionName))
+        {
+            throw new InvalidOperationException(
+                $"Instance {parameters.InstanceId}: chưa xác định được tên version để khởi chạy (LaunchVersionName trống). Mở lại instance hoặc tạo instance mới để tự động lưu tên version.");
+        }
+
+        // NEOFORGE/OPTIFINE v.v. kế thừa vanilla base — đảm bảo version gốc
+        // đã có ở root trước khi merge (no-op nếu đã cài).
+        if (!string.IsNullOrEmpty(parameters.MinecraftVersion))
+        {
+            await InstallWithRetryAsync(parameters.MinecraftVersion, ct);
+        }
+
+        // Tra version theo tên (đã migrate nếu thiếu) rồi mới resolve object.
+        if (!await EnsureVersionResolvableAsync(parameters, ct))
+        {
+            throw new InvalidOperationException(
+                $"Không tìm thấy version '{parameters.LaunchVersionName}' cho instance {parameters.InstanceId}. Thử tạo lại instance hoặc kiểm tra thư mục {parameters.InstancePath}\\versions.");
+        }
+
+        // Tải mod loader libraries (Fabric loader, mixin, neoforge, ...) vào shared libraries
+        if (!string.IsNullOrEmpty(parameters.LaunchVersionName) &&
+            parameters.LaunchVersionName != parameters.MinecraftVersion)
+        {
+            await InstallWithRetryAsync(parameters.LaunchVersionName, ct);
+        }
+
+        var version = await _launcher.GetVersionAsync(parameters.LaunchVersionName, ct);
         if (version == null)
         {
-            throw new InvalidOperationException($"Version not found for instance {parameters.InstanceId}");
+            throw new InvalidOperationException(
+                $"Không tìm thấy version '{parameters.LaunchVersionName}' cho instance {parameters.InstanceId}. Thử tạo lại instance hoặc kiểm tra thư mục {parameters.InstancePath}\\versions.");
         }
 
         var mcVersion = string.IsNullOrEmpty(parameters.MinecraftVersion)
@@ -116,9 +145,12 @@ public sealed class CmlGameLauncher : IGameLauncher
         }
 
         // Build launch parameters - use MLaunchOption with correct properties for CmlLib.Core 4.0.6
+        var mcPath = CreateInstanceMinecraftPath(parameters.InstancePath, _launcher.MinecraftPath);
+
         var launchOption = new MLaunchOption
         {
-            Path = new MinecraftPath(parameters.InstancePath),
+            Path = mcPath,
+            JavaPath = java.Path,
             MaximumRamMb = parameters.MaxRamMb,
             Session = CreateSession(parameters.Account),
             ScreenWidth = parameters.Width ?? 854,
@@ -161,6 +193,164 @@ public sealed class CmlGameLauncher : IGameLauncher
         }
 
         return new MSession(account.DisplayName, account.AccessToken ?? "", account.Uuid ?? account.Id);
+    }
+
+    /// <summary>
+    /// Tải tài nguyên phiên bản Minecraft gốc qua CmlLib với cơ chế tự động thử lại (Retry Policy).
+    /// Tối đa 3 lần, exponential backoff (2s, 4s), bắt các lỗi mạng gián đoạn.
+    /// Tôn trọng CancellationToken khi người dùng hủy.
+    /// </summary>
+    private async Task InstallWithRetryAsync(string versionName, CancellationToken ct)
+    {
+        const int maxAttempts = 3;
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            ct.ThrowIfCancellationRequested();
+            try
+            {
+                await _launcher.InstallAsync(versionName, ct);
+                return;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex) when (IsNetworkException(ex))
+            {
+                if (attempt >= maxAttempts)
+                {
+                    _logger.LogError(ex, "Tải tài nguyên version {Version} thất bại sau {MaxAttempts} lần thử", versionName, maxAttempts);
+                    throw;
+                }
+
+                var delaySeconds = (int)Math.Pow(2, attempt); // Lần 1 chờ 2s, lần 2 chờ 4s
+                _logger.LogWarning(ex, "Lỗi mạng khi tải version {Version} (lần {Attempt}/{MaxAttempts}). Thử lại sau {Delay}s...",
+                    versionName, attempt, maxAttempts, delaySeconds);
+                await Task.Delay(TimeSpan.FromSeconds(delaySeconds), ct);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Khởi tạo MinecraftPath cho instance nhưng ghi đè Library, Assets, Versions, Runtime
+    /// trỏ về thư mục root dùng chung (shared path), để classpath và tài nguyên nạp đúng
+    /// mà vẫn giữ gameDir trỏ vào thư mục instance.
+    /// </summary>
+    internal static MinecraftPath CreateInstanceMinecraftPath(string instancePath, MinecraftPath sharedPath)
+    {
+        var mcPath = new MinecraftPath(instancePath);
+        mcPath.Library = sharedPath.Library;
+        mcPath.Assets = sharedPath.Assets;
+        mcPath.Versions = sharedPath.Versions;
+        mcPath.Runtime = sharedPath.Runtime;
+        return mcPath;
+    }
+
+    /// <summary>
+    /// Kiểm tra ngoại lệ có bắt nguồn từ lỗi kết nối mạng / timeout hay không.
+    /// </summary>
+    public static bool IsNetworkException(Exception ex)
+    {
+        for (var current = ex; current != null; current = current.InnerException)
+        {
+            if (current is System.Net.Http.HttpRequestException or
+                System.Net.Sockets.SocketException or
+                System.IO.IOException or
+                TimeoutException)
+            {
+                return true;
+            }
+
+            if (current is TaskCanceledException tce && !tce.CancellationToken.IsCancellationRequested)
+            {
+                return true;
+            }
+
+            if (current.Message.Contains("An error occurred while sending the request", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Tra version theo tên; nếu root chưa có (instance cũ cài version json
+    /// ngay trong thư mục instance như "test fabric/versions/fabric-loader-*"),
+    /// copy folder version từ instance lên root rồi tra lại. Trả về true nếu
+    /// version đã resolvable qua _launcher.GetVersionAsync(name) (không null,
+    /// không ném lỗi "Cannot find").
+    /// </summary>
+    private async Task<bool> EnsureVersionResolvableAsync(LaunchParameters parameters, CancellationToken ct)
+    {
+        var name = parameters.LaunchVersionName!;
+        try
+        {
+            var found = await _launcher.GetVersionAsync(name, ct);
+            if (found != null) return true;
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Version {Name} not found at root, trying instance folder migration", name);
+        }
+
+        MigrateInstanceVersionToRoot(parameters);
+
+        try
+        {
+            return await _launcher.GetVersionAsync(name, ct) != null;
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Version {Name} still not resolvable after migration", name);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Copy folder version (json + jar) từ {InstancePath}/versions/{name}/ lên
+    /// {root instances}/versions/{name}/ nếu root còn thiếu — giúp instance cũ
+    /// CmlLib tra được ở root. Không đè folder đã tồn tại ở root.
+    /// </summary>
+    private void MigrateInstanceVersionToRoot(LaunchParameters parameters)
+    {
+        var name = parameters.LaunchVersionName;
+        if (string.IsNullOrEmpty(name)) return;
+
+        var sourceDir = Directory.EnumerateDirectories(Path.Combine(parameters.InstancePath, "versions"), "*", SearchOption.TopDirectoryOnly)
+            .FirstOrDefault(d => string.Equals(Path.GetFileName(d), name, StringComparison.OrdinalIgnoreCase));
+        if (sourceDir == null) return;
+
+        var rootVersions = Path.Combine(_options.RootPath, "instances", "versions");
+        if (string.Equals(Path.Combine(parameters.InstancePath, "versions"), Path.GetFullPath(rootVersions), StringComparison.OrdinalIgnoreCase))
+        {
+            return; // instance và root trùng nơi — không cần copy
+        }
+
+        var targetDir = Path.Combine(rootVersions, name);
+        if (Directory.Exists(targetDir))
+        {
+            _logger.LogInformation("Version {Name} already exists at root versions, skip migration", name);
+            return;
+        }
+
+        Directory.CreateDirectory(rootVersions);
+        CopyDirectory(sourceDir, targetDir);
+        _logger.LogInformation("Migrated version folder {Name} from instance {InstanceId} to root versions", name, parameters.InstanceId);
+    }
+
+    private static void CopyDirectory(string sourceDir, string targetDir)
+    {
+        Directory.CreateDirectory(targetDir);
+        foreach (var file in Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories))
+        {
+            var relative = Path.GetRelativePath(sourceDir, file);
+            var target = Path.Combine(targetDir, relative);
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            File.Copy(file, target, overwrite: true);
+        }
     }
 
     private static System.Collections.Generic.IEnumerable<MArgument> ParseJvmArguments(string jvmArgs)

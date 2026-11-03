@@ -1,0 +1,4 @@
+﻿HA-01 primary-file | slug=sodium | file=sodium-fabric-0.8.13+mc1.21.1.jar | api_sha512_len=128 | downloads=2114228 | url-host=cdn.modrinth.com
+HA-02 download+sha512-match | tmp=.agent\mods-hash-tmp\sodium-fabric-0.8.13+mc1.21.1.jar | size=1574609B | match=True
+HA-03 POST /version_files | best:name.proto= | returned_version_id= | project_id= | keys=1
+HA-04 fake-hash | resolved_count=1 | expected=0

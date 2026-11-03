@@ -3,15 +3,48 @@ using System.Text.Json.Serialization;
 
 namespace Vazer.Core.Modrinth;
 
+/// <summary>Bản đồ hash → phiên bản trả về từ POST /version_files; key ngoài là chuỗi hash.</summary>
+public sealed record VersionFilesRequest
+{
+    [JsonPropertyName("hashes")]
+    public string[] Hashes { get; init; } = Array.Empty<string>();
+
+    [JsonPropertyName("algorithm")]
+    public string Algorithm { get; init; } = "sha512";
+}
+
+/// <summary>Yêu cầu tra cứu bản mới nhất theo hash và tương thích loader/MC từ POST /version_files/update.</summary>
+public sealed record VersionFilesUpdateRequest
+{
+    [JsonPropertyName("hashes")]
+    public string[] Hashes { get; init; } = Array.Empty<string>();
+
+    [JsonPropertyName("algorithm")]
+    public string Algorithm { get; init; } = "sha512";
+
+    [JsonPropertyName("loaders")]
+    public string[] Loaders { get; init; } = Array.Empty<string>();
+
+    [JsonPropertyName("game_versions")]
+    public string[] GameVersions { get; init; } = Array.Empty<string>();
+}
+
 public sealed record SearchQuery
 {
+    private readonly int _limit = 20;
+
     public string? Query { get; init; }
+    public string? ProjectType { get; init; } // mod, resourcepack, shader
     public string[]? Loaders { get; init; }
     public string[]? GameVersions { get; init; }
     public string[]? Categories { get; init; }
     public string? SortIndex { get; init; } // relevance, downloads, follows, newest, updated
     public int Offset { get; init; }
-    public int Limit { get; init; } = 20; // max 100
+    public int Limit
+    {
+        get => _limit;
+        init => _limit = Math.Clamp(value, 1, 100);
+    }
 }
 
 public sealed record SearchResult
@@ -48,6 +81,12 @@ public sealed record SearchHit
 
     [JsonPropertyName("icon_url")]
     public string? IconUrl { get; init; }
+
+    [JsonPropertyName("gallery")]
+    public string[]? Gallery { get; init; }
+
+    [JsonPropertyName("featured_gallery")]
+    public string? FeaturedGallery { get; init; }
 
     [JsonPropertyName("downloads")]
     public long Downloads { get; init; }
