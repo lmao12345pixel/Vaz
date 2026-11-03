@@ -208,20 +208,8 @@
                 Margin="4,0,0,2" />
         </StackPanel>
 
-        <!-- 4. Status / Error / Progress Bar -->
+        <!-- 4. Status / Progress Bar -->
         <StackPanel Grid.Row="4" Margin="0,0,0,8" Spacing="6">
-            <InfoBar
-                IsOpen="{x:Bind ViewModel.HasError, Mode=TwoWay}"
-                Severity="Error"
-                Title="Lỗi"
-                Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}">
-                <InfoBar.ActionButton>
-                    <Button
-                        Content="Thử lại"
-                        Command="{x:Bind ViewModel.RetryCommand}"
-                        Padding="12,4" />
-                </InfoBar.ActionButton>
-            </InfoBar>
             <TextBlock
                 Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
                 Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}"

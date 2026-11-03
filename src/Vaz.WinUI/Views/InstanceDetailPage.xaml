@@ -242,13 +242,8 @@
             </StackPanel>
         </Grid>
 
-        <!-- Status / error -->
+        <!-- Status / progress -->
         <StackPanel Grid.Row="1" Spacing="4">
-            <InfoBar
-                IsOpen="{x:Bind ViewModel.HasError, Mode=TwoWay}"
-                Severity="Error"
-                Title="Lỗi"
-                Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}" />
             <TextBlock
                 Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
                 Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}"

@@ -166,27 +166,52 @@ public sealed partial class MainWindow : Window
                             "Khởi chạy thất bại",
                             "Đứt kết nối mạng trong quá trình tải tài nguyên Minecraft. Đã tự động lưu tiến trình, vui lòng bấm 'Thử lại' để tiếp tục tải.",
                             "Thử lại",
-                            () => { });
+                            () => { return Task.CompletedTask; });
                     }
                     else if (testToastEnv == "center")
                     {
-                        notif.ShowInfo("Bản cập nhật mới", "Đã tải xong bản cập nhật VAZ Launcher 1.2.0.", "Chi tiết", () => { });
+                        notif.ShowInfo("Bản cập nhật mới", "Đã tải xong bản cập nhật VAZ Launcher 1.2.0.", "Chi tiết", () => { return Task.CompletedTask; });
                         await Task.Delay(200);
-                        notif.ShowWarning("Chưa chọn tài khoản", "Vui lòng đăng nhập trước khi khởi chạy game.", "Đăng nhập", () => NavigateToAccounts());
+                        notif.ShowWarning("Chưa chọn tài khoản", "Vui lòng đăng nhập trước khi khởi chạy game.", "Đăng nhập", () => { NavigateToAccounts(); return Task.CompletedTask; });
                         await Task.Delay(200);
-                        notif.ShowError("Khởi chạy thất bại", "Đứt kết nối mạng trong quá trình tải tài nguyên.", "Thử lại", () => { });
+                        notif.ShowError("Khởi chạy thất bại", "Đứt kết nối mạng trong quá trình tải tài nguyên.", "Thử lại", () => { return Task.CompletedTask; });
                         await Task.Delay(200);
                         notif.ShowSuccess("Đã cài Sodium 0.6.13", "Mod đã sẵn sàng hoạt động trong instance.");
                         await Task.Delay(600);
                         await NotificationCenterOverlay.OpenAsync();
                     }
+                    else if (testToastEnv == "type_success")
+                    {
+                        notif.ShowSuccess("Đã cài Sodium 0.6.13", "Mod đã sẵn sàng hoạt động trong instance.");
+                    }
+                    else if (testToastEnv == "type_warning")
+                    {
+                        notif.ShowWarning("RAM khả dụng thấp", "Cấu hình RAM < 2048 MB có thể gây giật lag khi chơi game.", "Đi tới Settings", () => { ViewModel.NavigateToSettingsAction?.Invoke(); return Task.CompletedTask; });
+                    }
+                    else if (testToastEnv == "type_error")
+                    {
+                        notif.ShowError("Khởi chạy thất bại", "Đứt kết nối mạng trong quá trình tải tài nguyên Minecraft. Bấm 'Thử lại' để tiếp tục tải.", "Thử lại", () => { return Task.CompletedTask; });
+                    }
+                    else if (testToastEnv == "type_info")
+                    {
+                        notif.ShowInfo("Minecraft đang chạy", "Đang chạy 'test fabric' (1.20.1) - Nhấn 'Dừng' nếu muốn tắt game.", "Dừng", () => { ViewModel.StopGame(); return Task.CompletedTask; });
+                    }
+                    else if (testToastEnv == "type_update")
+                    {
+                        notif.ShowUpdate("Có 3 bản cập nhật mod", "Các mod Sodium, Iris và Lithium đã có phiên bản tương thích mới.", "Cập nhật tất cả", () => { return Task.CompletedTask; }, "Để sau", null);
+                    }
+                    else if (testToastEnv == "type_progress")
+                    {
+                        var pid = notif.ShowProgress("Đang tải Minecraft 1.20.1", "Đang nạp client.jar và assets...");
+                        notif.UpdateProgress(pid, 68, "Đang nạp client.jar và assets (68%)...");
+                    }
                     else
                     {
-                        notif.ShowInfo("Bản cập nhật mới", "Đã tải xong bản cập nhật VAZ Launcher 1.2.0.", "Chi tiết", () => { });
+                        notif.ShowInfo("Bản cập nhật mới", "Đã tải xong bản cập nhật VAZ Launcher 1.2.0.", "Chi tiết", () => { return Task.CompletedTask; });
                         await Task.Delay(400);
-                        notif.ShowWarning("Chưa chọn tài khoản", "Vui lòng đăng nhập trước khi khởi chạy game.", "Đăng nhập", () => NavigateToAccounts());
+                        notif.ShowWarning("Chưa chọn tài khoản", "Vui lòng đăng nhập trước khi khởi chạy game.", "Đăng nhập", () => { NavigateToAccounts(); return Task.CompletedTask; });
                         await Task.Delay(400);
-                        notif.ShowError("Khởi chạy thất bại", "Đứt kết nối mạng trong quá trình tải tài nguyên. Bấm 'Thử lại' để tiếp tục.", "Thử lại", () => { });
+                        notif.ShowError("Khởi chạy thất bại", "Đứt kết nối mạng trong quá trình tải tài nguyên. Bấm 'Thử lại' để tiếp tục.", "Thử lại", () => { return Task.CompletedTask; });
                         await Task.Delay(400);
                         notif.ShowSuccess("Đã cài Sodium 0.6.13", "Mod đã sẵn sàng hoạt động trong instance.");
                     }
