@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Animation;
 using Vaz.WinUI.Helpers;
+using Vaz.WinUI.Services;
 using Vaz.WinUI.ViewModels;
 using Vaz.WinUI.Views;
 
@@ -106,61 +107,36 @@ public sealed partial class MainWindow : Window
         AppThemeManager.ReduceMotionChanged += OnReduceMotionChanged;
         ApplyReduceMotion(AppThemeManager.IsReduceMotion);
 
-        ViewModel.ShowErrorMessageAction = async msg =>
+        ViewModel.NavigateToAccountsAction = () =>
         {
-            if (Content is FrameworkElement root && root.XamlRoot != null)
-            {
-                var dialog = new ContentDialog
-                {
-                    XamlRoot = root.XamlRoot,
-                    Title = "Thông báo",
-                    Content = msg,
-                    CloseButtonText = "Đóng",
-                    DefaultButton = ContentDialogButton.Close
-                };
-                await dialog.ShowAsync();
-            }
+            ContentFrame.Navigate(typeof(AccountPage));
+            NavView.SelectedItem = NavView.FooterMenuItems.OfType<NavigationViewItem>().FirstOrDefault(i => (string)i.Tag == "account");
         };
 
-        ViewModel.ShowCrashDialogAction = async (msg, logPath) =>
+        ViewModel.NavigateToSettingsAction = () =>
         {
-            if (Content is FrameworkElement root && root.XamlRoot != null)
-            {
-                var hasTarget = !string.IsNullOrEmpty(logPath) && (File.Exists(logPath) || Directory.Exists(Path.GetDirectoryName(logPath)));
-                var dialog = new ContentDialog
-                {
-                    XamlRoot = root.XamlRoot,
-                    Title = "Khởi chạy thất bại",
-                    Content = msg,
-                    PrimaryButtonText = hasTarget ? "Xem chi tiết" : null,
-                    CloseButtonText = "Đóng",
-                    DefaultButton = hasTarget ? ContentDialogButton.Primary : ContentDialogButton.Close
-                };
-
-                if (hasTarget)
-                {
-                    dialog.PrimaryButtonClick += (_, _) =>
-                    {
-                        try
-                        {
-                            var target = File.Exists(logPath) ? logPath! : Path.GetDirectoryName(logPath)!;
-                            Process.Start(new ProcessStartInfo(target) { UseShellExecute = true });
-                        }
-                        catch
-                        {
-                            // ignored
-                        }
-                    };
-                }
-
-                await dialog.ShowAsync();
-            }
+            ContentFrame.Navigate(typeof(SettingsPage));
+            NavView.SelectedItem = NavView.FooterMenuItems.OfType<NavigationViewItem>().FirstOrDefault(i => (string)i.Tag == "settings");
         };
 
         ContentFrame.Navigated += (s, e) =>
         {
             _ = ViewModel.RefreshActiveAccountAsync();
         };
+
+        var notifService = (Application.Current as App)?.Services.GetService(typeof(INotificationService)) as INotificationService;
+        if (notifService != null)
+        {
+            NotificationCenterOverlay.Initialize(notifService);
+            notifService.UnreadCountChanged += (_, count) =>
+            {
+                DispatcherQueue.TryEnqueue(() =>
+                {
+                    UpdateUnreadBadge(count);
+                });
+            };
+            UpdateUnreadBadge(notifService.UnreadCount);
+        }
 
         _ = ViewModel.InitializeAsync();
         var startupPage = Environment.GetEnvironmentVariable("VAZER_STARTUP_PAGE");
@@ -172,6 +148,50 @@ public sealed partial class MainWindow : Window
         else
         {
             Navigate(typeof(InstancesPage));
+        }
+
+        // Demo test notification if requested
+        var testToastEnv = Environment.GetEnvironmentVariable("VAZER_TEST_TOAST");
+        if (!string.IsNullOrEmpty(testToastEnv))
+        {
+            var notif = (Application.Current as App)?.Services.GetService(typeof(INotificationService)) as INotificationService;
+            if (notif != null)
+            {
+                DispatcherQueue.TryEnqueue(async () =>
+                {
+                    await Task.Delay(600);
+                    if (testToastEnv == "launch_error")
+                    {
+                        notif.ShowError(
+                            "Khởi chạy thất bại",
+                            "Đứt kết nối mạng trong quá trình tải tài nguyên Minecraft. Đã tự động lưu tiến trình, vui lòng bấm 'Thử lại' để tiếp tục tải.",
+                            "Thử lại",
+                            () => { });
+                    }
+                    else if (testToastEnv == "center")
+                    {
+                        notif.ShowInfo("Bản cập nhật mới", "Đã tải xong bản cập nhật VAZ Launcher 1.2.0.", "Chi tiết", () => { });
+                        await Task.Delay(200);
+                        notif.ShowWarning("Chưa chọn tài khoản", "Vui lòng đăng nhập trước khi khởi chạy game.", "Đăng nhập", () => NavigateToAccounts());
+                        await Task.Delay(200);
+                        notif.ShowError("Khởi chạy thất bại", "Đứt kết nối mạng trong quá trình tải tài nguyên.", "Thử lại", () => { });
+                        await Task.Delay(200);
+                        notif.ShowSuccess("Đã cài Sodium 0.6.13", "Mod đã sẵn sàng hoạt động trong instance.");
+                        await Task.Delay(600);
+                        await NotificationCenterOverlay.OpenAsync();
+                    }
+                    else
+                    {
+                        notif.ShowInfo("Bản cập nhật mới", "Đã tải xong bản cập nhật VAZ Launcher 1.2.0.", "Chi tiết", () => { });
+                        await Task.Delay(400);
+                        notif.ShowWarning("Chưa chọn tài khoản", "Vui lòng đăng nhập trước khi khởi chạy game.", "Đăng nhập", () => NavigateToAccounts());
+                        await Task.Delay(400);
+                        notif.ShowError("Khởi chạy thất bại", "Đứt kết nối mạng trong quá trình tải tài nguyên. Bấm 'Thử lại' để tiếp tục.", "Thử lại", () => { });
+                        await Task.Delay(400);
+                        notif.ShowSuccess("Đã cài Sodium 0.6.13", "Mod đã sẵn sàng hoạt động trong instance.");
+                    }
+                });
+            }
         }
     }
 
@@ -199,6 +219,31 @@ public sealed partial class MainWindow : Window
     private void AccountBadge_Click(object sender, RoutedEventArgs e)
     {
         NavigateToAccounts();
+    }
+
+    private void UpdateUnreadBadge(int count)
+    {
+        if (count > 0)
+        {
+            UnreadBadgeText.Text = count > 9 ? "9+" : count.ToString();
+            UnreadBadgeBorder.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            UnreadBadgeBorder.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private async void NotificationBellButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (NotificationCenterOverlay.IsOpen)
+        {
+            await NotificationCenterOverlay.CloseAsync();
+        }
+        else
+        {
+            await NotificationCenterOverlay.OpenAsync();
+        }
     }
 
     private void NavView_ItemInvoked(NavigationView sender, NavigationViewItemInvokedEventArgs args)

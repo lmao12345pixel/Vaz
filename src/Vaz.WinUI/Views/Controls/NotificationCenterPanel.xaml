@@ -1,0 +1,204 @@
+<UserControl
+    x:Class="Vaz.WinUI.Views.Controls.NotificationCenterPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:models="using:Vaz.WinUI.Models"
+    Visibility="Collapsed">
+
+    <Grid x:Name="RootContainer">
+        <!-- Dismiss Backdrop -->
+        <Border
+            x:Name="Backdrop"
+            Background="#33000000"
+            Opacity="0"
+            Tapped="Backdrop_Tapped" />
+
+        <!-- Sliding Panel -->
+        <Border
+            x:Name="SidePanel"
+            Width="400"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Stretch"
+            Background="{ThemeResource SolidBackgroundFillColorBaseBrush}"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+            BorderThickness="1,0,0,0">
+            <Border.RenderTransform>
+                <TranslateTransform x:Name="PanelTransform" X="400" />
+            </Border.RenderTransform>
+
+            <Grid RowDefinitions="Auto,*">
+                <!-- Header -->
+                <Grid
+                    Grid.Row="0"
+                    Padding="20,16"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="0,0,0,1"
+                    ColumnDefinitions="*,Auto,Auto">
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xEA8F;" FontSize="16" Foreground="{StaticResource VazAccentBrush}" />
+                        <TextBlock
+                            Text="Thông báo"
+                            FontSize="16"
+                            FontWeight="SemiBold"
+                            Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                            VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <Button
+                        x:Name="ClearAllButton"
+                        Grid.Column="1"
+                        Content="Xóa tất cả"
+                        FontSize="12"
+                        Padding="8,4"
+                        Margin="0,0,8,0"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Click="ClearAllButton_Click" />
+
+                    <Button
+                        Grid.Column="2"
+                        Width="32" Height="32"
+                        Padding="0"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        CornerRadius="4"
+                        ToolTipService.ToolTip="Đóng"
+                        Click="CloseButton_Click">
+                        <FontIcon Glyph="&#xE711;" FontSize="12" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                    </Button>
+                </Grid>
+
+                <!-- Body / Notifications List -->
+                <ScrollViewer
+                    Grid.Row="1"
+                    VerticalScrollBarVisibility="Auto"
+                    HorizontalScrollBarVisibility="Disabled"
+                    Padding="16,12">
+                    <StackPanel Spacing="8">
+                        <!-- Empty State -->
+                        <StackPanel
+                            x:Name="EmptyStatePanel"
+                            Spacing="10"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Margin="0,80,0,0"
+                            Visibility="Collapsed">
+                            <Border
+                                Width="56" Height="56"
+                                CornerRadius="28"
+                                Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                HorizontalAlignment="Center">
+                                <FontIcon Glyph="&#xEA8F;" FontSize="24" Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <TextBlock
+                                Text="Không có thông báo nào"
+                                FontSize="14"
+                                FontWeight="SemiBold"
+                                Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                                HorizontalAlignment="Center" />
+                            <TextBlock
+                                Text="Các thông báo gần đây sẽ xuất hiện ở đây."
+                                FontSize="12"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                HorizontalAlignment="Center" />
+                        </StackPanel>
+
+                        <!-- Items List -->
+                        <ItemsControl x:Name="HistoryItemsControl">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="models:NotificationItem">
+                                    <Border
+                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="12,10"
+                                        Margin="0,0,0,8">
+                                        <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*,Auto">
+                                            <!-- Type Icon -->
+                                            <Border
+                                                Grid.Row="0"
+                                                Grid.Column="0"
+                                                Width="24" Height="24"
+                                                CornerRadius="12"
+                                                Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                                Margin="0,0,8,0"
+                                                VerticalAlignment="Top">
+                                                <FontIcon
+                                                    Glyph="{x:Bind IconGlyph}"
+                                                    FontSize="12"
+                                                    Foreground="{StaticResource VazAccentBrush}"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center" />
+                                            </Border>
+
+                                            <!-- Title & Time -->
+                                            <StackPanel Grid.Row="0" Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                                <TextBlock
+                                                    Text="{x:Bind DisplayTitle}"
+                                                    FontSize="13"
+                                                    FontWeight="SemiBold"
+                                                    Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                                                    TextTrimming="CharacterEllipsis" />
+                                                <TextBlock
+                                                    Text="{x:Bind CreatedAtFormatted}"
+                                                    FontSize="11"
+                                                    Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                                            </StackPanel>
+
+                                            <!-- Delete single item -->
+                                            <Button
+                                                Grid.Row="0"
+                                                Grid.Column="2"
+                                                Width="24" Height="24"
+                                                Padding="0"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                CornerRadius="4"
+                                                Tag="{x:Bind Id}"
+                                                ToolTipService.ToolTip="Xóa thông báo này"
+                                                Click="DeleteItem_Click"
+                                                VerticalAlignment="Top">
+                                                <FontIcon Glyph="&#xE711;" FontSize="10" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                                            </Button>
+
+                                            <!-- Message -->
+                                            <TextBlock
+                                                Grid.Row="1"
+                                                Grid.Column="0"
+                                                Grid.ColumnSpan="3"
+                                                Text="{x:Bind Message}"
+                                                FontSize="12"
+                                                TextWrapping="Wrap"
+                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                Margin="0,6,0,0" />
+
+                                            <!-- Optional Action -->
+                                            <StackPanel
+                                                Grid.Row="2"
+                                                Grid.Column="0"
+                                                Grid.ColumnSpan="3"
+                                                Orientation="Horizontal"
+                                                Spacing="8"
+                                                Margin="0,8,0,0"
+                                                Visibility="{x:Bind HasAction1, Mode=OneWay}">
+                                                <Button
+                                                    Content="{x:Bind ActionLabel1}"
+                                                    FontSize="12"
+                                                    Padding="10,4"
+                                                    Style="{StaticResource VazAccentButtonStyle}"
+                                                    Tag="{x:Bind Id}"
+                                                    Click="ItemAction_Click" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>
