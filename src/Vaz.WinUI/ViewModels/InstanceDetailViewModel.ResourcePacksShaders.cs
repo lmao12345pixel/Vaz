@@ -145,6 +145,7 @@ public partial class InstanceDetailViewModel
     [ObservableProperty] private string resourcePacksCountText = "0";
     [ObservableProperty] private string resourcePackSearchQuery = string.Empty;
     [ObservableProperty] private bool hasNoPacks;
+    [ObservableProperty] private bool isLoadingResourcePacks;
 
     partial void OnResourcePackSearchQueryChanged(string value) => RefreshResourcePackLists();
 
@@ -160,6 +161,7 @@ public partial class InstanceDetailViewModel
     [ObservableProperty] private string shaderLoaderStatus = "Đã phát hiện Iris Shader Loader";
     [ObservableProperty] private string shaderLoaderBannerText = "Instance của bạn đang sử dụng Fabric + Iris Shaders tương thích hoàn hảo.";
     [ObservableProperty] private bool hasNoShaders;
+    [ObservableProperty] private bool isLoadingShaders;
     [ObservableProperty] private string shaderSearchQuery = string.Empty;
 
     partial void OnShaderSearchQueryChanged(string value) => FilterShaders();
@@ -171,7 +173,42 @@ public partial class InstanceDetailViewModel
         StartFileSystemWatchers(Current?.Path);
     }
 
-    public void LoadResourcePacks()
+    /// <summary>
+    /// D15 Shimmer: wrapper giữ nguyên signature void (fire-and-forget từ mọi nơi).
+    /// Chỉ bật shimmer khi danh sách đang trống (trang đầu tiên) — không shimmer khi refresh sau import/append.
+    /// </summary>
+    public void LoadResourcePacks() => _ = LoadResourcePacksWithShimmerAsync();
+
+    private async Task LoadResourcePacksWithShimmerAsync()
+    {
+        bool showShimmer = ResourcePacks.Count == 0;
+        try
+        {
+            if (showShimmer)
+            {
+                IsLoadingResourcePacks = true;
+                await Task.Yield(); // cho phép UI render skeleton trước khi load chặn dispatcher
+            }
+
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            LoadResourcePacksCore();
+
+            // Shimmer hiển thị tối thiểu 400ms để hiệu ứng không nhấp nháy khi load quá nhanh
+            if (showShimmer && sw.ElapsedMilliseconds < 400)
+            {
+                await Task.Delay((int)(400 - sw.ElapsedMilliseconds));
+            }
+        }
+        finally
+        {
+            if (showShimmer)
+            {
+                IsLoadingResourcePacks = false;
+            }
+        }
+    }
+
+    private void LoadResourcePacksCore()
     {
         ResourcePacks.Clear();
         var defaults = ResourcePackShaderData.DefaultResourcePacks;
@@ -442,7 +479,40 @@ public partial class InstanceDetailViewModel
     }
 
     // --- Shaders Management ---
-    public void LoadShaders()
+    /// <summary>
+    /// D15 Shimmer: tương tự LoadResourcePacks — chỉ shimmer khi danh sách trống.
+    /// </summary>
+    public void LoadShaders() => _ = LoadShadersWithShimmerAsync();
+
+    private async Task LoadShadersWithShimmerAsync()
+    {
+        bool showShimmer = Shaders.Count == 0;
+        try
+        {
+            if (showShimmer)
+            {
+                IsLoadingShaders = true;
+                await Task.Yield();
+            }
+
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            LoadShadersCore();
+
+            if (showShimmer && sw.ElapsedMilliseconds < 400)
+            {
+                await Task.Delay((int)(400 - sw.ElapsedMilliseconds));
+            }
+        }
+        finally
+        {
+            if (showShimmer)
+            {
+                IsLoadingShaders = false;
+            }
+        }
+    }
+
+    private void LoadShadersCore()
     {
         Shaders.Clear();
         var defaults = ResourcePackShaderData.DefaultShaders;

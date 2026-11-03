@@ -172,6 +172,25 @@
                 </DoubleAnimation.EasingFunction>
             </DoubleAnimation>
         </Storyboard>
+
+        <!-- D15 Shimmer Loading: gradient quét chéo 1.5s, LinearEase (được phép cho shimmer) -->
+        <Storyboard x:Name="RpShimmerStoryboard" RepeatBehavior="Forever">
+            <DoubleAnimation
+                Storyboard.TargetName="RpShimmerTranslate"
+                Storyboard.TargetProperty="X"
+                From="-400"
+                To="400"
+                Duration="0:0:1.5" />
+        </Storyboard>
+
+        <Storyboard x:Name="ShShimmerStoryboard" RepeatBehavior="Forever">
+            <DoubleAnimation
+                Storyboard.TargetName="ShShimmerTranslate"
+                Storyboard.TargetProperty="X"
+                From="-400"
+                To="400"
+                Duration="0:0:1.5" />
+        </Storyboard>
     </Page.Resources>
 
     <Grid x:Name="PageRoot" RowDefinitions="Auto,Auto,*" Padding="24,16,24,16" RowSpacing="10">
@@ -1020,6 +1039,41 @@
                                             </ItemsRepeater>
                                         </ScrollViewer>
 
+                                        <!-- D15 Shimmer Loading Skeleton (Resource Packs) -->
+                                        <Grid x:Name="ResourcePacksShimmerHost"
+                                              Grid.Row="1"
+                                              RowSpacing="12"
+                                              IsHitTestVisible="False"
+                                              Canvas.ZIndex="1"
+                                              Visibility="{x:Bind ViewModel.IsLoadingResourcePacks, Mode=OneWay, Converter={StaticResource BoolToVis}}">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="90" />
+                                                <RowDefinition Height="90" />
+                                                <RowDefinition Height="90" />
+                                                <RowDefinition Height="90" />
+                                            </Grid.RowDefinitions>
+                                            <Border Grid.Row="0" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Opacity="0.7" />
+                                            <Border Grid.Row="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Opacity="0.7" />
+                                            <Border Grid.Row="2" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Opacity="0.7" />
+                                            <Border Grid.Row="3" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Opacity="0.7" />
+                                            <Rectangle Grid.RowSpan="4"
+                                                       IsHitTestVisible="False"
+                                                       Opacity="0.2"
+                                                       HorizontalAlignment="Stretch"
+                                                       VerticalAlignment="Stretch">
+                                                <Rectangle.RenderTransform>
+                                                    <TranslateTransform x:Name="RpShimmerTranslate" X="-400" />
+                                                </Rectangle.RenderTransform>
+                                                <Rectangle.Fill>
+                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                        <GradientStop Color="#00FFFFFF" Offset="0.0" />
+                                                        <GradientStop Color="{ThemeResource SystemAccentColorLight2}" Offset="0.5" />
+                                                        <GradientStop Color="#00FFFFFF" Offset="1.0" />
+                                                    </LinearGradientBrush>
+                                                </Rectangle.Fill>
+                                            </Rectangle>
+                                        </Grid>
+
                                         <!-- Empty State -->
                                         <StackPanel Grid.Row="1"
                                                     Visibility="{x:Bind ViewModel.HasNoPacks, Mode=OneWay, Converter={StaticResource BoolToVis}}"
@@ -1299,6 +1353,38 @@
                                             </DataTemplate>
                                         </ItemsRepeater.ItemTemplate>
                                     </ItemsRepeater>
+
+                                    <!-- D15 Shimmer Loading Skeleton (Shaders) -->
+                                    <Grid x:Name="ShadersShimmerHost"
+                                          RowSpacing="12"
+                                          IsHitTestVisible="False"
+                                          Canvas.ZIndex="1"
+                                          Visibility="{x:Bind ViewModel.IsLoadingShaders, Mode=OneWay, Converter={StaticResource BoolToVis}}">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="220" />
+                                            <RowDefinition Height="220" />
+                                            <RowDefinition Height="220" />
+                                        </Grid.RowDefinitions>
+                                        <Border Grid.Row="0" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="10" Opacity="0.7" />
+                                        <Border Grid.Row="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="10" Opacity="0.7" />
+                                        <Border Grid.Row="2" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="10" Opacity="0.7" />
+                                        <Rectangle Grid.RowSpan="3"
+                                                   IsHitTestVisible="False"
+                                                   Opacity="0.2"
+                                                   HorizontalAlignment="Stretch"
+                                                   VerticalAlignment="Stretch">
+                                            <Rectangle.RenderTransform>
+                                                <TranslateTransform x:Name="ShShimmerTranslate" X="-400" />
+                                            </Rectangle.RenderTransform>
+                                            <Rectangle.Fill>
+                                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                    <GradientStop Color="#00FFFFFF" Offset="0.0" />
+                                                    <GradientStop Color="{ThemeResource SystemAccentColorLight2}" Offset="0.5" />
+                                                    <GradientStop Color="#00FFFFFF" Offset="1.0" />
+                                                </LinearGradientBrush>
+                                            </Rectangle.Fill>
+                                        </Rectangle>
+                                    </Grid>
 
                                     <!-- Empty State -->
                                     <StackPanel Visibility="{x:Bind ViewModel.HasNoShaders, Mode=OneWay, Converter={StaticResource BoolToVis}}"

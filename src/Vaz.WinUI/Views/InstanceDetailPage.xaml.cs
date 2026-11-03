@@ -61,6 +61,28 @@ public sealed partial class InstanceDetailPage : Page
             SyncGraphicsModeComboBox();
             Bindings.Update();
         }
+        else if (e.PropertyName == nameof(ViewModel.IsLoadingResourcePacks))
+        {
+            if (ViewModel.IsLoadingResourcePacks)
+            {
+                RpShimmerStoryboard?.Begin();
+            }
+            else
+            {
+                RpShimmerStoryboard?.Stop();
+            }
+        }
+        else if (e.PropertyName == nameof(ViewModel.IsLoadingShaders))
+        {
+            if (ViewModel.IsLoadingShaders)
+            {
+                ShShimmerStoryboard?.Begin();
+            }
+            else
+            {
+                ShShimmerStoryboard?.Stop();
+            }
+        }
     }
 
     private void OnLogAppended()
