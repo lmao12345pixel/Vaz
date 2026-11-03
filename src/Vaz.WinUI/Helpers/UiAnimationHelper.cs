@@ -574,6 +574,44 @@ public static class UiAnimationHelper
         sbNew.Begin();
     }
 
+    /// <summary>
+    /// C12 (Drag &amp; Drop Hover): Vùng drop sáng lên khi kéo file vào (200ms), tắt khi kéo ra.
+    /// </summary>
+    public static void AnimateDragDropHover(FrameworkElement zone, bool isHovering, int durationMs = 200)
+    {
+        if (zone == null) return;
+
+        var targetOpacity = isHovering ? 0.85 : 1.0;
+        var sb = new Storyboard();
+        var anim = new DoubleAnimation
+        {
+            To = targetOpacity,
+            Duration = new Duration(TimeSpan.FromMilliseconds(durationMs)),
+            EasingFunction = EaseOutCubic
+        };
+        Storyboard.SetTarget(anim, zone);
+        Storyboard.SetTargetProperty(anim, nameof(UIElement.Opacity));
+        sb.Children.Add(anim);
+
+        if (zone is Border border)
+        {
+            if (isHovering)
+            {
+                if (Application.Current?.Resources.TryGetValue("VazAccentBrush", out var accentObj) == true && accentObj is Brush accentBrush)
+                    border.BorderBrush = accentBrush;
+                border.BorderThickness = new Thickness(2);
+            }
+            else
+            {
+                if (Application.Current?.Resources.TryGetValue("CardStrokeColorDefaultBrush", out var defaultObj) == true && defaultObj is Brush defaultBrush)
+                    border.BorderBrush = defaultBrush;
+                border.BorderThickness = new Thickness(1);
+            }
+        }
+
+        sb.Begin();
+    }
+
     #endregion
 
     #region Nhóm D: Dialog & Overlay

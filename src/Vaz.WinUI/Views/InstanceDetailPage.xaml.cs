@@ -1034,10 +1034,24 @@ public sealed partial class InstanceDetailPage : Page
         e.DragUIOverride.Caption = "Thêm gói tài nguyên (.zip)";
         e.DragUIOverride.IsCaptionVisible = true;
         e.DragUIOverride.IsContentVisible = true;
+        // C12: Drag & Drop Hover highlight
+        if (sender is FrameworkElement zone)
+            UiAnimationHelper.AnimateDragDropHover(zone, true);
+    }
+
+    private void ResourcePacksGrid_DragLeave(object sender, DragEventArgs e)
+    {
+        // C12: reset drag hover highlight
+        if (sender is FrameworkElement zone)
+            UiAnimationHelper.AnimateDragDropHover(zone, false);
     }
 
     private async void ResourcePacksGrid_Drop(object sender, DragEventArgs e)
     {
+        // C12: reset drag hover highlight on drop
+        if (sender is FrameworkElement zone)
+            UiAnimationHelper.AnimateDragDropHover(zone, false);
+
         if (e.DataView.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems))
         {
             var items = await e.DataView.GetStorageItemsAsync();
@@ -1293,10 +1307,24 @@ public sealed partial class InstanceDetailPage : Page
         e.DragUIOverride.Caption = "Thêm shader pack (.zip)";
         e.DragUIOverride.IsCaptionVisible = true;
         e.DragUIOverride.IsContentVisible = true;
+        // C12: Drag & Drop Hover highlight
+        if (sender is FrameworkElement zone)
+            UiAnimationHelper.AnimateDragDropHover(zone, true);
+    }
+
+    private void ShadersGrid_DragLeave(object sender, DragEventArgs e)
+    {
+        // C12: reset drag hover highlight
+        if (sender is FrameworkElement zone)
+            UiAnimationHelper.AnimateDragDropHover(zone, false);
     }
 
     private async void ShadersGrid_Drop(object sender, DragEventArgs e)
     {
+        // C12: reset drag hover highlight on drop
+        if (sender is FrameworkElement zone)
+            UiAnimationHelper.AnimateDragDropHover(zone, false);
+
         if (e.DataView.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems))
         {
             var items = await e.DataView.GetStorageItemsAsync();

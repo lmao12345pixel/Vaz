@@ -850,6 +850,7 @@
                           Padding="0,12,0,0"
                           AllowDrop="True"
                           DragOver="ResourcePacksGrid_DragOver"
+                          DragLeave="ResourcePacksGrid_DragLeave"
                           Drop="ResourcePacksGrid_Drop">
                         
                         <!-- Main Left Column -->
@@ -1113,6 +1114,7 @@
                           Padding="0,12,0,0"
                           AllowDrop="True"
                           DragOver="ShadersGrid_DragOver"
+                          DragLeave="ShadersGrid_DragLeave"
                           Drop="ShadersGrid_Drop">
                         
                         <!-- Main Left Column -->
