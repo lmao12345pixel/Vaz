@@ -850,6 +850,24 @@ public sealed partial class InstanceDetailPage : Page
                 UiAnimationHelper.AttachHoverFillSweep(btn);
             }
         }
+
+        // B7: Folder icon hover spin (Resource Packs)
+        if (OpenResourcePacksFolderButton != null)
+        {
+            OpenResourcePacksFolderButton.PointerEntered += (s, e) =>
+                UiAnimationHelper.AnimateFolderIconSpin(ResourcePacksFolderIcon, 15.0, 150);
+            OpenResourcePacksFolderButton.PointerExited += (s, e) =>
+                UiAnimationHelper.AnimateFolderIconSpin(ResourcePacksFolderIcon, 0.0, 150);
+        }
+
+        // B7: Folder icon hover spin (Shaders)
+        if (OpenShadersFolderButton != null)
+        {
+            OpenShadersFolderButton.PointerEntered += (s, e) =>
+                UiAnimationHelper.AnimateFolderIconSpin(ShadersFolderIcon, 15.0, 150);
+            OpenShadersFolderButton.PointerExited += (s, e) =>
+                UiAnimationHelper.AnimateFolderIconSpin(ShadersFolderIcon, 0.0, 150);
+        }
     }
 
     private void OpenResourcePacksFolder_Click(object sender, RoutedEventArgs e)
