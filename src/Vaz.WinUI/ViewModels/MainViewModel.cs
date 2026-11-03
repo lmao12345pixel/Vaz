@@ -26,6 +26,7 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly IGameLauncher _launcher;
     private readonly IJavaResolver _javaResolver;
     private readonly ActiveInstanceService _activeInstance;
+    private readonly INotificationService _notificationService;
 
     private IProcessHandle? _currentProcess;
 
@@ -103,22 +104,25 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
-    public Action<string>? ShowErrorMessageAction { get; set; }
-    public Action<string, string?>? ShowCrashDialogAction { get; set; }
+    public Action? NavigateToAccountsAction { get; set; }
+    public Action? NavigateToSettingsAction { get; set; }
     private volatile bool _userKilled;
+    private DateTime? _gameStartTime;
 
     public MainViewModel(
         IInstanceManager instances,
         IAccountStore accountStore,
         IGameLauncher launcher,
         IJavaResolver javaResolver,
-        ActiveInstanceService activeInstance)
+        ActiveInstanceService activeInstance,
+        INotificationService notificationService)
     {
         _instances = instances;
         _accountStore = accountStore;
         _launcher = launcher;
         _javaResolver = javaResolver;
         _activeInstance = activeInstance;
+        _notificationService = notificationService;
 
         _activeInstance.CurrentChanged += OnActiveInstanceChanged;
 
@@ -297,7 +301,7 @@ public sealed partial class MainViewModel : ObservableObject
         var instance = target ?? SelectedInstance;
         if (instance == null)
         {
-            ShowErrorMessageAction?.Invoke("Vui lòng chọn một instance trước khi chơi.");
+            _notificationService.ShowWarning("Chưa chọn Instance", "Vui lòng chọn một instance trước khi chơi.");
             return;
         }
 
@@ -321,6 +325,7 @@ public sealed partial class MainViewModel : ObservableObject
             _activeInstance.SetCurrent(instance.Id);
         }
 
+        Guid progressId = Guid.Empty;
         try
         {
             var account = await _accountStore.GetActiveAsync();
@@ -329,15 +334,32 @@ public sealed partial class MainViewModel : ObservableObject
                 RunningInstanceId = null;
                 IsLaunching = false;
                 UpdatePlayButtonLabels();
-                ShowErrorMessageAction?.Invoke("Vui lòng đăng nhập hoặc chọn tài khoản trước khi chơi. Nhấp vào thẻ tài khoản ở góc dưới bên phải để mở trang Tài khoản.");
+                _notificationService.ShowWarning(
+                    "Chưa chọn tài khoản",
+                    "Vui lòng đăng nhập hoặc chọn tài khoản trước khi chơi.",
+                    "Tài khoản",
+                    () => NavigateToAccountsAction?.Invoke());
                 return;
             }
 
+            progressId = _notificationService.ShowProgress("Đang chuẩn bị Minecraft", $"Kiểm tra Java và tài nguyên cho {instance.Name}...");
+            _notificationService.UpdateProgress(progressId, 30, "Đang kiểm tra môi trường Java...");
             var java = await _javaResolver.EnsureAsync(
                 _javaResolver.RequiredJava(instance.MinecraftVersion),
                 progress: null);
 
             PlayButtonSubText = "Đang khởi chạy tiến trình Minecraft...";
+            _notificationService.UpdateProgress(progressId, 75, "Đang nạp libraries và khởi chạy game...");
+
+            var maxRamMb = 4096;
+            if (maxRamMb < 2048)
+            {
+                _notificationService.ShowWarning(
+                    "RAM khả dụng thấp",
+                    "Cấu hình RAM < 2048 MB có thể gây giật lag khi chơi.",
+                    "Đi tới Settings",
+                    () => NavigateToSettingsAction?.Invoke());
+            }
 
             var result = await _launcher.LaunchAsync(new LaunchParameters
             {
@@ -347,16 +369,25 @@ public sealed partial class MainViewModel : ObservableObject
                 Java = java,
                 MinecraftVersion = instance.MinecraftVersion,
                 LaunchVersionName = LaunchVersionResolver.Resolve(instance),
-                MaxRamMb = 4096
+                MaxRamMb = maxRamMb
             });
+
+            _notificationService.CompleteProgress(progressId, true, "Đã khởi chạy Minecraft thành công.");
 
             _currentProcess = result.Process;
             CurrentProcessId = result.ProcessId;
             IsRunning = true;
             IsLaunching = false;
             _userKilled = false;
+            _gameStartTime = DateTime.Now;
             var launchStartTime = DateTimeOffset.UtcNow;
             UpdatePlayButtonLabels();
+
+            _notificationService.ShowInfo(
+                "Minecraft đang chạy",
+                $"Đang chạy '{instance.Name}' ({instance.MinecraftVersion})",
+                "Dừng",
+                () => StopGame());
 
             await _instances.UpdateLastPlayedAsync(instance.Id);
 
@@ -391,14 +422,32 @@ public sealed partial class MainViewModel : ObservableObject
                         {
                             var logPath = Path.Combine(instance.Path, "logs", "latest.log");
                             var message = $"Minecraft đóng bất thường (Mã lỗi: {exitCode}). Vui lòng kiểm tra file log để biết chi tiết.";
-                            if (ShowCrashDialogAction != null)
+                            _notificationService.Show(new Models.NotificationItem
                             {
-                                ShowCrashDialogAction.Invoke(message, logPath);
-                            }
-                            else
-                            {
-                                ShowErrorMessageAction?.Invoke(message);
-                            }
+                                Type = Models.NotificationType.Error,
+                                Priority = Models.NotificationPriority.Critical,
+                                Title = "Minecraft đóng bất thường",
+                                Message = message,
+                                ActionLabel1 = File.Exists(logPath) ? "Xem log" : null,
+                                ActionCallback1 = File.Exists(logPath) ? () =>
+                                {
+                                    try
+                                    {
+                                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(logPath) { UseShellExecute = true });
+                                    }
+                                    catch { }
+                                    return Task.CompletedTask;
+                                } : null
+                            });
+                        }
+                        else
+                        {
+                            var playtime = duration.TotalHours >= 1
+                                ? $"{(int)duration.TotalHours} giờ {duration.Minutes} phút"
+                                : duration.TotalMinutes >= 1
+                                    ? $"{duration.Minutes} phút {duration.Seconds} giây"
+                                    : $"{Math.Max(1, duration.Seconds)} giây";
+                            _notificationService.ShowInfo("Minecraft đã đóng", $"Thời gian chơi: {playtime}.");
                         }
                     }
 
@@ -416,17 +465,47 @@ public sealed partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            if (progressId != Guid.Empty)
+            {
+                _notificationService.CompleteProgress(progressId, false, "Khởi chạy Minecraft thất bại.");
+            }
+
             IsLaunching = false;
             IsRunning = false;
             CurrentProcessId = null;
             RunningInstanceId = null;
             UpdatePlayButtonLabels();
 
-            var errorMessage = CmlGameLauncher.IsNetworkException(ex)
+            var isNetwork = CmlGameLauncher.IsNetworkException(ex);
+            var errorMessage = isNetwork
                 ? "Đứt kết nối mạng trong quá trình tải tài nguyên Minecraft. Đã tự động lưu tiến trình, vui lòng bấm CHƠI lại để tiếp tục tải."
                 : $"Khởi chạy thất bại: {ex.Message}";
 
-            ShowErrorMessageAction?.Invoke(errorMessage);
+            _notificationService.Show(new Models.NotificationItem
+            {
+                Type = Models.NotificationType.Error,
+                Priority = Models.NotificationPriority.Critical,
+                Title = isNetwork ? "Đứt kết nối mạng" : "Khởi chạy thất bại",
+                Message = errorMessage,
+                ActionLabel1 = "Thử lại",
+                ActionCallback1 = () => LaunchInstanceAsync(instance)
+            });
+        }
+    }
+
+    [RelayCommand]
+    public void StopGame()
+    {
+        if (IsRunning && _currentProcess is { HasExited: false })
+        {
+            _userKilled = true;
+            try
+            {
+                _currentProcess.Kill();
+            }
+            catch
+            {
+            }
         }
     }
 
@@ -451,7 +530,7 @@ public sealed partial class MainViewModel : ObservableObject
             }
             catch (Exception ex)
             {
-                ShowErrorMessageAction?.Invoke($"Không thể dừng tiến trình: {ex.Message}");
+                _notificationService.ShowError("Không thể dừng tiến trình", ex.Message);
             }
             return;
         }
@@ -463,7 +542,7 @@ public sealed partial class MainViewModel : ObservableObject
 
         if (SelectedInstance == null)
         {
-            ShowErrorMessageAction?.Invoke("Vui lòng chọn một instance trước khi chơi.");
+            _notificationService.ShowWarning("Chưa chọn Instance", "Vui lòng chọn một instance trước khi chơi.");
             return;
         }
 

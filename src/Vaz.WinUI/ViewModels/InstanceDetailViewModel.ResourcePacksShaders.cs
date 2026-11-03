@@ -356,6 +356,7 @@ public partial class InstanceDetailViewModel
                 catch (Exception ex)
                 {
                     StatusMessage = $"Không thể xóa tệp: {ex.Message}";
+                    _notificationService?.ShowError("Không thể xóa gói tài nguyên", ex.Message);
                     return;
                 }
             }
@@ -368,6 +369,7 @@ public partial class InstanceDetailViewModel
         }
         RefreshResourcePackLists();
         StatusMessage = $"Đã xóa gói {pack.Name}.";
+        _notificationService?.ShowSuccess($"Đã xóa gói {pack.Name}", "Gói tài nguyên đã bị xóa khỏi thư mục.");
     }
 
     public async Task ImportResourcePackFilesAsync(System.Collections.Generic.IEnumerable<string> filePaths)
@@ -593,6 +595,7 @@ public partial class InstanceDetailViewModel
                 catch (Exception ex)
                 {
                     StatusMessage = $"Không thể xóa shader: {ex.Message}";
+                    _notificationService?.ShowError("Không thể xóa shader", ex.Message);
                     return;
                 }
             }
@@ -605,6 +608,7 @@ public partial class InstanceDetailViewModel
         }
         FilterShaders();
         StatusMessage = $"Đã xóa shader {shader.Name}.";
+        _notificationService?.ShowSuccess($"Đã xóa shader {shader.Name}", "Shader đã bị xóa khỏi thư mục.");
     }
 
     public async Task ImportShaderFilesAsync(System.Collections.Generic.IEnumerable<string> filePaths)

@@ -146,6 +146,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
     private readonly ActiveInstanceService _activeInstance;
     private readonly MainViewModel _mainViewModel;
     private readonly IGameOptionsService _gameOptionsService;
+    private readonly INotificationService? _notificationService;
 
     public ObservableCollection<InstalledModRow> Mods { get; } = new();
     public ObservableCollection<InstalledModRow> FilteredMods { get; } = new();
@@ -220,7 +221,8 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         IOptifineInstallerService optifine,
         ActiveInstanceService activeInstance,
         MainViewModel mainViewModel,
-        IGameOptionsService gameOptionsService)
+        IGameOptionsService gameOptionsService,
+        INotificationService? notificationService = null)
     {
         _instanceManager = instanceManager;
         _modInstall = modInstall;
@@ -229,6 +231,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         _activeInstance = activeInstance;
         _mainViewModel = mainViewModel;
         _gameOptionsService = gameOptionsService;
+        _notificationService = notificationService;
         _activeInstance.CurrentChanged += OnActiveInstanceChanged;
         _mainViewModel.PropertyChanged += OnMainViewModelPropertyChanged;
         UpdateGameRunningState();
@@ -733,16 +736,19 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
             }
 
             StatusMessage = $"Đã gỡ {row.FileName}";
+            _notificationService?.ShowSuccess($"Đã xóa mod {row.DisplayName}", "Mod đã được gỡ khỏi instance.");
         }
         catch (IOException)
         {
             HasError = true;
             ErrorMessage = "Không thể gỡ mod vì Minecraft đang chạy. Vui lòng tắt game trước khi thực hiện thao tác này.";
+            _notificationService?.ShowError("Không thể gỡ mod", ErrorMessage);
         }
         catch (Exception ex)
         {
             HasError = true;
             ErrorMessage = ex.Message;
+            _notificationService?.ShowError("Gỡ mod thất bại", ex.Message);
         }
         finally
         {
@@ -1262,6 +1268,16 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
 
             UpdateCount = result.Updates.Count(u => u.HasUpdate);
             StatusMessage = UpdateCount == 0 ? "Mọi mod đã là bản mới nhất." : $"{UpdateCount} mod có bản mới.";
+            if (UpdateCount > 0)
+            {
+                _notificationService?.ShowUpdate(
+                    $"Có {UpdateCount} bản cập nhật mod",
+                    "Các bản cập nhật mới đã sẵn sàng cho instance này.",
+                    "Cập nhật tất cả",
+                    () => _ = UpdateAllAsync(),
+                    "Để sau",
+                    null);
+            }
             OnPropertyChanged(string.Empty); // refresh UpdateBadge trong list
         }
         catch (Exception ex)
@@ -1299,12 +1315,14 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
 
             var updated = await _modInstall.UpdateAllAsync(Current.Id, progress);
             StatusMessage = $"Đã update {updated} mod.";
+            _notificationService?.ShowSuccess("Cập nhật hoàn tất", $"{updated} mod đã được cập nhật lên phiên bản mới nhất.");
             await LoadAsync();
         }
         catch (Exception ex)
         {
             HasError = true;
             ErrorMessage = ex.Message;
+            _notificationService?.ShowError("Cập nhật mod thất bại", ex.Message);
         }
         finally
         {

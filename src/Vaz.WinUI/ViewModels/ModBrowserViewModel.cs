@@ -284,6 +284,7 @@ public partial class ModBrowserViewModel : ObservableObject
     protected readonly IModDownloadManager _downloadManager;
     protected readonly ActiveInstanceService _activeInstance;
     protected readonly IModInstallService? _legacyModInstall;
+    protected readonly INotificationService? _notificationService;
 
     private CancellationTokenSource? _searchCts;
     private int _headOffset;
@@ -320,7 +321,6 @@ public partial class ModBrowserViewModel : ObservableObject
     [ObservableProperty] private bool isLoadingMore;
     [ObservableProperty] private bool isLoadingPrevious;
     [ObservableProperty] private bool hasError;
-    [ObservableProperty] private string errorMessage = string.Empty;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StatusText))]
     private string statusMessage = string.Empty;
@@ -359,12 +359,14 @@ public partial class ModBrowserViewModel : ObservableObject
         IModrinthSearchService searchService,
         IModDownloadManager downloadManager,
         ActiveInstanceService activeInstance,
-        IModInstallService? legacyModInstall = null)
+        IModInstallService? legacyModInstall = null,
+        INotificationService? notificationService = null)
     {
         _searchService = searchService ?? throw new ArgumentNullException(nameof(searchService));
         _downloadManager = downloadManager ?? throw new ArgumentNullException(nameof(downloadManager));
         _activeInstance = activeInstance ?? throw new ArgumentNullException(nameof(activeInstance));
         _legacyModInstall = legacyModInstall;
+        _notificationService = notificationService;
 
         Results = new ModSearchCollection(LoadMoreInternalAsync, () => HasMoreResults);
 
@@ -581,7 +583,8 @@ public partial class ModBrowserViewModel : ObservableObject
             if (requestId == _currentRequestId)
             {
                 HasError = true;
-                ErrorMessage = ModrinthErrorMapper.Map(ex).Message;
+                var mapped = ModrinthErrorMapper.Map(ex);
+                _notificationService?.ShowError("Không thể kết nối Modrinth", mapped.Message, "Thử lại", () => RetryAsync());
             }
         }
         finally
@@ -756,7 +759,7 @@ public partial class ModBrowserViewModel : ObservableObject
             {
                 HasError = true;
                 var mapped = ModrinthErrorMapper.Map(ex);
-                ErrorMessage = mapped.Message;
+                _notificationService?.ShowError("Không thể kết nối Modrinth", mapped.Message, "Thử lại", () => SearchAsync());
 
                 // Nếu gặp lỗi rate limit (429), tăng debounce lên 250ms an toàn
                 if (ex.Message.Contains("429") || mapped.Message.Contains("quá nhanh"))
@@ -862,7 +865,7 @@ public partial class ModBrowserViewModel : ObservableObject
         if (inst == null)
         {
             HasError = true;
-            ErrorMessage = "Chưa chọn instance để cài đặt.";
+            _notificationService?.ShowWarning("Chưa chọn Instance", "Vui lòng chọn một instance trước khi cài đặt mod.");
             return;
         }
 
@@ -884,6 +887,8 @@ public partial class ModBrowserViewModel : ObservableObject
             HasError = false;
             NotifyBusyChanged();
 
+            var progressId = _notificationService?.ShowProgress($"Đang cài {row.Title}", "Đang chuẩn bị tải...");
+
             var progress = new Progress<InstallProgress>(p =>
             {
                 _ = App.Dispatcher.TryEnqueue(() =>
@@ -899,6 +904,10 @@ public partial class ModBrowserViewModel : ObservableObject
                     {
                         StatusMessage = $"Downloading {row.Title}... {p.PercentComplete}%";
                     }
+                    if (progressId != null)
+                    {
+                        _notificationService?.UpdateProgress(progressId.Value, p.PercentComplete, StatusMessage);
+                    }
                     externalProgress?.Report(p);
                 });
             });
@@ -911,20 +920,35 @@ public partial class ModBrowserViewModel : ObservableObject
                 row.InstallState = ModInstallState.Installed;
                 HasChanges = true;
                 ProgressPercent = 100;
-                StatusMessage = $"Đã cài {result.ModName ?? row.Title}";
+                var modName = result.ModName ?? row.Title;
+                StatusMessage = $"Đã cài {modName}";
+                if (progressId != null)
+                {
+                    _notificationService?.CompleteProgress(progressId.Value, true, $"Đã cài {modName}");
+                }
+                _notificationService?.ShowSuccess(
+                    $"Đã cài {modName}",
+                    "Mod đã sẵn sàng trong instance.",
+                    imageSource: row.IconUrl);
             }
             else
             {
                 // Kiểm tra lại trên đĩa phòng khi đã cài trước đó
                 var onDisk = await _downloadManager.IsModInstalledOnDiskAsync(inst.Id, row.ProjectId, row.Slug, ProjectType);
                 row.InstallState = onDisk ? ModInstallState.Installed : ModInstallState.Idle;
-                StatusMessage = $"Cài thất bại: {result.ModName ?? row.Title}";
+                var modName = result.ModName ?? row.Title;
+                StatusMessage = $"Cài thất bại: {modName}";
+                if (progressId != null)
+                {
+                    _notificationService?.CompleteProgress(progressId.Value, false, $"Cài đặt {modName} thất bại");
+                }
+                _notificationService?.ShowError($"Cài đặt {modName} thất bại", result.Warning ?? "Không thể hoàn tất tải file mod.");
             }
 
             if (!string.IsNullOrEmpty(result.Warning))
             {
                 HasError = true;
-                ErrorMessage = result.Warning!;
+                _notificationService?.ShowWarning("Cảnh báo cài đặt", result.Warning!);
             }
         }
         catch (OperationCanceledException)
@@ -939,8 +963,9 @@ public partial class ModBrowserViewModel : ObservableObject
             var onDisk = await _downloadManager.IsModInstalledOnDiskAsync(inst.Id, row.ProjectId, row.Slug);
             row.InstallState = onDisk ? ModInstallState.Installed : ModInstallState.Idle;
             HasError = true;
-            ErrorMessage = ModrinthErrorMapper.Map(ex).Message;
+            var mapped = ModrinthErrorMapper.Map(ex);
             StatusMessage = "Cài thất bại.";
+            _notificationService?.ShowError("Lỗi tải mod", mapped.Message, "Thử lại", () => InstallModAsync(row));
         }
         finally
         {
@@ -1024,7 +1049,7 @@ public partial class ModBrowserViewModel : ObservableObject
         {
             StatusMessage = string.Empty;
             HasError = true;
-            ErrorMessage = ModrinthErrorMapper.Map(ex).Message;
+            _notificationService?.ShowError("Cài Performance Pack thất bại", ModrinthErrorMapper.Map(ex).Message, "Thử lại", () => InstallPerformancePackAsync());
         }
         finally
         {
