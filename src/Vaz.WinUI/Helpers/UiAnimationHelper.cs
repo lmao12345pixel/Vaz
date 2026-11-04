@@ -470,7 +470,49 @@ public static class UiAnimationHelper
     }
 
     /// <summary>
-    /// Install Success: Thẻ mới Slide Down + Fade-in. Badge "Đã cài" Scale 0 -> 1.2 -> 1 (Bounce) trong 400ms.
+    /// C13 (Drag &amp; Drop Success Bounce): Thẻ mới sau khi thả file bounce Scale 0.8 -> 1.05 -> 1 (300ms BackEase).
+    /// </summary>
+    public static void AnimateCardDropBounce(FrameworkElement card, int durationMs = 300)
+    {
+        if (card == null) return;
+
+        card.RenderTransformOrigin = new Point(0.5, 0.5);
+        var scale = EnsureScaleTransform(card);
+
+        var sb = new Storyboard();
+        var mid = TimeSpan.FromMilliseconds(durationMs * 0.6);
+        var end = TimeSpan.FromMilliseconds(durationMs);
+
+        var kfX = new DoubleAnimationUsingKeyFrames();
+        kfX.KeyFrames.Add(new EasingDoubleKeyFrame { KeyTime = KeyTime.FromTimeSpan(TimeSpan.Zero), Value = 0.8 });
+        kfX.KeyFrames.Add(new EasingDoubleKeyFrame { KeyTime = KeyTime.FromTimeSpan(mid), Value = 1.05, EasingFunction = EaseOutBack });
+        kfX.KeyFrames.Add(new EasingDoubleKeyFrame { KeyTime = KeyTime.FromTimeSpan(end), Value = 1.0, EasingFunction = EaseOutCubic });
+
+        var kfY = new DoubleAnimationUsingKeyFrames();
+        kfY.KeyFrames.Add(new EasingDoubleKeyFrame { KeyTime = KeyTime.FromTimeSpan(TimeSpan.Zero), Value = 0.8 });
+        kfY.KeyFrames.Add(new EasingDoubleKeyFrame { KeyTime = KeyTime.FromTimeSpan(mid), Value = 1.05, EasingFunction = EaseOutBack });
+        kfY.KeyFrames.Add(new EasingDoubleKeyFrame { KeyTime = KeyTime.FromTimeSpan(end), Value = 1.0, EasingFunction = EaseOutCubic });
+
+        Storyboard.SetTarget(kfX, scale);
+        Storyboard.SetTargetProperty(kfX, nameof(ScaleTransform.ScaleX));
+        sb.Children.Add(kfX);
+
+        Storyboard.SetTarget(kfY, scale);
+        Storyboard.SetTargetProperty(kfY, nameof(ScaleTransform.ScaleY));
+        sb.Children.Add(kfY);
+
+        var op = new DoubleAnimationUsingKeyFrames();
+        op.KeyFrames.Add(new EasingDoubleKeyFrame { KeyTime = KeyTime.FromTimeSpan(TimeSpan.Zero), Value = 0.0 });
+        op.KeyFrames.Add(new EasingDoubleKeyFrame { KeyTime = KeyTime.FromTimeSpan(mid), Value = 1.0, EasingFunction = EaseOutCubic });
+        Storyboard.SetTarget(op, card);
+        Storyboard.SetTargetProperty(op, nameof(UIElement.Opacity));
+        sb.Children.Add(op);
+
+        sb.Begin();
+    }
+
+    /// <summary>
+    /// Install Success: Thẻ mới Slide Down (TranslateY -30 -> 0, 350ms) + Fade-in. Badge "Đã cài" Scale 0 -> 1.2 -> 1 (BackEase) trong 400ms.
     /// </summary>
     public static void AnimateInstallSuccess(FrameworkElement? badge, FrameworkElement? card = null)
     {
@@ -817,7 +859,7 @@ public static class UiAnimationHelper
             To = distance,
             Duration = new Duration(TimeSpan.FromSeconds(1)),
             AutoReverse = true,
-            EasingFunction = EaseInOutCubic
+            EasingFunction = EaseInOutSine
         };
         Storyboard.SetTarget(anim, transform);
         Storyboard.SetTargetProperty(anim, nameof(TranslateTransform.Y));

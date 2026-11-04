@@ -15,6 +15,8 @@ namespace Vaz.WinUI.Views;
 public sealed partial class InstanceDetailPage : Page
 {
     public InstanceDetailViewModel ViewModel { get; }
+    private bool _isDropImportingPack;
+    private bool _isDropImportingShader;
     private UIElement? _lastPackInspectorTrigger;
     private UIElement? _lastShaderInspectorTrigger;
     private bool _isImportingPack;
@@ -1083,8 +1085,9 @@ public sealed partial class InstanceDetailPage : Page
             if (paths.Count > 0)
             {
                 _isImportingPack = true;
+                _isDropImportingPack = true;
                 try { await ViewModel.ImportResourcePackFilesAsync(paths); }
-                finally { _isImportingPack = false; }
+                finally { _isImportingPack = false; _isDropImportingPack = false; }
             }
         }
     }
@@ -1202,12 +1205,45 @@ public sealed partial class InstanceDetailPage : Page
         if (args.Element is FrameworkElement elem)
         {
             UiAnimationHelper.EnableImplicitAnimations(elem);
+
+            // B6: gắn phản hồi nhấn (Scale 0.95, 100ms QuadraticEase) cho MỌI nút bên trong thẻ.
+            // Chờ template áp dụng xong rồi mới duyệt cây trực quan.
+            DispatcherQueue?.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+                UiAnimationHelper.AttachPressFeedbackToButtons(elem));
+
             bool isNewImport = (sender == ResourcePacksRepeater && _isImportingPack) ||
                                (sender == ShadersRepeater && _isImportingShader);
             if (isNewImport)
             {
-                // B5: Install Success — slide từ trên xuống (TranslateY -30→0) + Fade-in
-                UiAnimationHelper.AnimateCardInsert(elem, 350);
+                bool isDropImport = (sender == ResourcePacksRepeater && _isDropImportingPack) ||
+                                    (sender == ShadersRepeater && _isDropImportingShader);
+
+                var badge = FindDescendantByName<Border>(elem, "InstalledBadge");
+                if (badge != null)
+                {
+                    badge.Visibility = Visibility.Visible;
+                }
+
+                if (isDropImport)
+                {
+                    // C13: Drag & Drop Success — bounce Scale 0.8 -> 1.05 -> 1 (BackEase 300ms)
+                    UiAnimationHelper.AnimateCardDropBounce(elem, 300);
+                    if (badge != null) badge.Visibility = Visibility.Collapsed;
+                }
+                else
+                {
+                    // B5: Install Success — thẻ slide -30 -> 0 (350ms) + badge "Đã cài" bounce BackEase
+                    UiAnimationHelper.AnimateInstallSuccess(badge, elem);
+                    if (badge != null)
+                    {
+                        DispatcherQueue?.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
+                            async () =>
+                            {
+                                await Task.Delay(1200);
+                                badge.Visibility = Visibility.Collapsed;
+                            });
+                    }
+                }
             }
             else if (args.Index < 12)
             {
@@ -1353,8 +1389,9 @@ public sealed partial class InstanceDetailPage : Page
             if (paths.Count > 0)
             {
                 _isImportingShader = true;
+                _isDropImportingShader = true;
                 try { await ViewModel.ImportShaderFilesAsync(paths); }
-                finally { _isImportingShader = false; }
+                finally { _isImportingShader = false; _isDropImportingShader = false; }
             }
         }
     }
