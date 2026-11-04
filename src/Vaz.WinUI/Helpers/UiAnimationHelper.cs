@@ -26,6 +26,12 @@ public static class UiAnimationHelper
 {
     private static readonly CubicEase EaseOutCubic = new() { EasingMode = EasingMode.EaseOut };
     private static readonly CubicEase EaseInOutCubic = new() { EasingMode = EasingMode.EaseInOut };
+    private static readonly QuadraticEase EaseOutQuad = new() { EasingMode = EasingMode.EaseOut };
+    private static readonly BackEase EaseOutBack = new() { EasingMode = EasingMode.EaseOut, Amplitude = 0.6 };
+    private static readonly SineEase EaseInOutSine = new() { EasingMode = EasingMode.EaseInOut };
+
+    // B6: tránh gắn handler trùng lặp cho cùng một Button (ItemsRepeater tái sử dụng element)
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Button, object> PressFeedbackAttached = new();
 
     #region Nhóm A: Button & Micro-Interactions
 
@@ -36,6 +42,16 @@ public static class UiAnimationHelper
     public static void AttachButtonPressFeedback(Button button, double targetScale = 0.95, int durationMs = 100, bool useSpringPhysics = true)
     {
         if (button == null) return;
+
+        if (!PressFeedbackAttached.TryGetValue(button, out _))
+        {
+            PressFeedbackAttached.Add(button, new object());
+        }
+        else
+        {
+            // Đã gắn trước đó (ItemsRepeater tái sử dụng element) — không gắn lại để tránh nhân đôi animation.
+            return;
+        }
 
         button.RenderTransformOrigin = new Point(0.5, 0.5);
         var scale = EnsureScaleTransform(button);
@@ -48,7 +64,7 @@ public static class UiAnimationHelper
             }
             else
             {
-                AnimateScaleSingle(scale, targetScale, durationMs);
+                AnimateScaleSingle(scale, targetScale, durationMs, EaseOutQuad);
             }
         }), true);
 
@@ -60,7 +76,7 @@ public static class UiAnimationHelper
             }
             else
             {
-                AnimateScaleSingle(scale, 1.0, durationMs);
+                AnimateScaleSingle(scale, 1.0, durationMs, EaseOutQuad);
             }
         }), true);
 
@@ -72,7 +88,7 @@ public static class UiAnimationHelper
             }
             else
             {
-                AnimateScaleSingle(scale, 1.0, durationMs);
+                AnimateScaleSingle(scale, 1.0, durationMs, EaseOutQuad);
             }
         }), true);
 
@@ -84,7 +100,7 @@ public static class UiAnimationHelper
             }
             else
             {
-                AnimateScaleSingle(scale, 1.0, durationMs);
+                AnimateScaleSingle(scale, 1.0, durationMs, EaseOutQuad);
             }
         }), true);
     }
@@ -357,11 +373,11 @@ public static class UiAnimationHelper
     /// <summary>
     /// B4 (Insert Slide-in): Thẻ mới chèn vào trượt xuống và Fade-in trong 300ms.
     /// </summary>
-    public static void AnimateCardInsert(FrameworkElement card, int durationMs = 300)
+    public static void AnimateCardInsert(FrameworkElement card, int durationMs = 350, double fromY = -30.0)
     {
         if (card == null) return;
         var transform = EnsureTranslateTransform(card);
-        transform.Y = -20.0;
+        transform.Y = fromY;
         card.Opacity = 0.0;
 
         var sb = new Storyboard();
@@ -468,12 +484,12 @@ public static class UiAnimationHelper
 
             var kfX = new DoubleAnimationUsingKeyFrames();
             kfX.KeyFrames.Add(new EasingDoubleKeyFrame { KeyTime = KeyTime.FromTimeSpan(TimeSpan.Zero), Value = 0.0 });
-            kfX.KeyFrames.Add(new EasingDoubleKeyFrame { KeyTime = KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(240)), Value = 1.2, EasingFunction = EaseOutCubic });
+            kfX.KeyFrames.Add(new EasingDoubleKeyFrame { KeyTime = KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(240)), Value = 1.2, EasingFunction = EaseOutBack });
             kfX.KeyFrames.Add(new EasingDoubleKeyFrame { KeyTime = KeyTime.FromTimeSpan(duration), Value = 1.0, EasingFunction = EaseOutCubic });
 
             var kfY = new DoubleAnimationUsingKeyFrames();
             kfY.KeyFrames.Add(new EasingDoubleKeyFrame { KeyTime = KeyTime.FromTimeSpan(TimeSpan.Zero), Value = 0.0 });
-            kfY.KeyFrames.Add(new EasingDoubleKeyFrame { KeyTime = KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(240)), Value = 1.2, EasingFunction = EaseOutCubic });
+            kfY.KeyFrames.Add(new EasingDoubleKeyFrame { KeyTime = KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(240)), Value = 1.2, EasingFunction = EaseOutBack });
             kfY.KeyFrames.Add(new EasingDoubleKeyFrame { KeyTime = KeyTime.FromTimeSpan(duration), Value = 1.0, EasingFunction = EaseOutCubic });
 
             Storyboard.SetTarget(kfX, scale);
@@ -489,7 +505,7 @@ public static class UiAnimationHelper
 
         if (card != null)
         {
-            AnimateCardInsert(card, 300);
+            AnimateCardInsert(card, 350);
         }
     }
 
@@ -603,9 +619,9 @@ public static class UiAnimationHelper
             }
             else
             {
-                if (Application.Current?.Resources.TryGetValue("CardStrokeColorDefaultBrush", out var defaultObj) == true && defaultObj is Brush defaultBrush)
-                    border.BorderBrush = defaultBrush;
-                border.BorderThickness = new Thickness(1);
+                if (Application.Current?.Resources.TryGetValue("VazAccentBrush", out var accentObj2) == true && accentObj2 is Brush accentBrush2)
+                    border.BorderBrush = accentBrush2;
+                border.BorderThickness = new Thickness(2);
             }
         }
 
@@ -1035,22 +1051,43 @@ public static class UiAnimationHelper
 
     #region Helper Transform Methods
 
-    private static void AnimateScaleSingle(ScaleTransform scale, double to, int durationMs)
+    private static void AnimateScaleSingle(ScaleTransform scale, double to, int durationMs, EasingFunctionBase? easing = null)
     {
         var duration = new Duration(TimeSpan.FromMilliseconds(durationMs));
         var sb = new Storyboard();
+        var ease = easing ?? EaseOutCubic;
 
-        var animX = new DoubleAnimation { To = to, Duration = duration, EasingFunction = EaseOutCubic };
+        var animX = new DoubleAnimation { To = to, Duration = duration, EasingFunction = ease };
         Storyboard.SetTarget(animX, scale);
         Storyboard.SetTargetProperty(animX, nameof(ScaleTransform.ScaleX));
         sb.Children.Add(animX);
 
-        var animY = new DoubleAnimation { To = to, Duration = duration, EasingFunction = EaseOutCubic };
+        var animY = new DoubleAnimation { To = to, Duration = duration, EasingFunction = ease };
         Storyboard.SetTarget(animY, scale);
         Storyboard.SetTargetProperty(animY, nameof(ScaleTransform.ScaleY));
         sb.Children.Add(animY);
 
         sb.Begin();
+    }
+
+    /// <summary>
+    /// B6 (Button Press cho nút bên trong thẻ): gắn Scale 0.95 khi nhấn / về 1.0 khi nhả (100ms QuadraticEase)
+    /// cho mọi Button nằm trong thẻ Resource Pack hoặc Shader.
+    /// </summary>
+    public static void AttachPressFeedbackToButtons(DependencyObject root, double targetScale = 0.95, int durationMs = 100)
+    {
+        if (root == null) return;
+
+        if (root is Button button)
+        {
+            AttachButtonPressFeedback(button, targetScale, durationMs, useSpringPhysics: false);
+        }
+
+        int count = VisualTreeHelper.GetChildrenCount(root);
+        for (int i = 0; i < count; i++)
+        {
+            AttachPressFeedbackToButtons(VisualTreeHelper.GetChild(root, i), targetScale, durationMs);
+        }
     }
 
     private static TranslateTransform EnsureTranslateTransform(UIElement element)

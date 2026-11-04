@@ -973,10 +973,22 @@
                                                                         CornerRadius="6"
                                                                         Background="{ThemeResource SubtleFillColorSecondaryBrush}"
                                                                         VerticalAlignment="Center">
-                                                                    <Image x:Name="PackCardThumbnail"
-                                                                           Source="{x:Bind IconImageSource, Mode=OneWay}"
-                                                                           Stretch="UniformToFill"
-                                                                           ImageOpened="Thumbnail_ImageOpened" />
+                                                                    <Grid>
+                                                                        <Image x:Name="PackCardThumbnail"
+                                                                               Source="{x:Bind IconImageSource, Mode=OneWay}"
+                                                                               Stretch="UniformToFill"
+                                                                               ImageOpened="Thumbnail_ImageOpened" />
+                                                                        <!-- B5: badge "Đã cài" (chỉ hiện + bounce khi vừa cài thành công) -->
+                                                                        <Border x:Name="InstalledBadge"
+                                                                                Visibility="Collapsed"
+                                                                                VerticalAlignment="Bottom"
+                                                                                Background="{StaticResource VazAccentBrush}"
+                                                                                CornerRadius="0,0,6,6"
+                                                                                Padding="0,1"
+                                                                                IsHitTestVisible="False">
+                                                                            <TextBlock Text="Đã cài" FontSize="9" Foreground="White" HorizontalAlignment="Center" />
+                                                                        </Border>
+                                                                    </Grid>
                                                                 </Border>
 
                                                                 <!-- Metadata Info -->
@@ -1308,6 +1320,19 @@
                                                                     CornerRadius="4"
                                                                     Padding="6,2">
                                                                 <TextBlock Text="{x:Bind StyleLabel}" FontSize="11" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                                                            </Border>
+
+                                                            <!-- B5: badge "Đã cài" (chỉ hiện + bounce khi vừa cài thành công) -->
+                                                            <Border x:Name="InstalledBadge"
+                                                                    Visibility="Collapsed"
+                                                                    HorizontalAlignment="Left"
+                                                                    VerticalAlignment="Top"
+                                                                    Margin="10"
+                                                                    Background="{StaticResource VazAccentBrush}"
+                                                                    CornerRadius="4"
+                                                                    Padding="6,2"
+                                                                    IsHitTestVisible="False">
+                                                                <TextBlock Text="Đã cài" FontSize="11" Foreground="White" />
                                                             </Border>
                                                         </Grid>
 
