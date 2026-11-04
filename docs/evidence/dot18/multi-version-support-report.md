@@ -39,3 +39,56 @@ Có (Fabric; Quilt trong service; NeoForge chưa có nguồn dữ liệu). Bindi
 
 - Runtime-verify UI (dialog mở, badge hiện đúng, dropdown loader load, nút "Tạo" disable + warning khi chưa chọn loader version).
 - Thêm nguồn metadata NeoForge nếu muốn UI chọn được NeoForge version (hoặc để `loaderVersion = null` = latest opt-in).
+
+---
+
+## Đợt 18.2 — Investigate & Expand Loader Support (2026-11-04)
+
+### Việc 1 — Giải trình test count 351 → 349
+
+Tiền đề "351 → 349" **không đúng**. Số liệu thực tế:
+
+| Thời điểm | Tổng test | Nguồn |
+|-----------|-----------|-------|
+| Trước Phase B (`f84a605` = `769cd75^`) | **342** | đo bằng `dotnet test --list-tests` trong worktree tạm (đã xóa) |
+| Sau Phase B (`769cd75`) | **349** | `dotnet test --list-tests` |
+| Sau khi thêm 2 test NeoForge (`1adcba7`) | **351** | `dotnet test` full suite |
+
+- Chênh lệch 342 → 349 = **+7 test mới, 0 test bị mất/đổi tên/skip**. Cả 7 đều nằm trong `MinecraftVersionServiceTests.cs` (ClearCacheAsync_ClearsAllFiles, GetCacheTimestampAsync_Exists, GetCacheTimestampAsync_Missing, GetLoaderVersionsAsync_Fabric, GetLoaderVersionsAsync_Quilt, GetLoaderVersionsAsync_UnsupportedLoader_EmptyList, GetVanillaVersionsAsync_FetchesFromMojang).
+- Không có test nào bị xóa trong commit Phase B (`git show 769cd75 -- tests/` → `MinecraftVersionServiceTests.cs` là **file mới**, 155 insertions).
+- Số "351" không xuất hiện ở đâu trong repo/docs; giả định ban đầu sai. Sau Việc 3, tổng test lại đúng bằng 351.
+
+### Việc 2 — Review diff 2 test đã sửa ở Phase A/B
+
+- `ClearCacheAsync_ClearsAllFiles` và `GetCacheTimestampAsync_Exists`: file test gốc ghi dummy cache vào **RootPath**; service thực tế dùng `{RootPath}/cache/` (`_cacheRoot` trong ctor). Hai test gốc fail deterministic (không flaky, không liên quan UI).
+- Fix đã commit: ghi dummy vào `{RootPath}/cache/` (đúng layout thật của service).
+- **Coverage không mất**: cả 2 test vẫn verify đúng hành vi mong muốn (ClearCache xóa file cache + giữ RootPath; GetCacheTimestamp trả non-null khi file tồn tại). Service logic không đổi.
+- **Kết luận: Chấp nhận được.** Không cần khôi phục test gốc.
+
+### Việc 3 — NeoForge metadata source — DONE (commit `1adcba7`)
+
+- `MinecraftVersionService.FetchNeoForgeVersionsAsync`: tính prefix qua `NeoForgeInstallerService.McToNeoForgePrefix` (yêu cầu MC ≥ 1.20, strip pre-release suffix); MC < 1.20 / snapshot → log warning, trả rỗng **không gọi HTTP**.
+- GET `https://maven.neoforged.net/api/maven/versions/releases/net/neoforged/neoforge` (shape `{isSnapshot, versions[]}`), filter `StartsWith(prefix)`, map → `LoaderVersionInfo` (stable / beta (`-beta`) / alpha (các suffix `-` khác, không installable)), URL = Maven installer template.
+- Cache `%AppData%/Vazer/cache/loader-versions/neoforge/{mcVersion}.json` (TTL 24h).
+- **Không có `20.1.x` trên Maven → MC 1.20.1 KHÔNG có NeoForge builds** (1.20.1 là bản Forge); sớm nhất là `20.2.x` (MC 1.20.2+); MC 1.21.1 → prefix `21.1.` ✓.
+- Unit tests mới: `GetLoaderVersionsAsync_NeoForge` (filter prefix, stable/beta) và `GetLoaderVersionsAsync_NeoForge_UnsupportedMc_ReturnsEmpty` (MC 1.19.4 → rỗng, không HTTP). **351/351 pass.**
+
+### Việc 4 — Quilt trong UI — DONE (commit `b38a200`)
+
+- `CreateInstanceViewModel.Loaders` = `["Fabric", "Quilt", "NeoForge", "Vanilla"]`; `CreateAsync` switch có arm Quilt.
+- Thêm `CreateQuiltAsync` vào `IInstanceManager` + `InstanceManager` (mirror Fabric: `QuiltInstaller` từ CmlLib.Core 4.0.6, `LoaderType="quilt"`, launch version name do installer trả về, Quilt đã được `LaunchVersionResolver` hỗ trợ sẵn).
+- UI bind danh sách Loaders tự động qua `LoaderCombo.ItemsSource` (code-behind) — không cần sửa XAML.
+
+### Gates đã chạy (18.2)
+
+- `dotnet build Vaz.sln -c Debug` — Succeeded, 0 warning, 0 error (sau khi thêm Quilt).
+- `dotnet test` — **351/351 pass, 0 skipped** (sau Việc 3 và sau Việc 4).
+- `npm run check:static` — **PASSED** (chạy trước commit b38a200).
+
+### Còn tồn đọng / lưu ý
+
+- **UI chưa runtime-verify** — chưa mở dialog kiểm tra Quilt/NeoForge dropdown, nút Tạo disable, badge, tạo instance thật. Không được coi là PASS manual test.
+- NeoForge: dropdown đã có dữ liệu (stable/beta) từ 18.2; alpha không hiển thị/installable. Installer vẫn tự resolve nếu `loaderVersion = null`; UI giờ luôn gửi selected version (hoặc null nếu danh sách rỗng — nhưng danh sách rỗng thì `CanCreateInstance = false`, không tạo được).
+- VM sort loader versions bằng ordinal string compare (`OrderByDescending(v => v.Version)`) — sai thứ tự khi patch có nhiều chữ số (vd `21.1.99` > `21.1.206`); chưa sửa (ngoài scope), nên dùng sort dạng số nếu cần chính xác.
+- Forge vẫn **không hỗ trợ**.
+- Commits của Đợt 18.2: `1adcba7 feat(versions): add NeoForge loader version metadata source`, `b38a200 feat(versions): add Quilt to instance creation UI`.
