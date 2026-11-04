@@ -432,7 +432,7 @@ public sealed partial class InstanceDetailPage : Page
 
         ModrinthBrowserHostGrid.Visibility = Visibility.Visible;
         ModrinthBrowserHostGrid.Opacity = 0.0;
-        ModrinthBrowserTranslate.Y = 50;
+        ModrinthBrowserTranslate.X = 400;
 
         OpenModrinthBrowserStoryboard.Begin();
 
@@ -1056,23 +1056,20 @@ public sealed partial class InstanceDetailPage : Page
         e.DragUIOverride.Caption = "Thêm gói tài nguyên (.zip)";
         e.DragUIOverride.IsCaptionVisible = true;
         e.DragUIOverride.IsContentVisible = true;
-        // C12: Drag & Drop Hover highlight
-        if (sender is FrameworkElement zone)
-            UiAnimationHelper.AnimateDragDropHover(zone, true);
+        // C12: Drag & Drop Hover highlight (overlay Border sáng lên)
+        UiAnimationHelper.AnimateDragDropHover(ResourcePacksDropHighlight, true);
     }
 
     private void ResourcePacksGrid_DragLeave(object sender, DragEventArgs e)
     {
         // C12: reset drag hover highlight
-        if (sender is FrameworkElement zone)
-            UiAnimationHelper.AnimateDragDropHover(zone, false);
+        UiAnimationHelper.AnimateDragDropHover(ResourcePacksDropHighlight, false);
     }
 
     private async void ResourcePacksGrid_Drop(object sender, DragEventArgs e)
     {
         // C12: reset drag hover highlight on drop
-        if (sender is FrameworkElement zone)
-            UiAnimationHelper.AnimateDragDropHover(zone, false);
+        UiAnimationHelper.AnimateDragDropHover(ResourcePacksDropHighlight, false);
 
         if (e.DataView.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems))
         {
@@ -1329,23 +1326,20 @@ public sealed partial class InstanceDetailPage : Page
         e.DragUIOverride.Caption = "Thêm shader pack (.zip)";
         e.DragUIOverride.IsCaptionVisible = true;
         e.DragUIOverride.IsContentVisible = true;
-        // C12: Drag & Drop Hover highlight
-        if (sender is FrameworkElement zone)
-            UiAnimationHelper.AnimateDragDropHover(zone, true);
+        // C12: Drag & Drop Hover highlight (overlay Border sáng lên)
+        UiAnimationHelper.AnimateDragDropHover(ShadersDropHighlight, true);
     }
 
     private void ShadersGrid_DragLeave(object sender, DragEventArgs e)
     {
         // C12: reset drag hover highlight
-        if (sender is FrameworkElement zone)
-            UiAnimationHelper.AnimateDragDropHover(zone, false);
+        UiAnimationHelper.AnimateDragDropHover(ShadersDropHighlight, false);
     }
 
     private async void ShadersGrid_Drop(object sender, DragEventArgs e)
     {
         // C12: reset drag hover highlight on drop
-        if (sender is FrameworkElement zone)
-            UiAnimationHelper.AnimateDragDropHover(zone, false);
+        UiAnimationHelper.AnimateDragDropHover(ShadersDropHighlight, false);
 
         if (e.DataView.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems))
         {

@@ -591,13 +591,14 @@ public static class UiAnimationHelper
     }
 
     /// <summary>
-    /// C12 (Drag &amp; Drop Hover): Vùng drop sáng lên khi kéo file vào (200ms), tắt khi kéo ra.
+    /// C12 (Drag &amp; Drop Hover): Overlay vùng drop sáng lên (Background opacity 0 -> 0.3) + BorderBrush accent (200ms), tắt khi kéo ra.
+    /// Tham số <paramref name="zone"/> nên là Border overlay phủ toàn vùng drop (IsHitTestVisible=False).
     /// </summary>
     public static void AnimateDragDropHover(FrameworkElement zone, bool isHovering, int durationMs = 200)
     {
         if (zone == null) return;
 
-        var targetOpacity = isHovering ? 0.85 : 1.0;
+        var targetOpacity = isHovering ? 0.3 : 0.0;
         var sb = new Storyboard();
         var anim = new DoubleAnimation
         {

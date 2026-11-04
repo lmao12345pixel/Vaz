@@ -126,24 +126,24 @@
             </DoubleAnimation>
         </Storyboard>
 
-        <!-- Modrinth-Style Browser Animations (Đợt 14) -->
+        <!-- Modrinth-Style Browser Animations (Đợt 14 / C11 Đợt 17.1: slide ngang 400px) -->
         <Storyboard x:Name="OpenModrinthBrowserStoryboard">
             <DoubleAnimation
                 Storyboard.TargetName="ModrinthBrowserHostGrid"
                 Storyboard.TargetProperty="Opacity"
                 From="0.0"
                 To="1.0"
-                Duration="0:0:0.25">
+                Duration="0:0:0.35">
                 <DoubleAnimation.EasingFunction>
                     <CubicEase EasingMode="EaseOut" />
                 </DoubleAnimation.EasingFunction>
             </DoubleAnimation>
             <DoubleAnimation
                 Storyboard.TargetName="ModrinthBrowserTranslate"
-                Storyboard.TargetProperty="Y"
-                From="50"
+                Storyboard.TargetProperty="X"
+                From="400"
                 To="0"
-                Duration="0:0:0.25">
+                Duration="0:0:0.35">
                 <DoubleAnimation.EasingFunction>
                     <CubicEase EasingMode="EaseOut" />
                 </DoubleAnimation.EasingFunction>
@@ -156,17 +156,17 @@
                 Storyboard.TargetProperty="Opacity"
                 From="1.0"
                 To="0.0"
-                Duration="0:0:0.2">
+                Duration="0:0:0.25">
                 <DoubleAnimation.EasingFunction>
                     <CubicEase EasingMode="EaseIn" />
                 </DoubleAnimation.EasingFunction>
             </DoubleAnimation>
             <DoubleAnimation
                 Storyboard.TargetName="ModrinthBrowserTranslate"
-                Storyboard.TargetProperty="Y"
+                Storyboard.TargetProperty="X"
                 From="0"
-                To="30"
-                Duration="0:0:0.2">
+                To="400"
+                Duration="0:0:0.25">
                 <DoubleAnimation.EasingFunction>
                     <CubicEase EasingMode="EaseIn" />
                 </DoubleAnimation.EasingFunction>
@@ -1163,6 +1163,15 @@
                                 </ScrollViewer>
                             </Border>
                         </Grid>
+
+                        <!-- C12: vùng drop sáng lên khi kéo file vào (Border overlay, không chặn hit-test) -->
+                        <Border x:Name="ResourcePacksDropHighlight"
+                                Background="{StaticResource VazAccentBrush}"
+                                BorderBrush="{StaticResource VazAccentBrush}"
+                                BorderThickness="2"
+                                CornerRadius="8"
+                                Opacity="0"
+                                IsHitTestVisible="False" />
                     </Grid>
                 </TabViewItem.Content>
             </TabViewItem>
@@ -1501,6 +1510,15 @@
                                 </ScrollViewer>
                             </Border>
                         </Grid>
+
+                        <!-- C12: vùng drop sáng lên khi kéo file vào (Border overlay, không chặn hit-test) -->
+                        <Border x:Name="ShadersDropHighlight"
+                                Background="{StaticResource VazAccentBrush}"
+                                BorderBrush="{StaticResource VazAccentBrush}"
+                                BorderThickness="2"
+                                CornerRadius="8"
+                                Opacity="0"
+                                IsHitTestVisible="False" />
                     </Grid>
                 </TabViewItem.Content>
             </TabViewItem>
