@@ -24,6 +24,26 @@ public sealed class InverseBoolToVisibilityConverter : IValueConverter
         => value is Visibility v && v != Visibility.Visible;
 }
 
+/// <summary>bool → bool (phủ định) — thay cho x:Bind !(bool)Property.</summary>
+public sealed class BoolNegationConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, string language)
+        => value is bool b ? !b : true;
+
+    public object ConvertBack(object value, Type targetType, object parameter, string language)
+        => throw new NotSupportedException();
+}
+
+/// <summary>MinecraftVersionInfo.IsInstalled → Visibility (badge "Đã cài").</summary>
+public sealed class IsInstalledVersionConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, string language)
+        => value is bool b && b ? Visibility.Visible : Visibility.Collapsed;
+
+    public object ConvertBack(object value, Type targetType, object parameter, string language)
+        => throw new NotSupportedException();
+}
+
 /// <summary>int &gt; 0 → bool (InfoBar IsOpen khi có bản mới).</summary>
 public sealed class CountToBoolConverter : IValueConverter
 {

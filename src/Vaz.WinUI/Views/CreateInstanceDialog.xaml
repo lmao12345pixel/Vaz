@@ -6,7 +6,8 @@
     PrimaryButtonText="Tạo"
     CloseButtonText="Hủy"
     DefaultButton="Primary"
-    PrimaryButtonClick="Dialog_PrimaryButtonClick">
+    PrimaryButtonClick="Dialog_PrimaryButtonClick"
+    IsPrimaryButtonEnabled="{Binding CanCreateInstance}">
     <StackPanel Spacing="8" MinWidth="380">
         <TextBox
             x:Name="NameBox"
@@ -18,20 +19,68 @@
             Header="Loader"
             HorizontalAlignment="Stretch" />
 
-        <ComboBox
-            x:Name="VersionCombo"
-            Header="Minecraft version"
-            HorizontalAlignment="Stretch" />
+        <StackPanel>
+            <ComboBox
+                x:Name="VersionCombo"
+                Header="Minecraft version"
+                HorizontalAlignment="Stretch"
+                IsEnabled="{Binding IsVersionsLoading, Converter={StaticResource BoolNegationConverter}}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="{Binding Id}" VerticalAlignment="Center" />
+                            <!-- B1: Badge "Đã cài" (versions/{id} tồn tại trên đĩa) -->
+                            <Border Background="{StaticResource VazAccentBrush}"
+                                    CornerRadius="4"
+                                    Padding="4,2"
+                                    VerticalAlignment="Center"
+                                    Visibility="{Binding IsInstalled, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="Đã cài" FontSize="11" />
+                            </Border>
+                        </StackPanel>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+            <ProgressRing
+                IsActive="{Binding IsVersionsLoading}"
+                Width="16"
+                Height="16"
+                HorizontalAlignment="Left"
+                Visibility="{Binding IsVersionsLoading, Converter={StaticResource BoolToVis}}" />
+        </StackPanel>
 
-        <TextBox
-            x:Name="LoaderVersionBox"
-            Header="Loader version (để trống = latest)"
-            PlaceholderText="latest" />
+        <StackPanel>
+            <ComboBox
+                x:Name="LoaderVersionBox"
+                Header="Loader version"
+                PlaceholderText="Chọn loader version"
+                HorizontalAlignment="Stretch"
+                IsEnabled="{Binding IsLoaderVersionsLoading, Converter={StaticResource BoolNegationConverter}}" />
+            <ProgressRing
+                IsActive="{Binding IsLoaderVersionsLoading}"
+                Width="16"
+                Height="16"
+                HorizontalAlignment="Left"
+                Visibility="{Binding IsLoaderVersionsLoading, Converter={StaticResource BoolToVis}}" />
+            <TextBlock
+                x:Name="NoLoaderVersionsText"
+                Text="Không có version tương thích"
+                FontSize="12"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Visibility="Collapsed" />
+        </StackPanel>
 
         <StackPanel Orientation="Horizontal" Spacing="8">
             <ProgressRing x:Name="BusyRing" IsActive="False" Width="20" Height="20" />
             <TextBlock x:Name="BusyText" Text="" VerticalAlignment="Center" Visibility="Collapsed" />
         </StackPanel>
+
+        <InfoBar
+            x:Name="CreateWarningBar"
+            IsOpen="{Binding CanCreateInstance, Converter={StaticResource BoolNegationConverter}}"
+            Severity="Warning"
+            Title=""
+            Message="{Binding CreateWarningMessage}" />
 
         <InfoBar
             x:Name="CreateErrorBar"

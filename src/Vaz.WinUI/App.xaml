@@ -13,6 +13,7 @@
             <helpers:BoolToVisibilityConverter x:Key="BoolToVis" />
             <helpers:InverseBoolToVisibilityConverter x:Key="BoolToVisInv" />
             <helpers:InverseBoolToVisibilityConverter x:Key="BoolToInvertVis" />
+            <helpers:BoolNegationConverter x:Key="BoolNegationConverter" />
             <helpers:CountToBoolConverter x:Key="CountToBool" />
             <helpers:CountToTextConverter x:Key="CountToText" />
             <helpers:BoolToActiveBorderBrushConverter x:Key="BoolToActiveBorderBrush" />
@@ -20,6 +21,7 @@
             <helpers:DoubleToIntConverter x:Key="DoubleToInt" />
             <helpers:SettingsSectionVisibilityConverter x:Key="SettingsSectionVis" />
             <helpers:AccentHexToBrushConverter x:Key="AccentHexToBrush" />
+            <helpers:IsInstalledVersionConverter x:Key="IsInstalledVersionConverter" />
 
             <!-- Design tokens dùng chung — docs/design/tokens.json (spacing/radius) -->
             <x:Double x:Key="VazSpaceXs">4</x:Double>

@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using Vazer.Core.Abstractions;
+using Vazer.Core.Versions;
 
 namespace Vaz.WinUI.ViewModels;
 
@@ -12,11 +13,8 @@ public sealed partial class CreateInstanceViewModel : ObservableObject
     /// <summary>Loader hỗ trợ tạo instance.</summary>
     public static IReadOnlyList<string> Loaders { get; } = new[] { "Fabric", "NeoForge", "Vanilla" };
 
-    /// <summary>Các Minecraft version phổ biến cho picker.</summary>
-    public static IReadOnlyList<string> MinecraftVersions { get; } =
-        new[] { "1.21.1", "1.21", "1.20.6", "1.20.4", "1.20.1", "1.19.4" };
-
     private readonly IInstanceManager _instanceManager;
+    private readonly IMinecraftVersionService _versionService;
 
     [ObservableProperty]
     private string name = "New Instance";
@@ -25,10 +23,7 @@ public sealed partial class CreateInstanceViewModel : ObservableObject
     private string selectedLoader = "Fabric";
 
     [ObservableProperty]
-    private string selectedMinecraftVersion = "1.21.1";
-
-    [ObservableProperty]
-    private string? loaderVersion;
+    private string? selectedMinecraftVersion;
 
     [ObservableProperty]
     private bool isBusy;
@@ -36,9 +31,118 @@ public sealed partial class CreateInstanceViewModel : ObservableObject
     [ObservableProperty]
     private string? errorMessage;
 
-    public CreateInstanceViewModel(IInstanceManager instanceManager)
+    [ObservableProperty]
+    private IReadOnlyList<MinecraftVersionInfo> vanillaVersions = Array.Empty<MinecraftVersionInfo>();
+
+    [ObservableProperty]
+    private bool isVersionsLoading;
+
+    [ObservableProperty]
+    private string? selectedLoaderVersion;
+
+    [ObservableProperty]
+    private bool isLoaderVersionsLoading;
+
+    [ObservableProperty]
+    private IReadOnlyList<string> loaderVersions = Array.Empty<string>();
+
+    [ObservableProperty]
+    private bool canCreateInstance = true;
+
+    [ObservableProperty]
+    private string? createWarningMessage;
+
+    public CreateInstanceViewModel(IInstanceManager instanceManager, IMinecraftVersionService versionService)
     {
         _instanceManager = instanceManager;
+        _versionService = versionService;
+        _ = LoadVersionsAsync();
+    }
+
+    /// <summary>
+    /// Load danh sách Vanilla versions từ service.
+    /// </summary>
+    private async Task LoadVersionsAsync()
+    {
+        IsVersionsLoading = true;
+        try
+        {
+            var versions = await _versionService.GetVanillaVersionsAsync();
+            // Lấy top 10 release gần nhất
+            VanillaVersions = versions
+                .Where(v => v.Type == "release")
+                .OrderByDescending(v => v.ReleaseTime)
+                .Take(10)
+                .ToList()
+                .AsReadOnly();
+            // Chọn version mặc định là release gần nhất
+            if (VanillaVersions.Count > 0)
+            {
+                SelectedMinecraftVersion = VanillaVersions[0].Id;
+                _ = LoadLoaderVersionsAsync(SelectedLoader ?? "Fabric", SelectedMinecraftVersion);
+            }
+        }
+        finally
+        {
+            IsVersionsLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// Load danh sách loader versions khi đổi MC version hoặc Mod Loader.
+    /// </summary>
+    private async Task LoadLoaderVersionsAsync(string loaderType, string mcVersion)
+    {
+        IsLoaderVersionsLoading = true;
+        try
+        {
+            var versions = await _versionService.GetLoaderVersionsAsync(loaderType, mcVersion);
+            // Lấy version ổn định trước, beta sau
+            var stable = versions.Where(v => v.Stable).OrderByDescending(v => v.Version).Select(v => v.Version).ToList();
+            var beta = versions.Where(v => !v.Stable && v.Installable).OrderByDescending(v => v.Version).Select(v => v.Version).ToList();
+            LoaderVersions = stable.Concat(beta).ToList().AsReadOnly();
+            // Chọn version mặc định là latest stable hoặc beta đầu tiên
+            SelectedLoaderVersion = LoaderVersions.FirstOrDefault();
+            UpdateCanCreateInstance();
+        }
+        finally
+        {
+            IsLoaderVersionsLoading = false;
+        }
+    }
+
+    partial void OnSelectedMinecraftVersionChanged(string? value)
+    {
+        if (!string.IsNullOrEmpty(value))
+        {
+            _ = LoadLoaderVersionsAsync(SelectedLoader ?? "Fabric", value);
+        }
+    }
+
+    partial void OnSelectedLoaderChanged(string value)
+    {
+        UpdateCanCreateInstance();
+        if (!string.IsNullOrEmpty(SelectedMinecraftVersion))
+        {
+            _ = LoadLoaderVersionsAsync(value ?? "Fabric", SelectedMinecraftVersion);
+        }
+    }
+
+    partial void OnSelectedLoaderVersionChanged(string? value)
+    {
+        UpdateCanCreateInstance();
+    }
+
+    private void UpdateCanCreateInstance()
+    {
+        var mcSelected = !string.IsNullOrEmpty(SelectedMinecraftVersion);
+        var loader = SelectedLoader ?? "Vanilla";
+        var loaderVersionSelected = loader == "Vanilla" || !string.IsNullOrEmpty(SelectedLoaderVersion);
+
+        CanCreateInstance = mcSelected && loaderVersionSelected;
+        CreateWarningMessage = CanCreateInstance ? null : (loader != "Vanilla" && string.IsNullOrEmpty(SelectedLoaderVersion)) 
+            ? $"Vui lòng chọn loader version cho {loader}." 
+            : (mcSelected ? null : "Chọn Minecraft version.");
     }
 
     /// <summary>
@@ -52,7 +156,7 @@ public sealed partial class CreateInstanceViewModel : ObservableObject
         ErrorMessage = null;
 
         var name = Name?.Trim() ?? string.Empty;
-        if (name.Length == 0)
+        if (string.IsNullOrEmpty(name))
         {
             ErrorMessage = "Tên instance không được để trống.";
             return null;
@@ -70,7 +174,7 @@ public sealed partial class CreateInstanceViewModel : ObservableObject
             return null;
         }
 
-        var loaderVersion = string.IsNullOrWhiteSpace(LoaderVersion) ? null : LoaderVersion.Trim();
+        var loaderVersion = string.IsNullOrWhiteSpace(SelectedLoaderVersion) ? null : SelectedLoaderVersion.Trim();
 
         try
         {
