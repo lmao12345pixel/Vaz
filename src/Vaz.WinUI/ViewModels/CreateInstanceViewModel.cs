@@ -98,8 +98,8 @@ public sealed partial class CreateInstanceViewModel : ObservableObject
         {
             var versions = await _versionService.GetLoaderVersionsAsync(loaderType, mcVersion);
             // Lấy version ổn định trước, beta sau
-            var stable = versions.Where(v => v.Stable).OrderByDescending(v => v.Version).Select(v => v.Version).ToList();
-            var beta = versions.Where(v => !v.Stable && v.Installable).OrderByDescending(v => v.Version).Select(v => v.Version).ToList();
+            var stable = versions.Where(v => v.Stable).OrderByDescending(v => v.Version, new LoaderVersionComparer()).Select(v => v.Version).ToList();
+            var beta = versions.Where(v => !v.Stable && v.Installable).OrderByDescending(v => v.Version, new LoaderVersionComparer()).Select(v => v.Version).ToList();
             LoaderVersions = stable.Concat(beta).ToList().AsReadOnly();
             // Chọn version mặc định là latest stable hoặc beta đầu tiên
             SelectedLoaderVersion = LoaderVersions.FirstOrDefault();

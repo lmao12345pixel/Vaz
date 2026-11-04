@@ -89,6 +89,29 @@ Tiền đề "351 → 349" **không đúng**. Số liệu thực tế:
 
 - **UI chưa runtime-verify** — chưa mở dialog kiểm tra Quilt/NeoForge dropdown, nút Tạo disable, badge, tạo instance thật. Không được coi là PASS manual test.
 - NeoForge: dropdown đã có dữ liệu (stable/beta) từ 18.2; alpha không hiển thị/installable. Installer vẫn tự resolve nếu `loaderVersion = null`; UI giờ luôn gửi selected version (hoặc null nếu danh sách rỗng — nhưng danh sách rỗng thì `CanCreateInstance = false`, không tạo được).
-- VM sort loader versions bằng ordinal string compare (`OrderByDescending(v => v.Version)`) — sai thứ tự khi patch có nhiều chữ số (vd `21.1.99` > `21.1.206`); chưa sửa (ngoài scope), nên dùng sort dạng số nếu cần chính xác.
+- ~~VM sort loader versions bằng ordinal string compare~~ **(đã sửa trong Đợt 18.2b — xem mục dưới).**
 - Forge vẫn **không hỗ trợ**.
 - Commits của Đợt 18.2: `1adcba7 feat(versions): add NeoForge loader version metadata source`, `b38a200 feat(versions): add Quilt to instance creation UI`.
+
+---
+
+## Đợt 18.2b — Fix sort version & update doc (2026-11-04)
+
+### Giới hạn NeoForge (bổ sung ghi chú)
+
+- **NeoForge chỉ hỗ trợ MC ≥ 1.20.2** (build sớm nhất trên Maven: `20.2.x`). **MC 1.20.1 KHÔNG có NeoForge** (1.20.1 là thời Forge).
+- **Forge: chưa hỗ trợ** (sẽ làm trong Đợt 18.3).
+- **Quilt: đã hỗ trợ trong UI** (dropdown loader + tạo instance qua QuiltInstaller / CmlLib.Core 4.0.6).
+
+### Việc 1 — Fix sort Loader Version — DONE
+
+- Thêm `src/Vazer.Core/Versions/LoaderVersionComparer.cs` — comparer SemVer-like (bỏ build metadata `+...`, tách core/prerelease tại `-`, so sánh số từng segment; stable > prerelease cùng core; prerelease so sánh theo identifier: số < chữ, số so sánh số, chữ ordinal; prerelease ngắn hơn xếp thấp hơn).
+- `CreateInstanceViewModel` dùng `OrderByDescending(v => v.Version, new LoaderVersionComparer())` cho cả stable và beta lists — `21.1.206` nay > `21.1.99`.
+- Không sửa service, không thêm package mới.
+- Thêm `tests/Vazer.Core.Tests/LoaderVersionComparerTests.cs` (11 case `[Theory]` + 1 `[Fact]` OrderByDescending_GivesHighestFirst = 12 test).
+
+### Gates đã chạy (18.2b)
+
+- `dotnet build Vaz.sln -c Debug` — Succeeded (8 warning đều pre-existing trong `MinecraftVersionService.cs`: CS1998, IL2026; không warning từ code mới).
+- `dotnet test` — **363/363 pass, 0 skipped** (từ 351, +12 test comparer).
+- `npm run check:static` — **PASSED** (build + test + agent config 12/12; lần đầu chạy báo `4 Lỗi(s)` trong build nhưng không tái hiện được và artifact output đã mất; chạy lại sạch 0 error — xem ghi chú bên dưới).
