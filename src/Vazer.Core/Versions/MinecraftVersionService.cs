@@ -3,11 +3,12 @@ using System.Text.Json;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Vazer.Core.Loaders;
 
 namespace Vazer.Core.Versions;
 
 /// <summary>
-/// Service fetch và cache version manifest từ Mojang và loader metadata (Fabric/Quilt).
+/// Service fetch và cache version manifest từ Mojang và loader metadata (Fabric/Quilt/NeoForge).
 /// Caches: %AppData%/Vazer/cache/versions-manifest.json, loader-versions/{loader}/{mcVersion}.json (TTL 24h).
 /// </summary>
 public sealed class MinecraftVersionService : IMinecraftVersionService
@@ -84,6 +85,8 @@ public sealed class MinecraftVersionService : IMinecraftVersionService
                 versions = await FetchFabricVersionsAsync(mcVersion, ct);
             else if (string.Equals(loader, "quilt", StringComparison.OrdinalIgnoreCase))
                 versions = await FetchQuiltVersionsAsync(mcVersion, ct);
+            else if (string.Equals(loader, "neoforge", StringComparison.OrdinalIgnoreCase))
+                versions = await FetchNeoForgeVersionsAsync(mcVersion, ct);
             else
                 _logger.LogWarning("Loader {Loader} không hỗ trợ fetch metadata", loader);
         }
@@ -222,6 +225,45 @@ public sealed class MinecraftVersionService : IMinecraftVersionService
         return loaderVersions?.Count > 0 ? loaderVersions : Array.Empty<LoaderVersionInfo>();
     }
 
+    private async Task<IReadOnlyList<LoaderVersionInfo>> FetchNeoForgeVersionsAsync(string mcVersion, CancellationToken ct)
+    {
+        // Loader version scheme: 1.21.1 -> prefix "21.1.". MC không hỗ trợ → không gọi HTTP.
+        string prefix;
+        try
+        {
+            prefix = NeoForgeInstallerService.McToNeoForgePrefix(mcVersion);
+        }
+        catch (NotSupportedException ex)
+        {
+            _logger.LogWarning(ex, "NeoForge không hỗ trợ Minecraft {Mc}", mcVersion);
+            return Array.Empty<LoaderVersionInfo>();
+        }
+
+        const string url = "https://maven.neoforged.net/api/maven/versions/releases/net/neoforged/neoforge";
+        var response = await _httpClient.GetAsync(url, ct);
+        response.EnsureSuccessStatusCode();
+
+        var json = await response.Content.ReadAsStringAsync(ct);
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        var dto = JsonSerializer.Deserialize<NeoForgeMavenVersions>(json, options);
+
+        var versions = dto?.Versions
+            .Where(v => v.StartsWith(prefix, StringComparison.Ordinal))
+            .Select(v => new LoaderVersionInfo
+            {
+                Version = v,
+                Loader = "neoforge",
+                MinecraftVersion = mcVersion,
+                Release = v.Contains("-beta", StringComparison.OrdinalIgnoreCase) ? "beta"
+                    : v.Contains('-') ? "alpha"
+                    : "stable",
+                Url = $"https://maven.neoforged.net/releases/net/neoforged/neoforge/{v}/neoforge-{v}-installer.jar"
+            })
+            .ToList();
+
+        return versions?.Count > 0 ? versions : Array.Empty<LoaderVersionInfo>();
+    }
+
     private async Task SaveCacheAsync<T>(string path, T data, CancellationToken ct)
     {
         var dir = Path.GetDirectoryName(path)!;
@@ -233,5 +275,10 @@ public sealed class MinecraftVersionService : IMinecraftVersionService
     private class VanillaVersionManifest
     {
         public List<MinecraftVersionInfo> Versions { get; set; } = new();
+    }
+
+    private class NeoForgeMavenVersions
+    {
+        public List<string> Versions { get; set; } = new();
     }
 }

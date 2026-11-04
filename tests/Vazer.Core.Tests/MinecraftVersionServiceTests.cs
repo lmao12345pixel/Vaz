@@ -99,6 +99,35 @@ public sealed class MinecraftVersionServiceTests : IDisposable
         versions[1].Stable.Should().BeFalse();
     }
 
+    // ── 3b. GetLoaderVersionsAsync_NeoForge ──
+
+    [Fact]
+    public async Task GetLoaderVersionsAsync_NeoForge()
+    {
+        var mavenJson = """{"isSnapshot":false,"versions":["21.1.0","21.1.206","21.1.10-beta","21.2.0-beta","20.2.1","26.3.0.101"]}""";
+        // Fake handler match theo PathAndQuery (không host) — map cả 2 dạng như fabric/quilt test.
+        _handler.MapJson(HttpMethod.Get, "https://maven.neoforged.net/api/maven/versions/releases/net/neoforged/neoforge", HttpStatusCode.OK, mavenJson);
+        _handler.MapJson(HttpMethod.Get, "/api/maven/versions/releases/net/neoforged/neoforge", HttpStatusCode.OK, mavenJson);
+
+        var versions = await _service.GetLoaderVersionsAsync("neoforge", "1.21.1");
+
+        // Chỉ giữ các build khớp prefix "21.1." của MC 1.21.1, giữ nguyên thứ tự API.
+        versions.Should().HaveCount(3);
+        versions.Select(v => v.Version).Should().Equal("21.1.0", "21.1.206", "21.1.10-beta");
+        versions.Count(v => v.Stable).Should().Be(2);
+        versions.Count(v => v.Installable && !v.Stable).Should().Be(1);
+        versions.Should().OnlyContain(v => v.Loader == "neoforge" && v.MinecraftVersion == "1.21.1");
+    }
+
+    [Fact]
+    public async Task GetLoaderVersionsAsync_NeoForge_UnsupportedMc_ReturnsEmpty()
+    {
+        // MC 1.19.4 → prefix "19.4." < 20.20 → bị từ chối, không gọi HTTP.
+        var versions = await _service.GetLoaderVersionsAsync("neoforge", "1.19.4");
+
+        versions.Should().BeEmpty();
+    }
+
     // ── 4. GetLoaderVersionsAsync_UnsupportedLoader_EmptyList ──
 
     [Fact]
