@@ -111,6 +111,16 @@ public interface IInstanceManager
     Task<MinecraftInstance> CreateNeoForgeAsync(string name, string minecraftVersion, string? neoforgeVersion = null, CancellationToken ct = default);
 
     /// <summary>
+    /// Tạo instance với Quilt loader.
+    /// </summary>
+    /// <param name="name">Tên instance.</param>
+    /// <param name="minecraftVersion">Minecraft version.</param>
+    /// <param name="quiltVersion">Quilt loader version (optional, lấy latest nếu null).</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Instance vừa tạo.</returns>
+    Task<MinecraftInstance> CreateQuiltAsync(string name, string minecraftVersion, string? quiltVersion = null, CancellationToken ct = default);
+
+    /// <summary>
     /// Xóa instance.
     /// </summary>
     /// <param name="id">Instance ID.</param>

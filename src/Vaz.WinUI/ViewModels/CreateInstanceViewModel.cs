@@ -11,7 +11,7 @@ namespace Vaz.WinUI.ViewModels;
 public sealed partial class CreateInstanceViewModel : ObservableObject
 {
     /// <summary>Loader hỗ trợ tạo instance.</summary>
-    public static IReadOnlyList<string> Loaders { get; } = new[] { "Fabric", "NeoForge", "Vanilla" };
+    public static IReadOnlyList<string> Loaders { get; } = new[] { "Fabric", "Quilt", "NeoForge", "Vanilla" };
 
     private readonly IInstanceManager _instanceManager;
     private readonly IMinecraftVersionService _versionService;
@@ -182,6 +182,7 @@ public sealed partial class CreateInstanceViewModel : ObservableObject
             return SelectedLoader switch
             {
                 "Fabric" => await _instanceManager.CreateFabricAsync(name, SelectedMinecraftVersion, loaderVersion),
+                "Quilt" => await _instanceManager.CreateQuiltAsync(name, SelectedMinecraftVersion, loaderVersion),
                 "NeoForge" => await _instanceManager.CreateNeoForgeAsync(name, SelectedMinecraftVersion, loaderVersion),
                 "Vanilla" => await _instanceManager.CreateVanillaAsync(name, SelectedMinecraftVersion),
                 _ => throw new InvalidOperationException($"Loader không hỗ trợ: {SelectedLoader}")

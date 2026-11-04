@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading;
 using CmlLib.Core;
 using CmlLib.Core.ModLoaders.FabricMC;
+using CmlLib.Core.ModLoaders.QuiltMC;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -167,6 +168,50 @@ public sealed class InstanceManager : IInstanceManager
 
         await SaveMetaAsync(instance, ct);
         _logger.LogInformation("Created Fabric instance {Id} with version {VersionName}", id, versionName);
+        return instance;
+    }
+
+    /// <inheritdoc />
+    public async Task<MinecraftInstance> CreateQuiltAsync(string name, string minecraftVersion, string? quiltVersion = null, CancellationToken ct = default)
+    {
+        var id = SanitizeId(name);
+        var instancePath = Path.Combine(_options.RootPath, "instances", id);
+        Directory.CreateDirectory(instancePath);
+
+        _logger.LogInformation("Installing Quilt {QuiltVersion} for MC {MCVersion} on instance {Id}", quiltVersion ?? "latest", minecraftVersion, id);
+
+        var httpClient = _httpClientFactory.CreateClient();
+        var quiltInstaller = new QuiltInstaller(httpClient);
+        var loaders = await quiltInstaller.GetLoaders(minecraftVersion);
+
+        var targetLoader = quiltVersion != null
+            ? loaders.FirstOrDefault(l => l.Version == quiltVersion)
+            : loaders.FirstOrDefault(l => l.Stable) ?? loaders.FirstOrDefault();
+
+        if (targetLoader == null)
+        {
+            throw new InvalidOperationException($"No Quilt loader found for Minecraft {minecraftVersion}");
+        }
+
+        var loaderVersion = RequireLoaderVersion(targetLoader.Version, minecraftVersion);
+        var versionName = await quiltInstaller.Install(minecraftVersion, loaderVersion, new MinecraftPath(instancePath));
+
+        var instance = new MinecraftInstance
+        {
+            Id = id,
+            Name = name,
+            MinecraftVersion = minecraftVersion,
+            LoaderType = "quilt",
+            LoaderVersion = loaderVersion,
+            LaunchVersionName = versionName,
+            Path = instancePath,
+            IconPath = null,
+            CreatedAt = DateTimeOffset.UtcNow,
+            LastPlayedAt = null
+        };
+
+        await SaveMetaAsync(instance, ct);
+        _logger.LogInformation("Created Quilt instance {Id} with version {VersionName}", id, versionName);
         return instance;
     }
 
