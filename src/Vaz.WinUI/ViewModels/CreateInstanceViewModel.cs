@@ -1,12 +1,14 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using Vazer.Core.Abstractions;
+using Vazer.Core.Instances;
+using Vazer.Core.Loaders;
 using Vazer.Core.Versions;
 
 namespace Vaz.WinUI.ViewModels;
 
 /// <summary>
 /// ViewModel cho dialog "Tạo instance mới": validate input rồi gọi
-/// IInstanceManager (Fabric / NeoForge / Vanilla).
+/// IInstanceCreationService (facade, tự chọn installer phù hợp).
 /// </summary>
 public sealed partial class CreateInstanceViewModel : ObservableObject
 {
@@ -23,7 +25,7 @@ public sealed partial class CreateInstanceViewModel : ObservableObject
         _ => 4
     };
 
-    private readonly IInstanceManager _instanceManager;
+    private readonly IInstanceCreationService _creationService;
     private readonly IMinecraftVersionService _versionService;
 
     [ObservableProperty]
@@ -62,9 +64,33 @@ public sealed partial class CreateInstanceViewModel : ObservableObject
     [ObservableProperty]
     private string? createWarningMessage;
 
-    public CreateInstanceViewModel(IInstanceManager instanceManager, IMinecraftVersionService versionService)
+    /// <summary>Stage hiện tại của installer (Preparing/Downloading/Installing/Finalizing/Done).</summary>
+    [ObservableProperty]
+    private string? installStage;
+
+    /// <summary>Text mô tả tiến trình (hiển thị dưới ProgressBar).</summary>
+    [ObservableProperty]
+    private string? installMessage;
+
+    /// <summary>Progress percent, -1 = indeterminate.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsInstallerProgressIndeterminate))]
+    private double installerProgressPercent = -1;
+
+    /// <summary>True khi đang cài (disable nút trong dialog).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsNotInstalling))]
+    private bool isInstalling;
+
+    /// <summary>Hỗ trợ binding ProgressBar.IsIndeterminate.</summary>
+    public bool IsInstallerProgressIndeterminate => InstallerProgressPercent < 0;
+
+    /// <summary>Hỗ trợ binding IsEnabled (ngược lại IsInstalling).</summary>
+    public bool IsNotInstalling => !IsInstalling;
+
+    public CreateInstanceViewModel(IInstanceCreationService creationService, IMinecraftVersionService versionService)
     {
-        _instanceManager = instanceManager;
+        _creationService = creationService;
         _versionService = versionService;
         _ = LoadVersionsAsync();
     }
@@ -192,14 +218,29 @@ public sealed partial class CreateInstanceViewModel : ObservableObject
         try
         {
             IsBusy = true;
-            return SelectedLoader switch
+            IsInstalling = true;
+            InstallerProgressPercent = -1;
+            InstallStage = InstallerStage.Preparing.ToString();
+            InstallMessage = "Đang chuẩn bị...";
+
+            // Progress<T> capture sync context (UI thread) tại đây — installer report
+            // từ thread pool nhưng callback vẫn được marshal về UI thread.
+            var progress = new Progress<InstallerProgress>(p =>
             {
-                "Fabric" => await _instanceManager.CreateFabricAsync(name, SelectedMinecraftVersion, loaderVersion),
-                "Quilt" => await _instanceManager.CreateQuiltAsync(name, SelectedMinecraftVersion, loaderVersion),
-                "NeoForge" => await _instanceManager.CreateNeoForgeAsync(name, SelectedMinecraftVersion, loaderVersion),
-                "Vanilla" => await _instanceManager.CreateVanillaAsync(name, SelectedMinecraftVersion),
-                _ => throw new InvalidOperationException($"Loader không hỗ trợ: {SelectedLoader}")
-            };
+                InstallerProgressPercent = p.Percent;
+                InstallMessage = p.Message;
+                InstallStage = p.Stage.ToString();
+            });
+
+            var info = await _creationService.CreateAsync(
+                name,
+                SelectedMinecraftVersion,
+                SelectedLoader,
+                loaderVersion,
+                progress,
+                CancellationToken.None);
+
+            return info.ToMinecraftInstance();
         }
         catch (Exception ex)
         {
@@ -209,6 +250,10 @@ public sealed partial class CreateInstanceViewModel : ObservableObject
         finally
         {
             IsBusy = false;
+            IsInstalling = false;
+            InstallerProgressPercent = -1;
+            InstallStage = null;
+            InstallMessage = null;
         }
     }
 }
