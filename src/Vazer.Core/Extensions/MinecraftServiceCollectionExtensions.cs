@@ -90,11 +90,24 @@ public static class MinecraftServiceCollectionExtensions
         services.AddSingleton<CompositeAuthProvider>();
         services.AddSingleton<IAdoptiumClient, AdoptiumClient>();
         services.AddSingleton<IJavaResolver, JavaResolver>();
-        services.AddSingleton<INeoForgeInstaller, NeoForgeInstaller>();
+        // Loader installers (Strategy pattern cho IInstanceCreationService).
+        // NeoForgeInstaller cũng là INeoForgeInstaller (InstanceManager/MrpackImporter dùng).
+        services.AddSingleton<VanillaInstaller>();
+        services.AddSingleton<FabricInstaller>();
+        services.AddSingleton<QuiltInstaller>();
+        services.AddSingleton<NeoForgeInstaller>();
+        services.AddSingleton<ForgeInstaller>();
+        services.AddSingleton<ILoaderInstaller>(sp => sp.GetRequiredService<VanillaInstaller>());
+        services.AddSingleton<ILoaderInstaller>(sp => sp.GetRequiredService<FabricInstaller>());
+        services.AddSingleton<ILoaderInstaller>(sp => sp.GetRequiredService<QuiltInstaller>());
+        services.AddSingleton<ILoaderInstaller>(sp => sp.GetRequiredService<NeoForgeInstaller>());
+        services.AddSingleton<ILoaderInstaller>(sp => sp.GetRequiredService<ForgeInstaller>());
+        services.AddSingleton<INeoForgeInstaller>(sp => sp.GetRequiredService<NeoForgeInstaller>());
+        services.AddSingleton<IInstanceCreationService, InstanceCreationService>();
         services.AddSingleton<LoaderInstallerRegistry>(sp =>
         {
             var registry = new LoaderInstallerRegistry();
-            registry.Register("neoforge", sp.GetRequiredService<INeoForgeInstaller>());
+            registry.Register("neoforge", sp.GetRequiredService<NeoForgeInstaller>());
             return registry;
         });
         // Phase B: CreateInstanceViewModel cần IMinecraftVersionService (fetch Mojang/Fabric/Quilt/NeoForge metadata).
