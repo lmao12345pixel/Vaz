@@ -3,6 +3,46 @@
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
 
+if (-not ([System.Management.Automation.PSTypeName]'VazMouse').Type) {
+    Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class VazMouse {
+    [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+    [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+    [DllImport("user32.dll")] public static extern bool SetCursorPos(int X, int Y);
+    [DllImport("user32.dll")] public static extern void mouse_event(int dwFlags, int dx, int dy, int dwData, int dwExtraInfo);
+    public static void Click(int x, int y) {
+        SetCursorPos(x, y);
+        System.Threading.Thread.Sleep(150);
+        mouse_event(0x02, 0, 0, 0, 0); // DOWN
+        System.Threading.Thread.Sleep(60);
+        mouse_event(0x04, 0, 0, 0, 0); // UP
+    }
+    public static void ClickHwnd(IntPtr hWnd, int x, int y) {
+        ShowWindow(hWnd, 9);
+        SetForegroundWindow(hWnd);
+        System.Threading.Thread.Sleep(300);
+        SetCursorPos(x, y);
+        System.Threading.Thread.Sleep(150);
+        mouse_event(0x02, 0, 0, 0, 0);
+        System.Threading.Thread.Sleep(80);
+        mouse_event(0x04, 0, 0, 0, 0);
+        System.Threading.Thread.Sleep(300);
+    }
+}
+"@
+}
+
+function Click-MouseAt {
+    param([int]$X, [int]$Y, [IntPtr]$HWnd = [IntPtr]::Zero)
+    if ($HWnd -ne [IntPtr]::Zero) {
+        [VazMouse]::ClickHwnd($HWnd, $X, $Y)
+    } else {
+        [VazMouse]::Click($X, $Y)
+    }
+}
+
 function Get-VazRoot {
     param([int]$TimeoutSec = 15)
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
