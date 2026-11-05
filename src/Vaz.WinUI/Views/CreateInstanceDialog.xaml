@@ -87,6 +87,12 @@
             IsOpen="False"
             Severity="Error"
             Title="Tạo instance thất bại"
-            Message="" />
+            Message="">
+            <InfoBar.ActionButton>
+                <Button x:Name="ViewInstallLogButton"
+                        Content="Xem chi tiết lỗi"
+                        Click="ViewInstallLogButton_Click" />
+            </InfoBar.ActionButton>
+        </InfoBar>
     </StackPanel>
 </ContentDialog>

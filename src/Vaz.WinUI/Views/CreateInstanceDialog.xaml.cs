@@ -1,4 +1,6 @@
 using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -96,6 +98,34 @@ public sealed partial class CreateInstanceDialog : ContentDialog
 
         var showEmptyText = !hasItems && !_vm.IsLoaderVersionsLoading;
         NoLoaderVersionsText.Visibility = showEmptyText ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>Mở log NeoForge installer mới nhất (hoặc thư mục downloads nếu chưa có log).</summary>
+    private void ViewInstallLogButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var dir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "Vazer", "Minecraft", "java", "downloads");
+
+            string? log = null;
+            if (Directory.Exists(dir))
+            {
+                log = Directory.GetFiles(dir, "neoforge-*-installer.jar.log")
+                    .OrderByDescending(File.GetLastWriteTimeUtc)
+                    .FirstOrDefault();
+            }
+
+            var target = log ?? (Directory.Exists(dir)
+                ? dir
+                : Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData));
+            Process.Start(new ProcessStartInfo(target) { UseShellExecute = true });
+        }
+        catch
+        {
+            // Không chặn flow khi không mở được log — thông điệp lỗi đã hiển thị trên InfoBar.
+        }
     }
 
     private async void Dialog_PrimaryButtonClick(ContentDialog sender, ContentDialogButtonClickEventArgs args)

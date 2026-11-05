@@ -127,6 +127,11 @@ public sealed class NeoForgeInstallerService : INeoForgeInstallerService
 
         progress?.Report(new InstallProgress { TotalBytes = 1, DownloadedBytes = 1, Status = "installing" });
 
+        // NeoForge installer BẮT BUỘC phải có launcher_profiles.json trong thư mục game,
+        // nếu thiếu -> in "There is no minecraft launcher profile in ..." và exit code 1.
+        // Tạo file tối thiểu (không ghi đè nếu đã có).
+        EnsureLauncherProfiles(instance.Path);
+
         var psi = new ProcessStartInfo
         {
             FileName = javaExe,
@@ -134,7 +139,9 @@ public sealed class NeoForgeInstallerService : INeoForgeInstallerService
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
-            CreateNoWindow = true
+            CreateNoWindow = true,
+            // Installer ghi log ra file {jar}.log theo CWD — đặt CWD cạnh jar để path đoán được.
+            WorkingDirectory = downloadDir
         };
 
         using var process = Process.Start(psi)
@@ -146,9 +153,11 @@ public sealed class NeoForgeInstallerService : INeoForgeInstallerService
         _logger.LogDebug("NeoForge installer stdout: {Out}", stdout);
         if (process.ExitCode != 0)
         {
-            _logger.LogError("NeoForge installer failed: {Err}", stderr);
+            var reason = ExtractInstallerError(stdout, stderr);
+            var logPath = installerJar + ".log";
+            _logger.LogError("NeoForge installer failed (exit {Code}): {Reason}. Log: {Log}", process.ExitCode, reason, logPath);
             throw new InvalidOperationException(
-                $"NeoForge installer exited with code {process.ExitCode}. See log for details.");
+                $"Không thể cài đặt NeoForge. {reason} Chi tiết: {logPath}. Vui lòng kiểm tra Java 21 đã được cài đặt.");
         }
 
         // Verify: installer must produce versions/neoforge-<version>/ with a version json.
@@ -166,6 +175,51 @@ public sealed class NeoForgeInstallerService : INeoForgeInstallerService
 
         progress?.Report(new InstallProgress { TotalBytes = 1, DownloadedBytes = 1, Status = "done" });
         _logger.LogInformation("Installed NeoForge {Version} into {Path}", version, instance.Path);
+    }
+
+    /// <summary>
+    /// Tạo launcher_profiles.json tối thiểu trong thư mục game nếu chưa có.
+    /// NeoForge installer (headless, --installClient) yêu cầu file này; thiếu -> exit code 1
+    /// với thông điệp "There is no minecraft launcher profile in &lt;dir&gt;".
+    /// Không ghi đè file đã tồn tại. Trả về true nếu đã tạo mới.
+    /// </summary>
+    internal static bool EnsureLauncherProfiles(string gameDir)
+    {
+        var path = Path.Combine(gameDir, "launcher_profiles.json");
+        if (File.Exists(path))
+        {
+            return false;
+        }
+
+        Directory.CreateDirectory(gameDir);
+        File.WriteAllText(path, """{"profiles":{},"settings":{},"version":3}""");
+        return true;
+    }
+
+    /// <summary>
+    /// Lấy dòng lỗi "đáng chú ý nhất" từ output của installer để hiển thị cho user.
+    /// Ưu tiên dòng chứa từ khóa lỗi; fallback về dòng cuối.
+    /// </summary>
+    internal static string ExtractInstallerError(string? stdout, string? stderr)
+    {
+        var lines = ((stdout ?? string.Empty) + "\n" + (stderr ?? string.Empty))
+            .Split('\n')
+            .Select(l => l.Trim())
+            .Where(l => l.Length > 0)
+            .ToList();
+
+        if (lines.Count == 0)
+        {
+            return "Installer không in ra thông tin lỗi.";
+        }
+
+        var keyLine = lines.LastOrDefault(l =>
+            l.Contains("error", StringComparison.OrdinalIgnoreCase) ||
+            l.Contains("no minecraft launcher profile", StringComparison.OrdinalIgnoreCase) ||
+            l.Contains("exception", StringComparison.OrdinalIgnoreCase) ||
+            l.Contains("failed", StringComparison.OrdinalIgnoreCase));
+
+        return keyLine ?? lines[^1];
     }
 
     private async Task<string> ResolveJavaAsync(string minecraftVersion, CancellationToken ct)
