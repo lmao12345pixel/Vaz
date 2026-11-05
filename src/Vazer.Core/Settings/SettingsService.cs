@@ -61,25 +61,59 @@ public sealed class SettingsService : ISettingsService
         try
         {
             GlobalSettings? loaded = null;
+            var repaired = false;
+            var resetToDefaults = false;
 
             if (File.Exists(_filePath))
             {
                 try
                 {
                     var json = await File.ReadAllTextAsync(_filePath, ct).ConfigureAwait(false);
-                    loaded = JsonSerializer.Deserialize(json, SettingsJsonTypeInfo);
+                    try
+                    {
+                        loaded = JsonSerializer.Deserialize(json, SettingsJsonTypeInfo);
+                    }
+                    catch (JsonException)
+                    {
+                        // Thử recovery nếu có lỗi double-escape quotes (ví dụ \"theme\")
+                        if (json.Contains("\\\""))
+                        {
+                            var fixedJson = json.Replace("\\\"", "\"");
+                            loaded = JsonSerializer.Deserialize(fixedJson, SettingsJsonTypeInfo);
+                            repaired = true;
+                            _logger.LogWarning("settings.json chứa escaped quotes — đã tự động khôi phục và ghi lại file");
+                        }
+                        else
+                        {
+                            throw;
+                        }
+                    }
                 }
-                catch (JsonException ex)
+                catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "settings.json không hợp lệ — dùng mặc định");
-                }
-                catch (IOException ex)
-                {
-                    _logger.LogWarning(ex, "Không đọc được settings.json — dùng mặc định");
+                    _logger.LogWarning(ex, "settings.json không hợp lệ — backup file cũ (.bak) và dùng mặc định");
+                    resetToDefaults = true;
                 }
             }
 
-            return Normalize(loaded);
+            var normalized = Normalize(loaded);
+
+            // Persist recovery: sửa file hỏng tại chỗ (giữ bản backup .bak) để lần mở sau không lỗi nữa.
+            if (repaired || resetToDefaults)
+            {
+                try
+                {
+                    BackupCorruptFile();
+                    await WriteAtomicNoLock(normalized, ct).ConfigureAwait(false);
+                }
+                catch (Exception writeEx)
+                {
+                    // Không crash app vì không ghi được file — chỉ log.
+                    _logger.LogWarning(writeEx, "Không thể ghi lại settings.json sau recovery");
+                }
+            }
+
+            return normalized;
         }
         finally
         {
@@ -97,24 +131,47 @@ public sealed class SettingsService : ISettingsService
         await _lock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            var directory = Path.GetDirectoryName(_filePath);
-            if (!string.IsNullOrEmpty(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-
-            var json = JsonSerializer.Serialize(normalized, SettingsJsonTypeInfo);
-            var tmpPath = _filePath + ".tmp";
-            await File.WriteAllTextAsync(tmpPath, json, ct).ConfigureAwait(false);
-
-            // Ghi atomic: move đè file thật, tránh file cụt khi app bị kill giữa chừng.
-            File.Move(tmpPath, _filePath, true);
-
+            await WriteAtomicNoLock(normalized, ct).ConfigureAwait(false);
             return normalized;
         }
         finally
         {
             _lock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Ghi file atomically (tmp + move). Caller phải giu _lock nếu concurrent.
+    /// </summary>
+    private async Task WriteAtomicNoLock(GlobalSettings normalized, CancellationToken ct)
+    {
+        var directory = Path.GetDirectoryName(_filePath);
+        if (!string.IsNullOrEmpty(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        var json = JsonSerializer.Serialize(normalized, SettingsJsonTypeInfo);
+        var tmpPath = _filePath + ".tmp";
+        await File.WriteAllTextAsync(tmpPath, json, ct).ConfigureAwait(false);
+
+        // Ghi atomic: move đè file thật, tránh file cụt khi app bị kill giữa chừng.
+        File.Move(tmpPath, _filePath, true);
+    }
+
+    private void BackupCorruptFile()
+    {
+        try
+        {
+            var bakPath = _filePath + ".bak";
+            if (File.Exists(_filePath))
+            {
+                File.Copy(_filePath, bakPath, true);
+            }
+        }
+        catch (Exception backupEx)
+        {
+            _logger.LogWarning(backupEx, "Không thể tạo backup cho settings.json hỏng");
         }
     }
 

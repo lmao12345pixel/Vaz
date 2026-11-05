@@ -1,3 +1,4 @@
+using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -151,6 +152,30 @@ public sealed class SettingsServiceTests : IDisposable
         settings.RamMb.Should().Be(4096);
         settings.Theme.Should().Be("dark");
         settings.DataPath.Should().Be(_tempRoot);
+
+        File.Exists(SettingsPath + ".bak").Should().BeTrue("bản hỏng phải được giữ lại làm backup");
+        File.Exists(SettingsPath).Should().BeTrue("app phải tạo file mặc định mới sau khi reset");
+        var raw = await File.ReadAllTextAsync(SettingsPath);
+        var roundtrip = JsonSerializer.Deserialize<JsonElement>(raw);
+        roundtrip.GetProperty("theme").GetString().Should().Be("dark");
+    }
+
+    [Fact]
+    public async Task Load_DoubleEscapedJson_RecoversAndRewritesFile()
+    {
+        // File thật bị lỗi double-escape: mỗi quote bị prefix bằng backslash.
+        WriteRawJson("""{ \"theme\": \"light\", \"ramMb\": 8192 }""");
+
+        var settings = await _service.LoadAsync();
+
+        settings.Theme.Should().Be("light", "recovery phải giữ giá trị user, không reset về default");
+        settings.RamMb.Should().Be(8192);
+
+        File.Exists(SettingsPath + ".bak").Should().BeTrue();
+        var raw = await File.ReadAllTextAsync(SettingsPath);
+        raw.Should().NotContain("\\\"", "file được ghi lại phải là JSON hợp lệ");
+        var roundtrip = JsonSerializer.Deserialize<JsonElement>(raw);
+        roundtrip.GetProperty("theme").GetString().Should().Be("light");
     }
 
     [Fact]
