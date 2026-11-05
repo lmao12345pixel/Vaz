@@ -45,6 +45,7 @@ public partial class App : Application
         services.AddSingleton<IModrinthSearchService, ModrinthSearchService>();
         services.AddSingleton<IModDownloadManager, ModDownloadManager>();
         services.AddSingleton<INotificationService, NotificationService>();
+        services.AddSingleton<CoverImageCacheService>();
 
         // ViewModels
         services.AddSingleton<MainViewModel>();
