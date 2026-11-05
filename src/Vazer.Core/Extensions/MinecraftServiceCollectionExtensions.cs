@@ -90,11 +90,11 @@ public static class MinecraftServiceCollectionExtensions
         services.AddSingleton<CompositeAuthProvider>();
         services.AddSingleton<IAdoptiumClient, AdoptiumClient>();
         services.AddSingleton<IJavaResolver, JavaResolver>();
-        services.AddSingleton<INeoForgeInstallerService, NeoForgeInstallerService>();
+        services.AddSingleton<INeoForgeInstaller, NeoForgeInstaller>();
         services.AddSingleton<LoaderInstallerRegistry>(sp =>
         {
             var registry = new LoaderInstallerRegistry();
-            registry.Register("neoforge", sp.GetRequiredService<INeoForgeInstallerService>());
+            registry.Register("neoforge", sp.GetRequiredService<INeoForgeInstaller>());
             return registry;
         });
         // Phase B: CreateInstanceViewModel cần IMinecraftVersionService (fetch Mojang/Fabric/Quilt/NeoForge metadata).

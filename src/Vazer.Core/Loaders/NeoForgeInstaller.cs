@@ -10,9 +10,11 @@ using Vazer.Core.Abstractions;
 namespace Vazer.Core.Loaders;
 
 /// <summary>
-/// Option B implementation: NeoForge via official Maven + headless installer JAR.
+/// NeoForge loader qua official Maven + headless installer JAR (CmlLib.Core 4.0.6 không hỗ trợ NeoForge).
+/// Implement cả <see cref="INeoForgeInstaller"/> (tương thích InstanceManager/MrpackImporter)
+/// và <see cref="ILoaderInstaller"/> (strategy pattern cho InstanceCreationService).
 /// </summary>
-public sealed class NeoForgeInstallerService : INeoForgeInstallerService
+public sealed class NeoForgeInstaller : INeoForgeInstaller, ILoaderInstaller
 {
     internal const string MavenMetadataUrl =
         "https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml";
@@ -21,13 +23,13 @@ public sealed class NeoForgeInstallerService : INeoForgeInstallerService
         "https://maven.neoforged.net/releases/net/neoforged/neoforge/{0}/neoforge-{0}-installer.jar";
 
     private readonly IHttpClientFactory _httpClientFactory;
-    private readonly ILogger<NeoForgeInstallerService> _logger;
+    private readonly ILogger<NeoForgeInstaller> _logger;
     private readonly MinecraftOptions _options;
     private readonly IJavaResolver? _javaResolver;
 
-    public NeoForgeInstallerService(
+    public NeoForgeInstaller(
         IHttpClientFactory httpClientFactory,
-        ILogger<NeoForgeInstallerService> logger,
+        ILogger<NeoForgeInstaller> logger,
         IOptions<MinecraftOptions> options,
         IJavaResolver? javaResolver = null)
     {
@@ -35,6 +37,23 @@ public sealed class NeoForgeInstallerService : INeoForgeInstallerService
         _logger = logger;
         _options = options.Value;
         _javaResolver = javaResolver;
+    }
+
+    /// <inheritdoc />
+    public string LoaderType => "neoforge";
+
+    /// <inheritdoc />
+    public bool SupportsVersion(string mcVersion)
+    {
+        try
+        {
+            _ = McToNeoForgePrefix(mcVersion);
+            return true;
+        }
+        catch (NotSupportedException)
+        {
+            return false;
+        }
     }
 
     /// <summary>
@@ -105,8 +124,53 @@ public sealed class NeoForgeInstallerService : INeoForgeInstallerService
             throw new ArgumentException("Instance LoaderVersion must be set before NeoForge install.", nameof(instance));
         }
 
-        var version = instance.LoaderVersion;
-        var javaExe = await ResolveJavaAsync(instance.MinecraftVersion, ct);
+        progress?.Report(new InstallProgress { TotalBytes = 1, DownloadedBytes = 1, Status = "installing" });
+        await RunInstallerAsync(instance.Path, instance.MinecraftVersion, instance.LoaderVersion, progress: null, ct);
+        progress?.Report(new InstallProgress { TotalBytes = 1, DownloadedBytes = 1, Status = "done" });
+    }
+
+    /// <inheritdoc />
+    public async Task InstallAsync(
+        string instancePath,
+        string mcVersion,
+        string? loaderVersion,
+        IProgress<InstallerProgress>? progress,
+        CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        progress?.Report(new InstallerProgress
+        {
+            Stage = InstallerStage.Preparing,
+            Percent = -1,
+            Message = "Đang chuẩn bị cài NeoForge..."
+        });
+
+        var version = string.IsNullOrWhiteSpace(loaderVersion)
+            ? await ResolveLatestVersionAsync(mcVersion, ct)
+            : loaderVersion;
+
+        await RunInstallerAsync(instancePath, mcVersion, version, progress, ct);
+
+        progress?.Report(new InstallerProgress
+        {
+            Stage = InstallerStage.Done,
+            Percent = 100,
+            Message = $"Hoàn tất cài NeoForge {version}"
+        });
+    }
+
+    /// <summary>
+    /// Logic cài chung: tải installer jar (nếu chưa có), đảm bảo launcher_profiles.json,
+    /// chạy headless installer, xác minh version json được tạo.
+    /// </summary>
+    private async Task RunInstallerAsync(
+        string instancePath,
+        string mcVersion,
+        string version,
+        IProgress<InstallerProgress>? progress,
+        CancellationToken ct)
+    {
+        var javaExe = await ResolveJavaAsync(mcVersion, ct);
 
         var downloadDir = Path.Combine(_options.RootPath, "java", "downloads");
         Directory.CreateDirectory(downloadDir);
@@ -114,6 +178,12 @@ public sealed class NeoForgeInstallerService : INeoForgeInstallerService
 
         if (!File.Exists(installerJar))
         {
+            progress?.Report(new InstallerProgress
+            {
+                Stage = InstallerStage.Downloading,
+                Percent = -1,
+                Message = $"Đang tải NeoForge installer {version}..."
+            });
             using var client = _httpClientFactory.CreateClient();
             client.Timeout = TimeSpan.FromMinutes(10);
             var url = string.Format(InstallerUrlTemplate, version);
@@ -125,17 +195,22 @@ public sealed class NeoForgeInstallerService : INeoForgeInstallerService
             await webStream.CopyToAsync(fileStream, ct);
         }
 
-        progress?.Report(new InstallProgress { TotalBytes = 1, DownloadedBytes = 1, Status = "installing" });
+        progress?.Report(new InstallerProgress
+        {
+            Stage = InstallerStage.Installing,
+            Percent = -1,
+            Message = $"Đang cài NeoForge {version} (có thể mất vài phút)..."
+        });
 
         // NeoForge installer BẮT BUỘC phải có launcher_profiles.json trong thư mục game,
         // nếu thiếu -> in "There is no minecraft launcher profile in ..." và exit code 1.
         // Tạo file tối thiểu (không ghi đè nếu đã có).
-        EnsureLauncherProfiles(instance.Path);
+        EnsureLauncherProfiles(instancePath);
 
         var psi = new ProcessStartInfo
         {
             FileName = javaExe,
-            Arguments = $"-jar \"{installerJar}\" --installClient \"{instance.Path}\"",
+            Arguments = $"-jar \"{installerJar}\" --installClient \"{instancePath}\"",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -160,8 +235,15 @@ public sealed class NeoForgeInstallerService : INeoForgeInstallerService
                 $"Không thể cài đặt NeoForge. {reason} Chi tiết: {logPath}. Vui lòng kiểm tra Java 21 đã được cài đặt.");
         }
 
+        progress?.Report(new InstallerProgress
+        {
+            Stage = InstallerStage.Finalizing,
+            Percent = -1,
+            Message = "Đang xác minh kết quả cài đặt..."
+        });
+
         // Verify: installer must produce versions/neoforge-<version>/ with a version json.
-        var versionsDir = Path.Combine(instance.Path, "versions");
+        var versionsDir = Path.Combine(instancePath, "versions");
         var versionJson = Directory.Exists(versionsDir)
             ? Directory.GetFiles(versionsDir, "*.json", SearchOption.AllDirectories)
                 .FirstOrDefault(f => f.Contains(version, StringComparison.OrdinalIgnoreCase))
@@ -173,8 +255,7 @@ public sealed class NeoForgeInstallerService : INeoForgeInstallerService
                 $"NeoForge installer finished but no version json for {version} found under {versionsDir}.");
         }
 
-        progress?.Report(new InstallProgress { TotalBytes = 1, DownloadedBytes = 1, Status = "done" });
-        _logger.LogInformation("Installed NeoForge {Version} into {Path}", version, instance.Path);
+        _logger.LogInformation("Installed NeoForge {Version} into {Path}", version, instancePath);
     }
 
     /// <summary>

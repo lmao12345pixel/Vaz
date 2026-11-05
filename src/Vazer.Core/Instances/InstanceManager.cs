@@ -16,7 +16,7 @@ namespace Vazer.Core.Instances;
 
 /// <summary>
 /// Instance manager using CmlLib.Core for vanilla/Fabric installation and
-/// <see cref="Loaders.INeoForgeInstallerService"/> for NeoForge
+/// <see cref="Loaders.INeoForgeInstaller"/> for NeoForge
 /// (CmlLib.Core 4.0.6 is the latest release and lacks NeoForge support).
 /// </summary>
 public sealed class InstanceManager : IInstanceManager
@@ -26,13 +26,13 @@ public sealed class InstanceManager : IInstanceManager
     private readonly IOptions<MinecraftOptions> _optionsAccessor;
     private readonly MinecraftLauncher _launcher;
     private readonly IHttpClientFactory _httpClientFactory;
-    private readonly Loaders.INeoForgeInstallerService? _neoForgeInstaller;
+    private readonly Loaders.INeoForgeInstaller? _neoForgeInstaller;
 
     public InstanceManager(
         ILogger<InstanceManager> logger,
         IOptions<MinecraftOptions> options,
         IHttpClientFactory httpClientFactory,
-        Loaders.INeoForgeInstallerService? neoForgeInstaller = null)
+        Loaders.INeoForgeInstaller? neoForgeInstaller = null)
     {
         _logger = logger;
         _options = options.Value;
@@ -218,9 +218,9 @@ public sealed class InstanceManager : IInstanceManager
     /// <inheritdoc />
     public async Task<MinecraftInstance> CreateNeoForgeAsync(string name, string minecraftVersion, string? neoforgeVersion = null, CancellationToken ct = default)
     {
-        var svc = _neoForgeInstaller ?? new Loaders.NeoForgeInstallerService(
+        var svc = _neoForgeInstaller ?? new Loaders.NeoForgeInstaller(
             _httpClientFactory,
-            NullLogger<Loaders.NeoForgeInstallerService>.Instance,
+            NullLogger<Loaders.NeoForgeInstaller>.Instance,
             _optionsAccessor);
 
         var id = SanitizeId(name);

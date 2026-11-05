@@ -263,7 +263,7 @@ public sealed class MinecraftVersionService : IMinecraftVersionService
         string prefix;
         try
         {
-            prefix = NeoForgeInstallerService.McToNeoForgePrefix(mcVersion);
+            prefix = NeoForgeInstaller.McToNeoForgePrefix(mcVersion);
         }
         catch (NotSupportedException ex)
         {

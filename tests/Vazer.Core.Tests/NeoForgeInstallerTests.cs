@@ -51,12 +51,12 @@ public sealed class NeoForgeInstallerTests : IDisposable
         try { Directory.Delete(_tempRoot, true); } catch { }
     }
 
-    private NeoForgeInstallerService CreateService()
+    private NeoForgeInstaller CreateService()
     {
         var options = Options.Create(new MinecraftOptions { RootPath = _tempRoot });
-        return new NeoForgeInstallerService(
+        return new NeoForgeInstaller(
             new FakeHttpClientFactory(_http),
-            NullLogger<NeoForgeInstallerService>.Instance,
+            NullLogger<NeoForgeInstaller>.Instance,
             options);
     }
 
@@ -68,7 +68,7 @@ public sealed class NeoForgeInstallerTests : IDisposable
     [InlineData("1.21.4", "21.4.")]
     public void McToNeoForgePrefix_Mapping(string mc, string expected)
     {
-        NeoForgeInstallerService.McToNeoForgePrefix(mc).Should().Be(expected);
+        NeoForgeInstaller.McToNeoForgePrefix(mc).Should().Be(expected);
     }
 
     [Theory]
@@ -77,7 +77,7 @@ public sealed class NeoForgeInstallerTests : IDisposable
     [InlineData("1.19.4")]
     public void McToNeoForgePrefix_Unsupported_Throws(string mc)
     {
-        Assert.Throws<NotSupportedException>(() => NeoForgeInstallerService.McToNeoForgePrefix(mc));
+        Assert.Throws<NotSupportedException>(() => NeoForgeInstaller.McToNeoForgePrefix(mc));
     }
 
     [Fact]
@@ -109,11 +109,11 @@ public sealed class NeoForgeInstallerTests : IDisposable
         var registry = new LoaderInstallerRegistry();
         var svc = CreateService();
 
-        registry.TryGet<INeoForgeInstallerService>("neoforge", out _).Should().BeFalse();
+        registry.TryGet<INeoForgeInstaller>("neoforge", out _).Should().BeFalse();
         registry.Register("neoforge", svc);
-        registry.TryGet<INeoForgeInstallerService>("neoforge", out var resolved).Should().BeTrue();
+        registry.TryGet<INeoForgeInstaller>("neoforge", out var resolved).Should().BeTrue();
         resolved.Should().BeSameAs(svc);
-        registry.TryGet<INeoForgeInstallerService>("NEOFORGE", out _).Should().BeTrue();
+        registry.TryGet<INeoForgeInstaller>("NEOFORGE", out _).Should().BeTrue();
     }
 
     // ---- Không có launcher_profiles.json → installer exit code 1 (bug thực tế) ----
@@ -123,7 +123,7 @@ public sealed class NeoForgeInstallerTests : IDisposable
     {
         var dir = Path.Combine(_tempRoot, "gamedir-test");
 
-        var created = NeoForgeInstallerService.EnsureLauncherProfiles(dir);
+        var created = NeoForgeInstaller.EnsureLauncherProfiles(dir);
 
         created.Should().BeTrue();
         var json = File.ReadAllText(Path.Combine(dir, "launcher_profiles.json"));
@@ -138,7 +138,7 @@ public sealed class NeoForgeInstallerTests : IDisposable
         var path = Path.Combine(dir, "launcher_profiles.json");
         File.WriteAllText(path, "{\"profiles\":{\"x\":{}},\"version\":3}");
 
-        var created = NeoForgeInstallerService.EnsureLauncherProfiles(dir);
+        var created = NeoForgeInstaller.EnsureLauncherProfiles(dir);
 
         created.Should().BeFalse();
         File.ReadAllText(path).Should().Contain("\"x\"");
@@ -157,7 +157,7 @@ public sealed class NeoForgeInstallerTests : IDisposable
             "There is no minecraft launcher profile in \"C:\\gamedir\", you need to run the launcher first!",
             "There was an error during installation");
 
-        var reason = NeoForgeInstallerService.ExtractInstallerError(stdout, null);
+        var reason = NeoForgeInstaller.ExtractInstallerError(stdout, null);
 
         reason.Should().Contain("error");
     }
@@ -165,7 +165,7 @@ public sealed class NeoForgeInstallerTests : IDisposable
     [Fact]
     public void ExtractInstallerError_EmptyOutput_ReturnsFallback()
     {
-        NeoForgeInstallerService.ExtractInstallerError(string.Empty, string.Empty)
+        NeoForgeInstaller.ExtractInstallerError(string.Empty, string.Empty)
             .Should().Contain("không in ra");
     }
 }

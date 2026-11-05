@@ -12,7 +12,7 @@ namespace Vazer.Core.Tests;
 /// <summary>
 /// Phase 1.6 TASK3 + 1.7 TASK1: InstanceManager metadata round-trip without network.
 /// CreateFabric/CreateVanilla require network (Mojang/Fabric APIs) and are NOT
-/// covered here. NeoForge goes through injectable <see cref="INeoForgeInstallerService"/>.
+/// covered here. NeoForge goes through injectable <see cref="INeoForgeInstaller"/>.
 /// </summary>
 public sealed class InstanceManagerTests : IDisposable
 {
@@ -168,7 +168,7 @@ public sealed class InstanceManagerTests : IDisposable
         fake.Installed.Should().HaveCount(1);
     }
 
-    private sealed class FakeNeoForgeService : INeoForgeInstallerService
+    private sealed class FakeNeoForgeService : INeoForgeInstaller
     {
         public string Version { get; set; } = "21.1.169";
         public int ResolveCalls { get; private set; }

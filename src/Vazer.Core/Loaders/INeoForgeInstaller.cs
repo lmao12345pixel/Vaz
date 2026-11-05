@@ -8,7 +8,7 @@ namespace Vazer.Core.Loaders;
 /// is the latest release and only handles Fabric/Quilt).
 /// Uses the official NeoForge Maven + headless installer JAR.
 /// </summary>
-public interface INeoForgeInstallerService
+public interface INeoForgeInstaller
 {
     /// <summary>
     /// Resolves the latest NeoForge build for a Minecraft version by reading
