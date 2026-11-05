@@ -1,0 +1,7 @@
+Case #4 — NeoForge + 26.3 (empty loader-version path; 1.20.1 input unavailable)
+LoaderVersion items: 0
+PrimaryButton IsEnabled: False
+NoLoaderVersionsText count: 1
+WarningText count: 1
+WarningText: Vui lòng chọn loader version cho NeoForge.
+NoLoaderVersionsText: Không có version tương thích
