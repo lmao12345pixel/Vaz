@@ -59,6 +59,7 @@ public sealed partial class CreateInstanceViewModel : ObservableObject
     private IReadOnlyList<string> loaderVersions = Array.Empty<string>();
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanCreateAndNotBusy))]
     private bool canCreateInstance = true;
 
     [ObservableProperty]
@@ -80,6 +81,7 @@ public sealed partial class CreateInstanceViewModel : ObservableObject
     /// <summary>True khi đang cài (disable nút trong dialog).</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsNotInstalling))]
+    [NotifyPropertyChangedFor(nameof(CanCreateAndNotBusy))]
     private bool isInstalling;
 
     /// <summary>Hỗ trợ binding ProgressBar.IsIndeterminate.</summary>
@@ -87,6 +89,9 @@ public sealed partial class CreateInstanceViewModel : ObservableObject
 
     /// <summary>Hỗ trợ binding IsEnabled (ngược lại IsInstalling).</summary>
     public bool IsNotInstalling => !IsInstalling;
+
+    /// <summary>Nút "Tạo": chỉ enable khi hợp lệ VÀ không đang cài.</summary>
+    public bool CanCreateAndNotBusy => CanCreateInstance && !IsInstalling;
 
     public CreateInstanceViewModel(IInstanceCreationService creationService, IMinecraftVersionService versionService)
     {

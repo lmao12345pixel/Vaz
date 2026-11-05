@@ -128,6 +128,18 @@ public sealed partial class CreateInstanceDialog : ContentDialog
         }
     }
 
+    /// <summary>
+    /// WinUI 3 ContentDialog không có IsCloseButtonEnabled — chặn nút Hủy khi đang cài
+    /// bằng cách cancel CloseButtonClick (dialog giữ nguyên, cài đặt tiếp tục).
+    /// </summary>
+    private void Dialog_CloseButtonClick(ContentDialog sender, ContentDialogButtonClickEventArgs args)
+    {
+        if (_vm.IsInstalling)
+        {
+            args.Cancel = true;
+        }
+    }
+
     private async void Dialog_PrimaryButtonClick(ContentDialog sender, ContentDialogButtonClickEventArgs args)
     {
         // Giữ dialog mở trong lúc await; nếu fail thì Cancel để user sửa input.
@@ -143,9 +155,8 @@ public sealed partial class CreateInstanceDialog : ContentDialog
                 ?? string.Empty;
             _vm.SelectedLoaderVersion = LoaderVersionBox.SelectedItem as string;
 
-            SetBusy(true, "Đang tạo instance...");
+            // VM set IsInstalling=true bên trong CreateAsync — ProgressBar/IsEnabled bind tự cập nhật.
             var instance = await _vm.CreateAsync();
-            SetBusy(false, string.Empty);
 
             if (instance == null)
             {
@@ -161,13 +172,5 @@ public sealed partial class CreateInstanceDialog : ContentDialog
         {
             deferral.Complete();
         }
-    }
-
-    private void SetBusy(bool busy, string message)
-    {
-        BusyRing.IsActive = busy;
-        BusyText.Visibility = string.IsNullOrEmpty(message) ? Visibility.Collapsed : Visibility.Visible;
-        BusyText.Text = message;
-        IsPrimaryButtonEnabled = !busy && _vm.CanCreateInstance;
     }
 }
