@@ -115,3 +115,44 @@ Tiền đề "351 → 349" **không đúng**. Số liệu thực tế:
 - `dotnet build Vaz.sln -c Debug` — Succeeded (8 warning đều pre-existing trong `MinecraftVersionService.cs`: CS1998, IL2026; không warning từ code mới).
 - `dotnet test` — **363/363 pass, 0 skipped** (từ 351, +12 test comparer).
 - `npm run check:static` — **PASSED** (build + test + agent config 12/12; lần đầu chạy báo `4 Lỗi(s)` trong build nhưng không tái hiện được và artifact output đã mất; chạy lại sạch 0 error — xem ghi chú bên dưới).
+
+---
+
+## D?t 18.2d/e - Dropdown MC Version khong group duoc + settings.json recovery (2026-11-05)
+
+### Vi?c 1 - Fix dropdown MC Version - DONE (commit `565f0c8`)
+
+- `CreateInstanceViewModel.LoadVersionsAsync`: bo `.Take(10)` + filter release-only; hien thi TAT CA version (~1300: release + snapshot + old_beta + old_alpha), sap xep release truoc roi snapshot/old (TypeRank); default selection van la release moi nhat. Verify UIA: dropdown select duoc 1.21.1, 1.20.1, 1.20.2.
+- Fallback tu Cach C -> Cach A: **Cach C (CollectionViewSource grouping + GroupStyle) crash tren WinUI 3 ComboBox**, 2 cach deu that bai (xem Known Limitations). **Cach B cung bat kha thi** vi WinUI 3 ComboBox khong co `IsEditable`.
+
+### Vi?c 2 - settings.json hong - DONE (commit `31b084a`)
+
+- File hong thuc te: `%APPDATA%\Vazer\Minecraft\settings.json` dong 14 (`\"theme\": \"dark\"`).
+- Recovery double-escape (co tu truoc) nay **ghi lai file da fix** atomically + tao `.bak`; parse fail hoan toan -> backup `.bak` + **ghi file mac dinh moi** (truoc do chi backup, khong tao file moi).
+- Da chay recovery tren file that: app mo duoc, file parse OK (theme=dark, accent=violet, ramMb=8192 - giu gia tri user, khong reset). `.bak` giu ban hong.
+
+### Known Limitations (WinUI 3 ComboBox)
+
+1. **WinUI 3 ComboBox khong ho tro CollectionViewSource grouping + GroupStyle** - da thu 2 cach, deu crash khi mo dialog (khong phai A/B test cosmetic):
+   - Set `ItemsSource = CollectionViewSource.View` truc tiep: `E_NOINTERFACE` (crash.txt 10:16:19).
+   - Bind qua XAML `{Binding Source={StaticResource VersionGroups}}` + `GroupStyle.HeaderTemplate`: `InvalidCastException` trong `MeasureOverride`, app chet hang (crash.txt 10:18:31).
+2. **WinUI 3 ComboBox khong co `IsEditable`** -> khong the searchable/filter-as-you-type dropdown truc tiep; muon search thi phai doi sang `AutoSuggestBox` (xem danh gia ben duoi).
+3. **Hien tai dung Cach A**: flat list ~1300 version, scrollable, release nam dau. Du dung nhung UX chua toi uu (phai scroll xa; snapshot nam sau release). Group header bi chac chan khong co thay cho den khi doi control.
+
+### Danh gia AutoSuggestBox cho dropdown MC Version (chi bao cao - chua lam)
+
+| Khia canh | Danh gia |
+|---|---|
+| Uu diem | User go tim version nhanh; filter-as-you-type (vd go "1.20" -> thay 1.20.1/1.20.2); giai quyet triet de ~1300 item scroll; giu duoc badge "Da cai" trong item template |
+| Nhuoc diem | Phai rewrite bind + selection: AutoSuggestBox dung `Text` + `QuerySubmitted`/`SuggestionChosen` thay vi `SelectedItem`/`ItemsSource` kieu Selector; phai map text -> MinecraftVersionInfo (validation truoc khi enable nut Tao); ItemTemplate khac ComboBox (van giu duoc DataTemplate nhung selection model khac han) |
+| Rui ro | Hanh vi focus/keyboard khac ComboBox; co the anh huong validation CanCreateInstance va flow loader-version reload (OnSelectedMinecraftVersionChanged); phan kiem tra regression moi thu dung duoc |
+| Uoc luong | ~2-3 gio (code + build + runtime verify UIA + screenshot) |
+
+**Ke luan de xuat: GIU Cach A cho Phase B.** Neu user feedback can search version, lam task rieng (Dot 18.4) - khong tron vao dot nay. Cach C grouping coi nhu BO qua (khong work tren WinUI 3 ComboBox).
+
+### Gates (18.2d/e)
+
+- `dotnet test Vaz.sln` - **364/364 pass** (363 + 1 test settings moi), 0 skipped.
+- `npm run check:static` - **PASSED**.
+- `dotnet build src/Vaz.WinUI` - 0 error, 0 warning.
+- Runtime: app mo dialog OK, settings real file tu recovery OK. **Chua claim manual test PASS** - user can test tay (cuon dropdown, chon 1.20.1/1.20.2, tao instance, mo settings).
