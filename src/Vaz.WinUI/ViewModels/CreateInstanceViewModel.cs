@@ -13,6 +13,16 @@ public sealed partial class CreateInstanceViewModel : ObservableObject
     /// <summary>Loader hỗ trợ tạo instance.</summary>
     public static IReadOnlyList<string> Loaders { get; } = new[] { "Fabric", "Quilt", "NeoForge", "Vanilla" };
 
+    /// <summary>Thứ tự hiển thị version trong dropdown: release trước, rồi snapshot, old beta, old alpha.</summary>
+    public static int TypeRank(string? type) => (type?.Trim().ToLowerInvariant()) switch
+    {
+        "release" => 0,
+        "snapshot" => 1,
+        "old_beta" => 2,
+        "old_alpha" => 3,
+        _ => 4
+    };
+
     private readonly IInstanceManager _instanceManager;
     private readonly IMinecraftVersionService _versionService;
 
@@ -68,17 +78,20 @@ public sealed partial class CreateInstanceViewModel : ObservableObject
         try
         {
             var versions = await _versionService.GetVanillaVersionsAsync();
-            // Lấy top 10 release gần nhất
+            // Hiển thị TẤT CẢ version (bỏ Take(10)), group theo Type (Release/Snapshot/Old Beta/Old Alpha)
             VanillaVersions = versions
-                .Where(v => v.Type == "release")
-                .OrderByDescending(v => v.ReleaseTime)
-                .Take(10)
+                .OrderBy(v => TypeRank(v.Type))
+                .ThenByDescending(v => v.ReleaseTime)
                 .ToList()
                 .AsReadOnly();
             // Chọn version mặc định là release gần nhất
-            if (VanillaVersions.Count > 0)
+            var latestRelease = versions
+                .Where(v => string.Equals(v.Type, "release", StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(v => v.ReleaseTime)
+                .FirstOrDefault();
+            if (latestRelease != null)
             {
-                SelectedMinecraftVersion = VanillaVersions[0].Id;
+                SelectedMinecraftVersion = latestRelease.Id;
                 _ = LoadLoaderVersionsAsync(SelectedLoader ?? "Fabric", SelectedMinecraftVersion);
             }
         }
