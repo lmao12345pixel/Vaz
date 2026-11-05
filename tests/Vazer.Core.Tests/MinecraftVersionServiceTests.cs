@@ -68,7 +68,8 @@ public sealed class MinecraftVersionServiceTests : IDisposable
     [Fact]
     public async Task GetLoaderVersionsAsync_Fabric()
     {
-        var fabricJson = """[{"version":"0.16.9","loader":"fabric","minecraft":"1.21.1","release":"stable","url":"https://example.com"},{"version":"0.16.8","loader":"fabric","minecraft":"1.21.1","release":"stable","url":"https://example.com"}]""";
+        // Hình dạng API thật của Fabric Meta: nested { loader: { version, stable, maven } }
+        var fabricJson = """[{"loader":{"version":"0.16.9","stable":true,"maven":"net.fabricmc:fabric-loader:0.16.9"},"intermediary":{"version":"1.21.1","stable":true}},{"loader":{"version":"0.16.8","stable":true,"maven":"net.fabricmc:fabric-loader:0.16.8"},"intermediary":{"version":"1.21.1","stable":true}}]""";
         _handler.MapJson(HttpMethod.Get, "https://meta.fabricmc.net/v2/versions/loader/1.21.1", HttpStatusCode.OK, fabricJson);
         _handler.MapJson(HttpMethod.Get, "/v2/versions/loader/1.21.1", HttpStatusCode.OK, fabricJson);
 
@@ -86,7 +87,8 @@ public sealed class MinecraftVersionServiceTests : IDisposable
     [Fact]
     public async Task GetLoaderVersionsAsync_Quilt()
     {
-        var quiltJson = """[{"version":"5.2.0","loader":"quilt","minecraft":"1.21.1","release":"stable","url":"https://example.com"},{"version":"5.1.0","loader":"quilt","minecraft":"1.21.1","release":"beta","url":"https://example.com"}]""";
+        // Hình dạng API thật của Quilt Meta: nested { loader: { version, maven } }; không có cờ stable
+        var quiltJson = """[{"loader":{"version":"5.2.0","maven":"org.quiltmc:quilt-loader:5.2.0"}},{"loader":{"version":"5.1.0-beta.1","maven":"org.quiltmc:quilt-loader:5.1.0-beta.1"}}]""";
         _handler.MapJson(HttpMethod.Get, "https://meta.quiltmc.org/v3/versions/loader/1.21.1", HttpStatusCode.OK, quiltJson);
         _handler.MapJson(HttpMethod.Get, "/v3/versions/loader/1.21.1", HttpStatusCode.OK, quiltJson);
 
@@ -95,7 +97,7 @@ public sealed class MinecraftVersionServiceTests : IDisposable
         versions.Should().HaveCount(2);
         versions[0].Version.Should().Be("5.2.0");
         versions[0].Stable.Should().BeTrue();
-        versions[1].Version.Should().Be("5.1.0");
+        versions[1].Version.Should().Be("5.1.0-beta.1");
         versions[1].Stable.Should().BeFalse();
     }
 

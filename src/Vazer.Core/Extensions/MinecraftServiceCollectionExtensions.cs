@@ -17,6 +17,7 @@ using Vazer.Core.Modrinth;
 using Vazer.Core.Mods;
 using Vazer.Core.Settings;
 using Vazer.Core.Store;
+using Vazer.Core.Versions;
 
 namespace Vazer.Core.Extensions;
 
@@ -96,6 +97,8 @@ public static class MinecraftServiceCollectionExtensions
             registry.Register("neoforge", sp.GetRequiredService<INeoForgeInstallerService>());
             return registry;
         });
+        // Phase B: CreateInstanceViewModel cần IMinecraftVersionService (fetch Mojang/Fabric/Quilt/NeoForge metadata).
+        services.AddSingleton<IMinecraftVersionService, MinecraftVersionService>();
         services.AddSingleton<IInstanceManager, InstanceManager>();
         services.AddSingleton<IGameLauncher, CmlGameLauncher>();
 

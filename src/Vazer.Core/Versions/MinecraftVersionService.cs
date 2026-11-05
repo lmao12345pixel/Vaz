@@ -1,5 +1,6 @@
 using System.Net.Http;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -59,7 +60,9 @@ public sealed class MinecraftVersionService : IMinecraftVersionService
 
     private void SetInstalledStatus(List<MinecraftVersionInfo> versions)
     {
-        var versionsDir = Path.Combine(_options.RootPath, "versions");
+        // Game root là {RootPath}/instances (InstanceManager / CmlGameLauncher / LaunchVersionResolver đều dùng
+        // MinecraftPath(RootPath + "/instances")), nên versions nằm ở {RootPath}/instances/versions.
+        var versionsDir = Path.Combine(_options.RootPath, "instances", "versions");
         foreach (var v in versions)
         {
             v.IsInstalled = Directory.Exists(Path.Combine(versionsDir, v.Id));
@@ -207,9 +210,22 @@ public sealed class MinecraftVersionService : IMinecraftVersionService
 
         var json = await response.Content.ReadAsStringAsync(ct);
         var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        var loaderVersions = JsonSerializer.Deserialize<List<LoaderVersionInfo>>(json, options);
+        // Fabric Meta trả về nested shape: [{ "loader": { "version": "0.20.1", "stable": true, "maven": "..." }, ... }]
+        var entries = JsonSerializer.Deserialize<List<FabricLoaderEntry>>(json, options);
 
-        return loaderVersions?.Count > 0 ? loaderVersions : Array.Empty<LoaderVersionInfo>();
+        var versions = entries?
+            .Where(e => e.Loader is { Version: { Length: > 0 } })
+            .Select(e => new LoaderVersionInfo
+            {
+                Version = e.Loader!.Version,
+                Loader = "fabric",
+                MinecraftVersion = mcVersion,
+                Release = e.Loader.Stable ? "stable" : "beta",
+                Url = e.Loader.Maven ?? $"https://maven.fabricmc.net/net/fabricmc/fabric-loader/{e.Loader.Version}/fabric-loader-{e.Loader.Version}.jar"
+            })
+            .ToList();
+
+        return versions?.Count > 0 ? versions : Array.Empty<LoaderVersionInfo>();
     }
 
     private async Task<IReadOnlyList<LoaderVersionInfo>> FetchQuiltVersionsAsync(string mcVersion, CancellationToken ct)
@@ -220,9 +236,25 @@ public sealed class MinecraftVersionService : IMinecraftVersionService
 
         var json = await response.Content.ReadAsStringAsync(ct);
         var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        var loaderVersions = JsonSerializer.Deserialize<List<LoaderVersionInfo>>(json, options);
+        // Quilt Meta trả về nested shape: [{ "loader": { "version": "0.20.0-beta.9", "maven": "..." }, ... }]
+        // Quilt KHÔNG có cờ stable → suy ra từ suffix (giống NeoForge): không có '-' = stable, '-beta' = beta, khác = alpha.
+        var entries = JsonSerializer.Deserialize<List<QuiltLoaderEntry>>(json, options);
 
-        return loaderVersions?.Count > 0 ? loaderVersions : Array.Empty<LoaderVersionInfo>();
+        var versions = entries?
+            .Where(e => e.Loader is { Version: { Length: > 0 } })
+            .Select(e => new LoaderVersionInfo
+            {
+                Version = e.Loader!.Version,
+                Loader = "quilt",
+                MinecraftVersion = mcVersion,
+                Release = ClassifyPrerelease(e.Loader.Version),
+                Url = e.Loader.Maven is { Length: > 0 } maven
+                    ? $"https://maven.quiltmc.org/repository/release/{maven.Replace(':', '/')}/{maven.Split(':').Last()}-installer.jar"
+                    : null
+            })
+            .ToList();
+
+        return versions?.Count > 0 ? versions : Array.Empty<LoaderVersionInfo>();
     }
 
     private async Task<IReadOnlyList<LoaderVersionInfo>> FetchNeoForgeVersionsAsync(string mcVersion, CancellationToken ct)
@@ -270,6 +302,46 @@ public sealed class MinecraftVersionService : IMinecraftVersionService
         Directory.CreateDirectory(dir);
         var json = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = false });
         await File.WriteAllTextAsync(path, json, ct);
+    }
+
+    private static string ClassifyPrerelease(string version)
+    {
+        if (!version.Contains('-', StringComparison.Ordinal))
+            return "stable";
+        return version.Contains("-beta", StringComparison.OrdinalIgnoreCase) ? "beta" : "alpha";
+    }
+
+    private class FabricLoaderEntry
+    {
+        [JsonPropertyName("loader")]
+        public FabricLoaderDto? Loader { get; set; }
+    }
+
+    private class FabricLoaderDto
+    {
+        [JsonPropertyName("version")]
+        public string Version { get; set; } = string.Empty;
+
+        [JsonPropertyName("stable")]
+        public bool Stable { get; set; }
+
+        [JsonPropertyName("maven")]
+        public string? Maven { get; set; }
+    }
+
+    private class QuiltLoaderEntry
+    {
+        [JsonPropertyName("loader")]
+        public QuiltLoaderDto? Loader { get; set; }
+    }
+
+    private class QuiltLoaderDto
+    {
+        [JsonPropertyName("version")]
+        public string Version { get; set; } = string.Empty;
+
+        [JsonPropertyName("maven")]
+        public string? Maven { get; set; }
     }
 
     private class VanillaVersionManifest
