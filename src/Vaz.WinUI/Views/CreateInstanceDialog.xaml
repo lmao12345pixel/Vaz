@@ -2,76 +2,25 @@
     x:Class="Vaz.WinUI.Views.CreateInstanceDialog"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Vaz.WinUI.Views.Controls"
     Title="Tạo instance mới"
-    PrimaryButtonText="Tạo"
-    CloseButtonText="Hủy"
-    DefaultButton="Primary"
-    PrimaryButtonClick="Dialog_PrimaryButtonClick"
-    CloseButtonClick="Dialog_CloseButtonClick"
-    IsPrimaryButtonEnabled="{Binding CanCreateAndNotBusy}">
-    <StackPanel Spacing="8" MinWidth="380">
-        <TextBox
-            x:Name="NameBox"
-            Header="Tên instance"
-            PlaceholderText="New Instance" />
+    MaxWidth="880"
+    MaxHeight="660">
+    <ContentDialog.Resources>
+        <x:Double x:Key="ContentDialogMaxWidth">880</x:Double>
+        <x:Double x:Key="ContentDialogMaxHeight">660</x:Double>
+    </ContentDialog.Resources>
+    <Grid Width="820" Height="540" RowDefinitions="*,Auto,Auto,Auto" RowSpacing="4">
+        <!-- Step hosts -->
+        <Grid x:Name="Step1Host" Grid.Row="0">
+            <local:WizardStep1Version x:Name="Step1" />
+        </Grid>
+        <Grid x:Name="Step2Host" Grid.Row="0" Visibility="Collapsed" Opacity="0">
+            <local:WizardStep2Loader x:Name="Step2" />
+        </Grid>
 
-        <ComboBox
-            x:Name="LoaderCombo"
-            Header="Loader"
-            HorizontalAlignment="Stretch" />
-
-        <StackPanel>
-            <ComboBox
-                x:Name="VersionCombo"
-                Header="Minecraft version"
-                HorizontalAlignment="Stretch"
-                IsEnabled="{Binding IsVersionsLoading, Converter={StaticResource BoolNegationConverter}}">
-                <ComboBox.ItemTemplate>
-                    <DataTemplate>
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <TextBlock Text="{Binding Id}" VerticalAlignment="Center" />
-                            <!-- B1: Badge "Đã cài" (versions/{id} tồn tại trên đĩa) -->
-                            <Border Background="{StaticResource VazAccentBrush}"
-                                    CornerRadius="4"
-                                    Padding="4,2"
-                                    VerticalAlignment="Center"
-                                    Visibility="{Binding IsInstalled, Converter={StaticResource BoolToVis}}">
-                                <TextBlock Text="Đã cài" FontSize="11" />
-                            </Border>
-                        </StackPanel>
-                    </DataTemplate>
-                </ComboBox.ItemTemplate>
-            </ComboBox>
-            <ProgressRing
-                IsActive="{Binding IsVersionsLoading}"
-                Width="16"
-                Height="16"
-                HorizontalAlignment="Left"
-                Visibility="{Binding IsVersionsLoading, Converter={StaticResource BoolToVis}}" />
-        </StackPanel>
-
-        <StackPanel>
-            <ComboBox
-                x:Name="LoaderVersionBox"
-                Header="Loader version"
-                PlaceholderText="Chọn loader version"
-                HorizontalAlignment="Stretch"
-                IsEnabled="{Binding IsLoaderVersionsLoading, Converter={StaticResource BoolNegationConverter}}" />
-            <ProgressRing
-                IsActive="{Binding IsLoaderVersionsLoading}"
-                Width="16"
-                Height="16"
-                HorizontalAlignment="Left"
-                Visibility="{Binding IsLoaderVersionsLoading, Converter={StaticResource BoolToVis}}" />
-            <TextBlock
-                x:Name="NoLoaderVersionsText"
-                Text="Không có version tương thích"
-                FontSize="12"
-                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                Visibility="Collapsed" />
-        </StackPanel>
-
-        <StackPanel Spacing="2" Visibility="{Binding IsInstalling, Converter={StaticResource BoolToVis}}">
+        <!-- Progress UI khi đang cài -->
+        <StackPanel Grid.Row="1" Spacing="2" Margin="0,4,0,0" Visibility="{Binding IsInstalling, Converter={StaticResource BoolToVis}}">
             <ProgressBar
                 Minimum="0"
                 Maximum="100"
@@ -85,15 +34,17 @@
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
         </StackPanel>
 
+        <!-- InfoBars -->
         <InfoBar
             x:Name="CreateWarningBar"
+            Grid.Row="2"
             IsOpen="{Binding CanCreateInstance, Converter={StaticResource BoolNegationConverter}}"
             Severity="Warning"
             Title=""
             Message="{Binding CreateWarningMessage}" />
-
         <InfoBar
             x:Name="CreateErrorBar"
+            Grid.Row="3"
             IsOpen="False"
             Severity="Error"
             Title="Tạo instance thất bại"
@@ -104,5 +55,5 @@
                         Click="ViewInstallLogButton_Click" />
             </InfoBar.ActionButton>
         </InfoBar>
-    </StackPanel>
+    </Grid>
 </ContentDialog>

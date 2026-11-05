@@ -17,10 +17,17 @@ public sealed partial class WizardVersionCard : UserControl
     public WizardVersionCard()
     {
         InitializeComponent();
-        PointerEntered += OnPointerEntered;
-        PointerExited += OnPointerExited;
-        PointerPressed += OnPointerPressed;
-        Tapped += OnTapped;
+        CardButton.PointerEntered += OnPointerEntered;
+        CardButton.PointerExited += OnPointerExited;
+    }
+
+    private void CardButton_Click(object sender, RoutedEventArgs e)
+    {
+        try { File.AppendAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Vazer", "nav_log.txt"), $"CardButton_Click fired for {Version?.Id}\n"); } catch { }
+        if (Version != null)
+        {
+            CardClicked?.Invoke(this, Version);
+        }
     }
 
     /// <summary>Version được chọn, null = chưa set.</summary>
@@ -52,6 +59,9 @@ public sealed partial class WizardVersionCard : UserControl
     {
         if (d is not WizardVersionCard self) return;
         if (e.NewValue is not MinecraftVersionInfo v) return;
+
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(self.CardButton, v.Id);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(self, v.Id);
 
         self.VersionText.Text = v.Id;
         self.DateText.Text = DateTimeOffset.TryParse(v.ReleaseTime, out var dt)
@@ -88,39 +98,6 @@ public sealed partial class WizardVersionCard : UserControl
 
     private void OnPointerExited(object sender, PointerRoutedEventArgs e)
         => UiAnimationHelper.AnimateCardHover(CardBorder, false, targetScale: 1.05, durationMs: 200);
-
-    private void OnPointerPressed(object sender, PointerRoutedEventArgs e)
-    {
-        // #4 Card Click: scale 0.95 → 1 bounce (150ms).
-        if (AppThemeManager.IsReduceMotion) return;
-
-        CardBorder.RenderTransformOrigin = new Windows.Foundation.Point(0.5, 0.5);
-        var scale = EnsureScaleTransform(CardBorder);
-
-        var sb = new Storyboard();
-        var s = new Duration(TimeSpan.FromMilliseconds(150));
-        var kfX = new DoubleAnimationUsingKeyFrames();
-        kfX.KeyFrames.Add(new EasingDoubleKeyFrame { KeyTime = KeyTime.FromTimeSpan(TimeSpan.Zero), Value = 0.95, EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
-        kfX.KeyFrames.Add(new EasingDoubleKeyFrame { KeyTime = KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(150)), Value = 1.0, EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
-        var kfY = new DoubleAnimationUsingKeyFrames();
-        kfY.KeyFrames.Add(new EasingDoubleKeyFrame { KeyTime = KeyTime.FromTimeSpan(TimeSpan.Zero), Value = 0.95, EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
-        kfY.KeyFrames.Add(new EasingDoubleKeyFrame { KeyTime = KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(150)), Value = 1.0, EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
-        Storyboard.SetTarget(kfX, scale);
-        Storyboard.SetTargetProperty(kfX, nameof(ScaleTransform.ScaleX));
-        Storyboard.SetTarget(kfY, scale);
-        Storyboard.SetTargetProperty(kfY, nameof(ScaleTransform.ScaleY));
-        sb.Children.Add(kfX);
-        sb.Children.Add(kfY);
-        sb.Begin();
-    }
-
-    private void OnTapped(object sender, TappedRoutedEventArgs e)
-    {
-        if (Version != null)
-        {
-            CardClicked?.Invoke(this, Version);
-        }
-    }
 
     private static ScaleTransform EnsureScaleTransform(UIElement element)
     {

@@ -33,7 +33,8 @@ public sealed partial class InstancesPage : Page
             .GetRequiredService<CreateInstanceViewModel>();
         var dialog = new CreateInstanceDialog(vm) { XamlRoot = XamlRoot };
         var result = await dialog.ShowAsync();
-        if (result == ContentDialogResult.Primary && dialog.CreatedInstanceId != null)
+        // Wizard không dùng nút Primary — chỉ cần CreatedInstanceId != null để refresh danh sách.
+        if (dialog.CreatedInstanceId != null)
         {
             await ViewModel.LoadCommand.ExecuteAsync(null);
             ViewModel.SetActiveTarget(dialog.CreatedInstanceId);

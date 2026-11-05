@@ -33,8 +33,20 @@ public sealed partial class WizardStep2Loader : UserControl
     /// <summary>State dùng chung với wizard (dialog giữ instance).</summary>
     public WizardState State { get; set; } = new();
 
+    /// <summary>Breadcrumb "Bước 2/2 · Minecraft x".</summary>
+    public void SetBreadcrumb(string text) => BreadcrumbText.Text = text;
+
+    /// <summary>Tên instance user nhập.</summary>
+    public string InstanceName => NameBox.Text;
+
+    /// <summary>Bật/tắt nút "Tạo Instance" (dùng khi đang cài).</summary>
+    public void SetCreateEnabled(bool enabled) => CreateButton.IsEnabled = enabled;
+
     /// <summary>User bấm "Quay lại".</summary>
     public event EventHandler? BackRequested;
+
+    /// <summary>User bấm "Hủy".</summary>
+    public event EventHandler? CancelRequested;
 
     /// <summary>User bấm "Tạo Instance".</summary>
     public event EventHandler? CreateRequested;
@@ -55,12 +67,16 @@ public sealed partial class WizardStep2Loader : UserControl
 
         UpdatePreview();
         UpdateLoaderCardStyles();
+        UpdatePreviewVisibility();
     }
 
     private void OnSizeChanged(object sender, SizeChangedEventArgs e)
+        => UpdatePreviewVisibility();
+
+    private void UpdatePreviewVisibility()
     {
-        // Live preview chỉ hiện khi width >= 1000 (theo spec).
-        PreviewPanel.Visibility = ActualWidth >= 1000 ? Visibility.Visible : Visibility.Collapsed;
+        // Live preview panel bên phải khi đủ chiều rộng (≥ 700px để vừa cả 2 cột trên dialog).
+        PreviewPanel.Visibility = ActualWidth >= 700 ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private async void LoaderButton_Click(object sender, RoutedEventArgs e)
@@ -290,6 +306,9 @@ public sealed partial class WizardStep2Loader : UserControl
 
     private void BackButton_Click(object sender, RoutedEventArgs e)
         => BackRequested?.Invoke(this, EventArgs.Empty);
+
+    private void CancelButton_Click(object sender, RoutedEventArgs e)
+        => CancelRequested?.Invoke(this, EventArgs.Empty);
 
     private void CreateButton_Click(object sender, RoutedEventArgs e)
     {

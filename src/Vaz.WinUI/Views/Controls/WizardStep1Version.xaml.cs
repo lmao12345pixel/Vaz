@@ -31,6 +31,9 @@ public sealed partial class WizardStep1Version : UserControl
     /// <summary>User bấm "Tiếp tục" khi đã chọn version.</summary>
     public event EventHandler? ContinueRequested;
 
+    /// <summary>User bấm "Hủy".</summary>
+    public event EventHandler? CancelRequested;
+
     public WizardStep1Version()
     {
         var app = Application.Current as App;
@@ -131,11 +134,12 @@ public sealed partial class WizardStep1Version : UserControl
     private int ComputeColumns()
     {
         var available = Math.Max(0, CardScroll.ActualWidth - 12);
-        return Math.Clamp((int)((available + 14) / 224), 2, 4);
+        return Math.Clamp((int)((available + 14) / 230), 2, 4);
     }
 
     private void OnCardClicked(object? sender, MinecraftVersionInfo version)
     {
+        try { System.IO.File.AppendAllText(System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Vazer", "nav_log.txt"), $"OnCardClicked version={version.Id}\n"); } catch { }
         // Single-select: bỏ chọn tất cả trước.
         foreach (var entry in _allVersions)
         {
@@ -259,11 +263,15 @@ public sealed partial class WizardStep1Version : UserControl
 
     private void ContinueButton_Click(object sender, RoutedEventArgs e)
     {
+        try { System.IO.File.AppendAllText(System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Vazer", "nav_log.txt"), $"ContinueButton_Click selected={State.SelectedVersion}\n"); } catch { }
         if (!string.IsNullOrEmpty(State.SelectedVersion))
         {
             ContinueRequested?.Invoke(this, EventArgs.Empty);
         }
     }
+
+    private void CancelButton_Click(object sender, RoutedEventArgs e)
+        => CancelRequested?.Invoke(this, EventArgs.Empty);
 
     private static int TypeRank(string? type) => (type?.Trim().ToLowerInvariant()) switch
     {

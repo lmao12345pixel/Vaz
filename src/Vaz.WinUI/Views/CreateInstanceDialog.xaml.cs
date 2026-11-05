@@ -1,21 +1,25 @@
-using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Animation;
+using Vaz.WinUI.Helpers;
+using Vaz.WinUI.Models;
 using Vaz.WinUI.ViewModels;
 using Vazer.Core.Versions;
 
 namespace Vaz.WinUI.Views;
 
 /// <summary>
-/// Dialog tạo instance mới: Name + Loader + Minecraft version (+ loader version).
-/// Validate qua CreateInstanceViewModel, tạo qua IInstanceManager.
+/// Wizard tạo instance mới (2 bước: chọn version → chọn loader).
+/// Validate qua CreateInstanceViewModel, tạo qua IInstanceCreationService.
 /// </summary>
 public sealed partial class CreateInstanceDialog : ContentDialog
 {
     private readonly CreateInstanceViewModel _vm;
+    private readonly WizardState _wizardState = new();
 
     /// <summary>Id instance vừa tạo (null nếu user hủy hoặc tạo thất bại).</summary>
     public string? CreatedInstanceId { get; private set; }
@@ -26,78 +30,112 @@ public sealed partial class CreateInstanceDialog : ContentDialog
         DataContext = _vm;
         InitializeComponent();
 
-        // Nạp danh sách + giá trị mặc định từ VM.
-        LoaderCombo.ItemsSource = CreateInstanceViewModel.Loaders;
-        LoaderCombo.SelectedItem = _vm.SelectedLoader;
-        VersionCombo.ItemsSource = _vm.VanillaVersions;
-        VersionCombo.SelectedItem = _vm.VanillaVersions.FirstOrDefault(v => v.Id == _vm.SelectedMinecraftVersion);
-        NameBox.Text = _vm.Name;
+        // WinUI 3 ContentDialog không tự thừa hưởng theme từ MainWindow (AppThemeManager.DialogTheme).
+        RequestedTheme = AppThemeManager.DialogTheme;
 
-        SyncLoaderVersions();
+        // Gán State dùng chung cho 2 step.
+        Step1.State = _wizardState;
+        Step2.State = _wizardState;
 
-        // Đồng bộ input control → VM (trigger load loader versions + validation).
-        VersionCombo.SelectionChanged += (_, _) =>
-        {
-            if (VersionCombo.SelectedItem is MinecraftVersionInfo info)
-            {
-                _vm.SelectedMinecraftVersion = info.Id;
-            }
-        };
+        // Đồng bộ khi user chọn xong ở Step 1 → chuyển sang Step 2.
+        Step1.ContinueRequested += (_, _) => SwitchToStep2();
+        Step1.CancelRequested += (_, _) => OnCancel();
 
-        LoaderCombo.SelectionChanged += (_, _) =>
-        {
-            if (LoaderCombo.SelectedItem is string loader)
-            {
-                _vm.SelectedLoader = loader;
-            }
-        };
-
-        LoaderVersionBox.SelectionChanged += (_, _) =>
-        {
-            _vm.SelectedLoaderVersion = LoaderVersionBox.SelectedItem as string;
-        };
-
-        _vm.PropertyChanged += OnViewModelPropertyChanged;
+        Step2.BackRequested += (_, _) => SwitchToStep1();
+        Step2.CancelRequested += (_, _) => OnCancel();
+        Step2.CreateRequested += async (_, _) => await CreateInstanceAsync();
     }
 
-    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    private void OnCancel()
     {
-        switch (e.PropertyName)
+        if (!_vm.IsInstalling)
         {
-            case nameof(CreateInstanceViewModel.VanillaVersions):
-                VersionCombo.ItemsSource = _vm.VanillaVersions;
-                VersionCombo.SelectedItem = _vm.VanillaVersions.FirstOrDefault(v => v.Id == _vm.SelectedMinecraftVersion);
-                break;
-
-            case nameof(CreateInstanceViewModel.SelectedMinecraftVersion):
-                // LoadVersionsAsync chọn default sau khi nạp xong; sync selection lên control.
-                VersionCombo.SelectedItem = _vm.VanillaVersions.FirstOrDefault(v => v.Id == _vm.SelectedMinecraftVersion);
-                break;
-
-            case nameof(CreateInstanceViewModel.LoaderVersions):
-            case nameof(CreateInstanceViewModel.IsLoaderVersionsLoading):
-                SyncLoaderVersions();
-                break;
-
-            case nameof(CreateInstanceViewModel.SelectedLoaderVersion):
-                LoaderVersionBox.SelectedItem = _vm.SelectedLoaderVersion;
-                break;
+            Hide();
         }
     }
 
-    /// <summary>
-    /// Đồng bộ LoaderVersionBox với trạng thái VM (items, selection, empty state).
-    /// </summary>
-    private void SyncLoaderVersions()
+    private void SwitchToStep2()
     {
-        LoaderVersionBox.ItemsSource = _vm.LoaderVersions;
+        try { File.AppendAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Vazer", "nav_log.txt"), $"SwitchToStep2 version={_wizardState.SelectedVersion}\n"); } catch { }
+        _wizardState.CurrentStep = WizardStep.Step2Loader;
 
-        var hasItems = _vm.LoaderVersions.Count > 0;
-        LoaderVersionBox.Visibility = hasItems ? Visibility.Visible : Visibility.Collapsed;
-        LoaderVersionBox.SelectedItem = _vm.SelectedLoaderVersion;
+        if (!string.IsNullOrWhiteSpace(_wizardState.SelectedVersion))
+        {
+            _vm.SelectedMinecraftVersion = _wizardState.SelectedVersion;
+        }
+        Step2.SetBreadcrumb($"Bước 2/2 · Minecraft {_wizardState.SelectedVersion ?? "?"}");
 
-        var showEmptyText = !hasItems && !_vm.IsLoaderVersionsLoading;
-        NoLoaderVersionsText.Visibility = showEmptyText ? Visibility.Visible : Visibility.Collapsed;
+        // Fade + slide step1 out → step2 in.
+        Step1Host.Visibility = Visibility.Collapsed;
+        Step2Host.Visibility = Visibility.Visible;
+        AnimateHost(Step1Host, show: false);
+        AnimateHost(Step2Host, show: true);
+    }
+
+    private void SwitchToStep1()
+    {
+        _wizardState.CurrentStep = WizardStep.Step1Version;
+
+        Step2Host.Visibility = Visibility.Collapsed;
+        Step1Host.Visibility = Visibility.Visible;
+        AnimateHost(Step2Host, show: false);
+        AnimateHost(Step1Host, show: true);
+    }
+
+    private void AnimateHost(FrameworkElement host, bool show)
+    {
+        if (AppThemeManager.IsReduceMotion)
+        {
+            host.Opacity = show ? 1 : 0;
+            return;
+        }
+
+        var translate = new TranslateTransform { Y = show ? 12 : 0 };
+        host.RenderTransform = translate;
+        host.Opacity = show ? 0 : 1;
+
+        var sb = new Storyboard();
+        var s = new Duration(TimeSpan.FromMilliseconds(220));
+        var animOp = new DoubleAnimation { To = show ? 1 : 0, Duration = s, EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
+        Storyboard.SetTarget(animOp, host);
+        Storyboard.SetTargetProperty(animOp, nameof(UIElement.Opacity));
+        var animY = new DoubleAnimation { To = 0, Duration = s, EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
+        Storyboard.SetTarget(animY, translate);
+        Storyboard.SetTargetProperty(animY, nameof(TranslateTransform.Y));
+        sb.Children.Add(animOp);
+        sb.Children.Add(animY);
+        sb.Begin();
+    }
+
+    /// <summary>Tạo instance từ lựa chọn của wizard — giữ nguyên flow VM + error handling cũ.</summary>
+    private async Task CreateInstanceAsync()
+    {
+        CreateErrorBar.IsOpen = false;
+
+        // Đồng bộ input từ wizard → VM.
+        _vm.Name = Step2.InstanceName;
+        _vm.SelectedLoader = _wizardState.SelectedLoader ?? "Vanilla";
+        _vm.SelectedMinecraftVersion = _wizardState.SelectedVersion ?? string.Empty;
+        _vm.SelectedLoaderVersion = string.IsNullOrWhiteSpace(_wizardState.SelectedLoaderVersion)
+            ? null
+            : _wizardState.SelectedLoaderVersion;
+
+        Step2.SetCreateEnabled(false);
+
+        var instance = await _vm.CreateAsync();
+
+        if (instance == null)
+        {
+            CreateErrorBar.Message = _vm.ErrorMessage ?? "Không tạo được instance.";
+            CreateErrorBar.IsOpen = true;
+            Step2.SetCreateEnabled(true);
+            return;
+        }
+
+        CreatedInstanceId = instance.Id;
+
+        // Đóng dialog khi thành công.
+        Hide();
     }
 
     /// <summary>Mở log NeoForge installer mới nhất (hoặc thư mục downloads nếu chưa có log).</summary>
@@ -137,40 +175,6 @@ public sealed partial class CreateInstanceDialog : ContentDialog
         if (_vm.IsInstalling)
         {
             args.Cancel = true;
-        }
-    }
-
-    private async void Dialog_PrimaryButtonClick(ContentDialog sender, ContentDialogButtonClickEventArgs args)
-    {
-        // Giữ dialog mở trong lúc await; nếu fail thì Cancel để user sửa input.
-        var deferral = args.GetDeferral();
-        try
-        {
-            CreateErrorBar.IsOpen = false;
-
-            // Đồng bộ input từ controls vào VM (code-behind style như OptifineInstallDialog).
-            _vm.Name = NameBox.Text;
-            _vm.SelectedLoader = LoaderCombo.SelectedItem as string ?? string.Empty;
-            _vm.SelectedMinecraftVersion = (VersionCombo.SelectedItem as MinecraftVersionInfo)?.Id
-                ?? string.Empty;
-            _vm.SelectedLoaderVersion = LoaderVersionBox.SelectedItem as string;
-
-            // VM set IsInstalling=true bên trong CreateAsync — ProgressBar/IsEnabled bind tự cập nhật.
-            var instance = await _vm.CreateAsync();
-
-            if (instance == null)
-            {
-                CreateErrorBar.Message = _vm.ErrorMessage ?? "Không tạo được instance.";
-                CreateErrorBar.IsOpen = true;
-                args.Cancel = true;
-                return;
-            }
-
-            CreatedInstanceId = instance.Id;
-        }
-        finally
-        {
-            deferral.Complete();
         }
     }
 }

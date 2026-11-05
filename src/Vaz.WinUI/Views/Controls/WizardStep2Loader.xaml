@@ -182,13 +182,17 @@
         </Grid>
 
         <!-- Footer -->
-        <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+        <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="8">
             <Button x:Name="BackButton"
                     Grid.Column="0"
                     Content="← Quay lại"
                     Click="BackButton_Click" />
+            <Button x:Name="CancelButton"
+                    Grid.Column="1"
+                    Content="Hủy"
+                    Click="CancelButton_Click" />
             <Button x:Name="CreateButton"
-                    Grid.Column="2"
+                    Grid.Column="3"
                     Content="Tạo Instance"
                     Style="{StaticResource VazAccentButtonStyle}"
                     Click="CreateButton_Click"

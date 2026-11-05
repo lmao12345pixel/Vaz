@@ -3,11 +3,11 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="14" Padding="28,20,28,16">
+    <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="14" Padding="24,18,24,14">
         <!-- Hero header -->
         <StackPanel Grid.Row="0" Spacing="4">
             <TextBlock Text="Bạn muốn chơi phiên bản nào?" FontSize="28" FontWeight="SemiBold" />
-            <TextBlock Text="Chọn phiên bản Minecraft — những bản đã cài có nhãn &#8220;Đã cài&#8221;."
+            <TextBlock Text="Chọn phiên bản Minecraft — bản đã cài có nhãn &#8220;Đã cài&#8221;."
                        FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
         </StackPanel>
 
@@ -42,8 +42,13 @@
         </ScrollViewer>
 
         <!-- Footer -->
-        <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="8">
-            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+        <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+            <Button x:Name="CancelButton"
+                    Grid.Column="0"
+                    Content="Hủy"
+                    Click="CancelButton_Click" />
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" HorizontalAlignment="Center">
                 <ProgressRing x:Name="LoadingRing" Width="18" Height="18" IsActive="False" Visibility="Collapsed" />
                 <TextBlock x:Name="StatusText"
                            Text="Đang tải danh sách version..."
@@ -54,7 +59,7 @@
             </StackPanel>
 
             <Button x:Name="ContinueButton"
-                    Grid.Column="1"
+                    Grid.Column="2"
                     Content="Tiếp tục →"
                     Style="{StaticResource VazAccentButtonStyle}"
                     HorizontalAlignment="Right"

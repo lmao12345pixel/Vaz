@@ -4,58 +4,65 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:Vaz.WinUI.Views.Controls">
 
-    <Border
-        x:Name="CardBorder"
-        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-        BorderBrush="{x:Bind IsSelected, Mode=OneWay, Converter={StaticResource BoolToActiveBorderBrush}}"
-        BorderThickness="{x:Bind IsSelected, Mode=OneWay, Converter={StaticResource BoolToActiveBorderThicknessConverter}}"
-        CornerRadius="{StaticResource VazRadiusMd}"
-        Padding="8"
-        Width="210"
-        Height="172">
-        <Grid RowDefinitions="96,Auto,Auto" RowSpacing="2">
-            <Grid Grid.Row="0">
-                <!-- Cover (16:9) — gradient fallback nếu wiki không tải được -->
-                <local:WizardVersionCover x:Name="Cover" Height="96" VerticalAlignment="Stretch" />
+    <Button
+        x:Name="CardButton"
+        Click="CardButton_Click"
+        HorizontalContentAlignment="Stretch"
+        VerticalContentAlignment="Stretch"
+        Padding="0"
+        Background="Transparent"
+        BorderThickness="0"
+        CornerRadius="{StaticResource VazRadiusMd}">
+        <Border
+            x:Name="CardBorder"
+            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{x:Bind IsSelected, Mode=OneWay, Converter={StaticResource BoolToActiveBorderBrush}}"
+            BorderThickness="{x:Bind IsSelected, Mode=OneWay, Converter={StaticResource BoolToActiveBorderThickness}}"
+            CornerRadius="{StaticResource VazRadiusMd}"
+            Padding="8"
+            Width="216"
+            Height="180">
+            <Grid RowDefinitions="104,Auto,Auto" RowSpacing="4">
+                <Grid Grid.Row="0">
+                    <local:WizardVersionCover x:Name="Cover" Height="104" VerticalAlignment="Stretch" IsHitTestVisible="False" />
 
-                <!-- Check badge khi được chọn -->
-                <Border
-                    x:Name="CheckBadge"
-                    Visibility="Collapsed"
-                    Background="{StaticResource VazAccentBrush}"
-                    Width="24"
-                    Height="24"
-                    CornerRadius="12"
-                    HorizontalAlignment="Right"
-                    VerticalAlignment="Top"
-                    Margin="8">
-                    <FontIcon Glyph="&#xE73E;" FontSize="12" Foreground="White" />
-                </Border>
+                    <Border
+                        x:Name="CheckBadge"
+                        Visibility="Collapsed"
+                        Background="{StaticResource VazAccentBrush}"
+                        Width="24"
+                        Height="24"
+                        CornerRadius="12"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Margin="8">
+                        <FontIcon Glyph="&#xE73E;" FontSize="12" Foreground="White" />
+                    </Border>
 
-                <!-- Badge "Đã cài" -->
-                <Border
-                    x:Name="InstalledBadge"
-                    Visibility="Collapsed"
-                    Background="{StaticResource VazAccentSubtleBrush}"
-                    BorderBrush="{StaticResource VazAccentBrush}"
-                    BorderThickness="1"
-                    CornerRadius="4"
-                    Padding="5,2"
-                    HorizontalAlignment="Left"
-                    VerticalAlignment="Top"
-                    Margin="8">
-                    <TextBlock Text="Đã cài" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource VazAccentBrush}" />
-                </Border>
+                    <Border
+                        x:Name="InstalledBadge"
+                        Visibility="Collapsed"
+                        Background="{StaticResource VazAccentSubtleBrush}"
+                        BorderBrush="{StaticResource VazAccentBrush}"
+                        BorderThickness="1"
+                        CornerRadius="4"
+                        Padding="6,2"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Top"
+                        Margin="8">
+                        <TextBlock Text="Đã cài" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource VazAccentBrush}" />
+                    </Border>
+                </Grid>
+
+                <TextBlock Grid.Row="1" x:Name="VersionText" Text="1.21.1" FontSize="17" FontWeight="SemiBold" />
+
+                <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <Border Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="4" Padding="6,2">
+                        <TextBlock x:Name="TypeText" Text="Release" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </Border>
+                    <TextBlock x:Name="DateText" Text="13/06/2024" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                </StackPanel>
             </Grid>
-
-            <TextBlock Grid.Row="1" x:Name="VersionText" Text="1.21.1" FontSize="17" FontWeight="SemiBold" />
-
-            <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                <Border Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="4" Padding="5,2">
-                    <TextBlock x:Name="TypeText" Text="Release" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                </Border>
-                <TextBlock x:Name="DateText" Text="13/06/2024" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
-            </StackPanel>
-        </Grid>
-    </Border>
+        </Border>
+    </Button>
 </UserControl>
