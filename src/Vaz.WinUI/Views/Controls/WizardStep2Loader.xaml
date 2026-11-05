@@ -1,0 +1,198 @@
+<UserControl
+    x:Class="Vaz.WinUI.Views.Controls.WizardStep2Loader"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <UserControl.Resources>
+        <LinearGradientBrush x:Key="VanillaGradient" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#8A5A2B" Offset="0" />
+            <GradientStop Color="#4E7A34" Offset="1" />
+        </LinearGradientBrush>
+        <LinearGradientBrush x:Key="FabricGradient" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#F59E0B" Offset="0" />
+            <GradientStop Color="#D97706" Offset="1" />
+        </LinearGradientBrush>
+        <LinearGradientBrush x:Key="QuiltGradient" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#3B82F6" Offset="0" />
+            <GradientStop Color="#8B5CF6" Offset="1" />
+        </LinearGradientBrush>
+        <LinearGradientBrush x:Key="NeoForgeGradient" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#EF4444" Offset="0" />
+            <GradientStop Color="#F97316" Offset="1" />
+        </LinearGradientBrush>
+    </UserControl.Resources>
+
+    <Grid RowDefinitions="Auto,*,Auto" RowSpacing="14" Padding="28,20,28,16">
+        <!-- Hero + breadcrumb -->
+        <StackPanel Grid.Row="0" Spacing="4">
+            <TextBlock Text="Chọn Mod Loader" FontSize="28" FontWeight="SemiBold" />
+            <TextBlock x:Name="BreadcrumbText"
+                       Text="Bước 2/2 · Minecraft"
+                       FontSize="13"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+        </StackPanel>
+
+        <!-- Main content: 2 cột (left: loader cards + name + loader version | right: live preview) -->
+        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="18">
+            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="14">
+                    <!-- 4 loader cards ngang -->
+                    <Grid x:Name="LoaderGrid" ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
+                        <!-- Vanilla -->
+                        <Button x:Name="VanillaButton" Grid.Column="0" Tag="Vanilla" Click="LoaderButton_Click"
+                                HorizontalContentAlignment="Stretch" Padding="0"
+                                CornerRadius="{StaticResource VazRadiusMd}"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1">
+                            <StackPanel Padding="10,12" Spacing="8">
+                                <Border Height="58" CornerRadius="10" Background="{StaticResource VanillaGradient}">
+                                    <TextBlock x:Name="VanillaLogo" Text="V" FontSize="30" FontWeight="Bold"
+                                               Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <TextBlock Text="Vanilla" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                <TextBlock Text="Không mod" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           HorizontalAlignment="Center" TextAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Fabric -->
+                        <Button x:Name="FabricButton" Grid.Column="1" Tag="Fabric" Click="LoaderButton_Click"
+                                HorizontalContentAlignment="Stretch" Padding="0"
+                                CornerRadius="{StaticResource VazRadiusMd}"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1">
+                            <StackPanel Padding="10,12" Spacing="8">
+                                <Border Height="58" CornerRadius="10" Background="{StaticResource FabricGradient}">
+                                    <TextBlock x:Name="FabricLogo" Text="F" FontSize="30" FontWeight="Bold"
+                                               Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <TextBlock Text="Fabric" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                <TextBlock Text="Nhanh, nhẹ" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           HorizontalAlignment="Center" TextAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Quilt -->
+                        <Button x:Name="QuiltButton" Grid.Column="2" Tag="Quilt" Click="LoaderButton_Click"
+                                HorizontalContentAlignment="Stretch" Padding="0"
+                                CornerRadius="{StaticResource VazRadiusMd}"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1">
+                            <StackPanel Padding="10,12" Spacing="8">
+                                <Border Height="58" CornerRadius="10" Background="{StaticResource QuiltGradient}">
+                                    <TextBlock x:Name="QuiltLogo" Text="Q" FontSize="30" FontWeight="Bold"
+                                               Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <TextBlock Text="Quilt" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                <TextBlock Text="Tương thích Fabric" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           HorizontalAlignment="Center" TextAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+
+                        <!-- NeoForge -->
+                        <Button x:Name="NeoForgeButton" Grid.Column="3" Tag="NeoForge" Click="LoaderButton_Click"
+                                HorizontalContentAlignment="Stretch" Padding="0"
+                                CornerRadius="{StaticResource VazRadiusMd}"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1">
+                            <StackPanel Padding="10,12" Spacing="8">
+                                <Border Height="58" CornerRadius="10" Background="{StaticResource NeoForgeGradient}">
+                                    <TextBlock x:Name="NeoForgeLogo" Text="N" FontSize="30" FontWeight="Bold"
+                                               Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <TextBlock Text="NeoForge" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                <TextBlock Text="Mạnh, nhiều mod" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           HorizontalAlignment="Center" TextAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+
+                    <!-- Tên instance -->
+                    <TextBox x:Name="NameBox"
+                             Header="Tên instance"
+                             PlaceholderText="New Instance"
+                             Text="New Instance" />
+
+                    <!-- Loader version area (hiển thị sau khi chọn loader) -->
+                    <StackPanel x:Name="LoaderVersionPanel" Spacing="8" Visibility="Collapsed">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0" Text="Loader version" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <ProgressRing x:Name="LoaderLoadingRing" Grid.Column="1" Width="16" Height="16" IsActive="False" Visibility="Collapsed" />
+                        </Grid>
+                        <ComboBox x:Name="LoaderVersionBox"
+                                  Header="Loader version"
+                                  PlaceholderText="Chọn loader version"
+                                  HorizontalAlignment="Stretch" />
+                        <TextBlock x:Name="NoLoaderVersionsText"
+                                   Text="Không có version tương thích"
+                                   FontSize="12"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   Visibility="Collapsed" />
+                    </StackPanel>
+
+                    <!-- Ghi chú khi chọn Vanilla -->
+                    <InfoBar x:Name="VanillaNote"
+                             IsOpen="False"
+                             Severity="Informational"
+                             Title="Vanilla"
+                             Message="Vanilla không cần chọn loader version — game sẽ được cài như bản gốc." />
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Live preview panel (ẩn khi hẹp < 1000px) -->
+            <Border x:Name="PreviewPanel"
+                    Grid.Column="1"
+                    Width="250"
+                    VerticalAlignment="Center"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{StaticResource VazRadiusMd}"
+                    Padding="16,18">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Tóm tắt" FontSize="16" FontWeight="SemiBold" />
+                    <StackPanel Spacing="8">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE8B5;" FontSize="13" Foreground="{StaticResource VazAccentBrush}" VerticalAlignment="Center" />
+                            <TextBlock x:Name="PreviewVersion" Text="Minecraft" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE902;" FontSize="13" Foreground="{StaticResource VazAccentBrush}" VerticalAlignment="Center" />
+                            <TextBlock x:Name="PreviewLoader" Text="Loader" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE896;" FontSize="13" Foreground="{StaticResource VazAccentBrush}" VerticalAlignment="Center" />
+                            <StackPanel>
+                                <TextBlock x:Name="PreviewSize" Text="~214 MB" FontSize="12" />
+                                <TextBlock Text="Ước tính tải xuống" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+                    <TextBlock x:Name="PreviewHint"
+                               Text="Chọn loader để xem tóm tắt cấu hình."
+                               FontSize="11"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Footer -->
+        <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+            <Button x:Name="BackButton"
+                    Grid.Column="0"
+                    Content="← Quay lại"
+                    Click="BackButton_Click" />
+            <Button x:Name="CreateButton"
+                    Grid.Column="2"
+                    Content="Tạo Instance"
+                    Style="{StaticResource VazAccentButtonStyle}"
+                    Click="CreateButton_Click"
+                    IsEnabled="False" />
+        </Grid>
+    </Grid>
+</UserControl>
