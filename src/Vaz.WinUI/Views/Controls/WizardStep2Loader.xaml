@@ -20,6 +20,10 @@
             <GradientStop Color="#EF4444" Offset="0" />
             <GradientStop Color="#F97316" Offset="1" />
         </LinearGradientBrush>
+        <LinearGradientBrush x:Key="ForgeGradient" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#B45309" Offset="0" />
+            <GradientStop Color="#78350F" Offset="1" />
+        </LinearGradientBrush>
     </UserControl.Resources>
 
     <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10" Padding="24,10,24,6">
@@ -36,8 +40,8 @@
         <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="18">
             <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
                 <StackPanel Spacing="14">
-                    <!-- 4 loader cards ngang -->
-                    <Grid x:Name="LoaderGrid" ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
+                    <!-- 5 loader cards ngang -->
+                    <Grid x:Name="LoaderGrid" ColumnDefinitions="*,*,*,*,*" ColumnSpacing="8">
                         <!-- Vanilla -->
                         <Button x:Name="VanillaButton" Grid.Column="0" Tag="Vanilla" Click="LoaderButton_Click"
                                 HorizontalContentAlignment="Stretch" Padding="0"
@@ -45,12 +49,12 @@
                                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                 BorderThickness="1">
-                            <StackPanel Padding="10,12" Spacing="8">
-                                <Border Height="58" CornerRadius="10" Background="{StaticResource VanillaGradient}">
-                                    <TextBlock x:Name="VanillaLogo" Text="V" FontSize="30" FontWeight="Bold"
+                            <StackPanel Padding="8,10" Spacing="6">
+                                <Border Height="52" CornerRadius="10" Background="{StaticResource VanillaGradient}">
+                                    <TextBlock x:Name="VanillaLogo" Text="V" FontSize="26" FontWeight="Bold"
                                                Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 </Border>
-                                <TextBlock Text="Vanilla" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                <TextBlock Text="Vanilla" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" />
                                 <TextBlock Text="Không mod" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                            HorizontalAlignment="Center" TextAlignment="Center" />
                             </StackPanel>
@@ -63,12 +67,12 @@
                                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                 BorderThickness="1">
-                            <StackPanel Padding="10,12" Spacing="8">
-                                <Border Height="58" CornerRadius="10" Background="{StaticResource FabricGradient}">
-                                    <TextBlock x:Name="FabricLogo" Text="F" FontSize="30" FontWeight="Bold"
+                            <StackPanel Padding="8,10" Spacing="6">
+                                <Border Height="52" CornerRadius="10" Background="{StaticResource FabricGradient}">
+                                    <TextBlock x:Name="FabricLogo" Text="F" FontSize="26" FontWeight="Bold"
                                                Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 </Border>
-                                <TextBlock Text="Fabric" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                <TextBlock Text="Fabric" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" />
                                 <TextBlock Text="Nhanh, nhẹ" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                            HorizontalAlignment="Center" TextAlignment="Center" />
                             </StackPanel>
@@ -81,13 +85,13 @@
                                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                 BorderThickness="1">
-                            <StackPanel Padding="10,12" Spacing="8">
-                                <Border Height="58" CornerRadius="10" Background="{StaticResource QuiltGradient}">
-                                    <TextBlock x:Name="QuiltLogo" Text="Q" FontSize="30" FontWeight="Bold"
+                            <StackPanel Padding="8,10" Spacing="6">
+                                <Border Height="52" CornerRadius="10" Background="{StaticResource QuiltGradient}">
+                                    <TextBlock x:Name="QuiltLogo" Text="Q" FontSize="26" FontWeight="Bold"
                                                Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 </Border>
-                                <TextBlock Text="Quilt" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" />
-                                <TextBlock Text="Tương thích Fabric" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                <TextBlock Text="Quilt" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                <TextBlock Text="Tương thích" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                            HorizontalAlignment="Center" TextAlignment="Center" />
                             </StackPanel>
                         </Button>
@@ -99,13 +103,31 @@
                                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                 BorderThickness="1">
-                            <StackPanel Padding="10,12" Spacing="8">
-                                <Border Height="58" CornerRadius="10" Background="{StaticResource NeoForgeGradient}">
-                                    <TextBlock x:Name="NeoForgeLogo" Text="N" FontSize="30" FontWeight="Bold"
+                            <StackPanel Padding="8,10" Spacing="6">
+                                <Border Height="52" CornerRadius="10" Background="{StaticResource NeoForgeGradient}">
+                                    <TextBlock x:Name="NeoForgeLogo" Text="N" FontSize="26" FontWeight="Bold"
                                                Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 </Border>
-                                <TextBlock Text="NeoForge" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" />
-                                <TextBlock Text="Mạnh, nhiều mod" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                <TextBlock Text="NeoForge" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                <TextBlock Text="Hiện đại" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           HorizontalAlignment="Center" TextAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Forge -->
+                        <Button x:Name="ForgeButton" Grid.Column="4" Tag="Forge" Click="LoaderButton_Click"
+                                HorizontalContentAlignment="Stretch" Padding="0"
+                                CornerRadius="{StaticResource VazRadiusMd}"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1">
+                            <StackPanel Padding="8,10" Spacing="6">
+                                <Border Height="52" CornerRadius="10" Background="{StaticResource ForgeGradient}">
+                                    <TextBlock x:Name="ForgeLogo" Text="Fo" FontSize="26" FontWeight="Bold"
+                                               Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <TextBlock Text="Forge" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                <TextBlock Text="Truyền thống" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                            HorizontalAlignment="Center" TextAlignment="Center" />
                             </StackPanel>
                         </Button>

@@ -14,7 +14,7 @@ namespace Vaz.WinUI.ViewModels;
 public sealed partial class CreateInstanceViewModel : ObservableObject
 {
     /// <summary>Loader hỗ trợ tạo instance.</summary>
-    public static IReadOnlyList<string> Loaders { get; } = new[] { "Fabric", "Quilt", "NeoForge", "Vanilla" };
+    public static IReadOnlyList<string> Loaders { get; } = new[] { "Vanilla", "Fabric", "Quilt", "NeoForge", "Forge" };
 
     /// <summary>Thứ tự hiển thị version trong dropdown: release trước, rồi snapshot, old beta, old alpha.</summary>
     public static int TypeRank(string? type) => (type?.Trim().ToLowerInvariant()) switch
@@ -183,6 +183,14 @@ public sealed partial class CreateInstanceViewModel : ObservableObject
         var mcSelected = !string.IsNullOrEmpty(SelectedMinecraftVersion);
         var loader = SelectedLoader ?? "Vanilla";
         var loaderVersionSelected = loader == "Vanilla" || !string.IsNullOrEmpty(SelectedLoaderVersion);
+
+        if (string.Equals(loader, "forge", StringComparison.OrdinalIgnoreCase) &&
+            mcSelected && !ForgeInstaller.IsHeadlessSupported(SelectedMinecraftVersion!))
+        {
+            CanCreateInstance = false;
+            CreateWarningMessage = "Forge headless chỉ hỗ trợ MC 1.13+.";
+            return;
+        }
 
         CanCreateInstance = mcSelected && loaderVersionSelected;
         CreateWarningMessage = CanCreateInstance ? null : (loader != "Vanilla" && string.IsNullOrEmpty(SelectedLoaderVersion)) 

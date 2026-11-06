@@ -29,6 +29,10 @@
             <GradientStop Color="#EF4444" Offset="0" />
             <GradientStop Color="#F97316" Offset="1" />
         </LinearGradientBrush>
+        <LinearGradientBrush x:Key="ForgeGradient" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#B45309" Offset="0" />
+            <GradientStop Color="#78350F" Offset="1" />
+        </LinearGradientBrush>
     </UserControl.Resources>
 
     <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10" Padding="24,10,24,6">

@@ -108,6 +108,7 @@ public static class MinecraftServiceCollectionExtensions
         {
             var registry = new LoaderInstallerRegistry();
             registry.Register("neoforge", sp.GetRequiredService<NeoForgeInstaller>());
+            registry.Register("forge", sp.GetRequiredService<ForgeInstaller>());
             return registry;
         });
         // Phase B: CreateInstanceViewModel cần IMinecraftVersionService (fetch Mojang/Fabric/Quilt/NeoForge metadata).

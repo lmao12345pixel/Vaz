@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Vaz.WinUI.Helpers;
 using Vaz.WinUI.Models;
+using Vazer.Core.Loaders;
 using Vazer.Core.Versions;
 
 namespace Vaz.WinUI.Views.Controls;
@@ -99,6 +100,7 @@ public sealed partial class WizardStep2Loader : UserControl
             "Fabric" => FabricLogo,
             "Quilt" => QuiltLogo,
             "NeoForge" => NeoForgeLogo,
+            "Forge" => ForgeLogo,
             _ => (TextBlock?)null
         });
 
@@ -153,7 +155,8 @@ public sealed partial class WizardStep2Loader : UserControl
         (VanillaButton, "Vanilla"),
         (FabricButton, "Fabric"),
         (QuiltButton, "Quilt"),
-        (NeoForgeButton, "NeoForge")
+        (NeoForgeButton, "NeoForge"),
+        (ForgeButton, "Forge")
     };
 
     private async Task RefreshLoaderVersionAreaAsync(string loader)
@@ -171,6 +174,17 @@ public sealed partial class WizardStep2Loader : UserControl
         VanillaNote.IsOpen = false;
         LoaderVersionPanel.Visibility = Visibility.Visible;
         AnimateLoaderVersionSlide(true); // slide-down + fade (#8 tương tự dropdown mở)
+
+        if (string.Equals(loader, "Forge", StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrEmpty(State.SelectedVersion) &&
+            !ForgeInstaller.IsHeadlessSupported(State.SelectedVersion))
+        {
+            NoLoaderVersionsText.Text = "Forge headless chỉ hỗ trợ MC 1.13+.";
+            NoLoaderVersionsText.Visibility = Visibility.Visible;
+            State.SelectedLoaderVersion = null;
+            ValidateCreate();
+            return;
+        }
 
         // Tải danh sách loader version
         _versionsCts?.Cancel();
@@ -278,6 +292,7 @@ public sealed partial class WizardStep2Loader : UserControl
             "Fabric" => $"Fabric {State.SelectedLoaderVersion ?? ""}".Trim(),
             "Quilt" => $"Quilt {State.SelectedLoaderVersion ?? ""}".Trim(),
             "NeoForge" => $"NeoForge {State.SelectedLoaderVersion ?? ""}".Trim(),
+            "Forge" => $"Forge {State.SelectedLoaderVersion ?? ""}".Trim(),
             _ => loader
         };
         PreviewLoader.Text = loaderLine;
@@ -288,12 +303,14 @@ public sealed partial class WizardStep2Loader : UserControl
             "Fabric" => 226,
             "Quilt" => 231,
             "NeoForge" => 282,
+            "Forge" => 275,
             _ => 214
         };
         PreviewSize.Text = $"~{mb} MB";
         PreviewHint.Text = loader switch
         {
             "NeoForge" => "NeoForge cần 1.20.2+ (build chính thức). Lần tạo đầu sẽ tải thêm thư viện đã vá.",
+            "Forge" => "Forge headless chỉ hỗ trợ MC 1.13+. Lần tạo đầu sẽ tải installer và patch client.",
             "Vanilla" => "Bản vanilla gốc từ Mojang, không có mod.",
             _ => "Loader nhẹ, khởi động nhanh."
         };
@@ -302,6 +319,16 @@ public sealed partial class WizardStep2Loader : UserControl
     private void ValidateCreate()
     {
         var loader = State.SelectedLoader;
+        var mc = State.SelectedVersion ?? "";
+
+        if (string.Equals(loader, "Forge", StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrEmpty(mc) &&
+            !ForgeInstaller.IsHeadlessSupported(mc))
+        {
+            CreateButton.IsEnabled = false;
+            return;
+        }
+
         var loaderOk = loader == null
             ? false
             : string.Equals(loader, "Vanilla", StringComparison.OrdinalIgnoreCase)
