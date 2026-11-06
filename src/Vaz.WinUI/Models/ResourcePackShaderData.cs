@@ -13,7 +13,7 @@ public sealed class ResourcePackItem
     public string Description { get; set; } = string.Empty;
     public string Resolution { get; set; } = "32x";
     public string Size { get; set; } = "10 MB";
-    public string Version { get; set; } = "1.21.1";
+    public string Version { get; set; } = "Unknown";
     public int PackFormat { get; set; } = 34; // 1.21.x format
     public string IconUri { get; set; } = string.Empty;
     public string BannerUri { get; set; } = string.Empty;

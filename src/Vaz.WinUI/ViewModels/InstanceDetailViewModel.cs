@@ -323,7 +323,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
                 var currentMcVersion = Current.MinecraftVersion;
                 if (string.IsNullOrWhiteSpace(currentMcVersion))
                 {
-                    // Không đoán 1.21.1: thiếu version là lỗi dữ liệu instance, cần user kiểm tra.
+                    // Không đoán version mặc định: thiếu version là lỗi dữ liệu instance, cần user kiểm tra.
                     _notificationService?.ShowWarning(
                         "Không xác định được phiên bản MC",
                         "Vui lòng kiểm tra lại instance.");

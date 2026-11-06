@@ -156,13 +156,13 @@ public sealed partial class CreateInstanceDialog : ContentDialog
         else if (targetStep == 3)
         {
             var loader = _wizardState.SelectedLoader ?? "Fabric";
-            var mc = _wizardState.SelectedVersion ?? "1.21.1";
+            var mc = _wizardState.SelectedVersion;
             if (_changeInstance != null)
             {
                 Step3.SetNameReadOnly(_changeInstance.Name);
                 Step3.SetActionLabel("Đổi phiên bản");
             }
-            else
+            else if (!string.IsNullOrWhiteSpace(mc))
             {
                 _ = Step3.SetDefaultNameAsync(null, loader, mc);
             }

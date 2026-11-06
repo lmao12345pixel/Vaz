@@ -223,6 +223,17 @@ public sealed partial class WizardStep2Loader : UserControl
             return;
         }
 
+        // Không assume version mặc định: thiếu MC version thì không query loader versions.
+        var mcVersion = State.SelectedVersion;
+        if (string.IsNullOrWhiteSpace(mcVersion))
+        {
+            NoLoaderVersionsText.Text = "Chọn phiên bản Minecraft trước.";
+            NoLoaderVersionsText.Visibility = Visibility.Visible;
+            State.SelectedLoaderVersion = null;
+            ValidateCreate();
+            return;
+        }
+
         // Tải danh sách loader version
         _versionsCts?.Cancel();
         var cts = new CancellationTokenSource();
@@ -233,7 +244,7 @@ public sealed partial class WizardStep2Loader : UserControl
         {
             var versions = await _versionService.GetLoaderVersionsAsync(
                 loader.ToLowerInvariant(),
-                State.SelectedVersion ?? "1.21.1",
+                mcVersion,
                 cts.Token);
 
             var stable = versions
@@ -371,7 +382,8 @@ public sealed partial class WizardStep2Loader : UserControl
             : string.Equals(loader, "Vanilla", StringComparison.OrdinalIgnoreCase)
                 || !string.IsNullOrWhiteSpace(State.SelectedLoaderVersion);
         var nameOk = !string.IsNullOrWhiteSpace(NameBox.Text);
-        CreateButton.IsEnabled = loaderOk && nameOk;
+        var mcOk = !string.IsNullOrWhiteSpace(mc);
+        CreateButton.IsEnabled = mcOk && loaderOk && nameOk;
     }
 
     private void BackButton_Click(object sender, RoutedEventArgs e)

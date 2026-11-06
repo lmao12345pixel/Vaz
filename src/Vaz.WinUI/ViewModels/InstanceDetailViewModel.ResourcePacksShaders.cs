@@ -65,7 +65,7 @@ public sealed partial class ResourcePackRow : ObservableObject
 
     public bool IsCompatible => Pack.IsCompatible && (PackFormat == 34 || PackFormat <= 0);
     public bool IsIncompatible => !IsCompatible;
-    public string CompatibilityText => IsCompatible ? "Tương thích 1.21.1" : $"Sai phiên bản (Format {PackFormat})";
+    public string CompatibilityText => IsCompatible ? "Tương thích" : $"Sai phiên bản (Format {PackFormat})";
 
     public string ViewDetailsAutomationName => $"Xem chi tiết {Name}";
     public string DeletePackAutomationName => $"Xóa gói {Name}";
@@ -283,7 +283,7 @@ public partial class InstanceDetailViewModel
                             Description = desc,
                             Resolution = res,
                             Size = sizeStr,
-                            Version = "1.21.1",
+                            Version = "Unknown",
                             PackFormat = packFormat,
                             IsCompatible = packFormat == 34 || packFormat <= 0
                         };
@@ -458,7 +458,7 @@ public partial class InstanceDetailViewModel
                     Description = "Gói tài nguyên người dùng thêm vào.",
                     Resolution = "32x",
                     Size = "15 MB",
-                    Version = "1.21.1",
+                    Version = "Unknown",
                     PackFormat = 34,
                     IsCompatible = true
                 };
