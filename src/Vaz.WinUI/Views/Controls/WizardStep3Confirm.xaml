@@ -1,0 +1,234 @@
+<UserControl
+    x:Class="Vaz.WinUI.Views.Controls.WizardStep3Confirm"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <UserControl.Resources>
+        <LinearGradientBrush x:Key="PreviewGradientBrush" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop x:Name="GradientStop1" Color="#10B981" Offset="0" />
+            <GradientStop x:Name="GradientStop2" Color="#0D9C6E" Offset="1" />
+        </LinearGradientBrush>
+        <LinearGradientBrush x:Key="CreateGradient" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#22C55E" Offset="0" />
+            <GradientStop Color="#10B981" Offset="0.55" />
+            <GradientStop Color="#06D6A0" Offset="1" />
+        </LinearGradientBrush>
+        <LinearGradientBrush x:Key="VanillaGradient" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#8A5A2B" Offset="0" />
+            <GradientStop Color="#4E7A34" Offset="1" />
+        </LinearGradientBrush>
+        <LinearGradientBrush x:Key="FabricGradient" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#F59E0B" Offset="0" />
+            <GradientStop Color="#D97706" Offset="1" />
+        </LinearGradientBrush>
+        <LinearGradientBrush x:Key="QuiltGradient" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#3B82F6" Offset="0" />
+            <GradientStop Color="#8B5CF6" Offset="1" />
+        </LinearGradientBrush>
+        <LinearGradientBrush x:Key="NeoForgeGradient" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#EF4444" Offset="0" />
+            <GradientStop Color="#F97316" Offset="1" />
+        </LinearGradientBrush>
+    </UserControl.Resources>
+
+    <Grid RowDefinitions="Auto,*,Auto" RowSpacing="14" Padding="28,18,28,14">
+        <!-- Hero + breadcrumb -->
+        <StackPanel Grid.Row="0" Spacing="4">
+            <TextBlock Text="Xác nhận &amp; tạo" FontSize="28" FontWeight="SemiBold" />
+            <TextBlock x:Name="BreadcrumbText"
+                       Text="Bước 3/3"
+                       FontSize="13"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+        </StackPanel>
+
+        <!-- Preview card -->
+        <Border x:Name="PreviewCard"
+                Grid.Row="1"
+                Width="500"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Background="{StaticResource PreviewGradientBrush}"
+                CornerRadius="{StaticResource VazRadiusLg}"
+                Padding="26,22,26,18">
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="12">
+                <!-- Big loader tile -->
+                <Border x:Name="LoaderTile"
+                        Grid.Row="0"
+                        Width="104"
+                        Height="104"
+                        CornerRadius="24"
+                        HorizontalAlignment="Center"
+                        Background="{StaticResource FabricGradient}">
+                    <TextBlock x:Name="LoaderGlyph"
+                               Text="F"
+                               FontSize="46"
+                               FontWeight="Bold"
+                               Foreground="White"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center" />
+                </Border>
+
+                <TextBlock x:Name="VersionLine"
+                           Grid.Row="1"
+                           Text="Minecraft 1.21.1"
+                           FontSize="22"
+                           FontWeight="SemiBold"
+                           Foreground="White"
+                           HorizontalAlignment="Center" />
+
+                <TextBlock x:Name="LoaderLine"
+                           Grid.Row="2"
+                           Text="Fabric"
+                           FontSize="13"
+                           FontWeight="Medium"
+                           Foreground="#E8FFFFFF"
+                           HorizontalAlignment="Center" />
+
+                <!-- Editable name -->
+                <Grid Grid.Row="3" Margin="10,2,10,0">
+                    <TextBox x:Name="NameBox"
+                             Text="Fabric 1.21.1 #1"
+                             PlaceholderText=""
+                             Padding="16,20,16,9"
+                             FontSize="16"
+                             Background="#1AFFFFFF"
+                             BorderBrush="#33FFFFFF"
+                             BorderThickness="1"
+                             CornerRadius="10"
+                             Foreground="White"
+                             HorizontalAlignment="Stretch" />
+                    <TextBlock x:Name="FloatingLabel"
+                               Text="Tên instance"
+                               FontSize="15"
+                               Foreground="#CCFFFFFF"
+                               Margin="16,0,16,0"
+                               VerticalAlignment="Center"
+                               IsHitTestVisible="False" />
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- Footer -->
+        <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="8">
+            <Button x:Name="BackButton"
+                    Grid.Column="0"
+                    Content="← Quay lại"
+                    Height="36"
+                    Padding="16,7"
+                    CornerRadius="6"
+                    Click="BackButton_Click" />
+            <Button x:Name="CancelButton"
+                    Grid.Column="1"
+                    Content="Hủy"
+                    Height="36"
+                    Padding="16,7"
+                    CornerRadius="6"
+                    Click="CancelButton_Click" />
+
+            <!-- Create button host + glow -->
+            <Grid Grid.Column="3" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <Border x:Name="CreateGlow"
+                        CornerRadius="18"
+                        Background="{StaticResource CreateGradient}"
+                        Opacity="0.0"
+                        Width="220"
+                        Height="52" />
+                <Button x:Name="CreateButton"
+                        Height="38"
+                        MinWidth="170"
+                        Padding="20,7"
+                        CornerRadius="19"
+                        BorderThickness="0"
+                        Background="{StaticResource CreateGradient}"
+                        Foreground="White"
+                        FontWeight="SemiBold"
+                        FontSize="14"
+                        IsEnabled="False"
+                        Click="CreateButton_Click">
+                    <Button.Content>
+                        <Grid>
+                            <!-- Normal content -->
+                            <StackPanel x:Name="NormalContent"
+                                        Orientation="Horizontal"
+                                        Spacing="8"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center">
+                                <FontIcon Glyph="&#xE73E;" FontSize="14" VerticalAlignment="Center" />
+                                <TextBlock Text="Tạo Instance" VerticalAlignment="Center" />
+                            </StackPanel>
+
+                            <!-- Loading content: ring + percent + stage text -->
+                            <StackPanel x:Name="LoadingContent"
+                                        Visibility="Collapsed"
+                                        Opacity="0"
+                                        Orientation="Horizontal"
+                                        Spacing="10"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center">
+                                <ProgressRing x:Name="CreateRing"
+                                              IsActive="True"
+                                              Width="20"
+                                              Height="20"
+                                              Foreground="White" />
+                                <StackPanel Spacing="1" VerticalAlignment="Center">
+                                    <Grid>
+                                        <TextBlock x:Name="StageTextOld"
+                                                   Text="Đang chuẩn bị..."
+                                                   FontSize="11"
+                                                   Foreground="#D9FFFFFF"
+                                                   Opacity="0"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock x:Name="StageTextNew"
+                                                   Text="Đang chuẩn bị..."
+                                                   FontSize="11"
+                                                   Foreground="#D9FFFFFF"
+                                                   Opacity="1"
+                                                   TextTrimming="CharacterEllipsis" />
+                                    </Grid>
+                                    <TextBlock x:Name="PercentText"
+                                               Text="0%"
+                                               FontSize="14"
+                                               FontWeight="SemiBold"
+                                               Foreground="White" />
+                                </StackPanel>
+                            </StackPanel>
+
+                            <!-- Success content: checkmark draw -->
+                            <Canvas x:Name="SuccessContent"
+                                    Visibility="Collapsed"
+                                    Opacity="0"
+                                    Width="110"
+                                    Height="34">
+                                <Path x:Name="SuccessCircle"
+                                      Fill="Transparent"
+                                      Stroke="White"
+                                      StrokeThickness="3"
+                                      StrokeLineJoin="Round"
+                                      Data="M 17,0 A 17,17 0 1 1 16.99,0"
+                                      Canvas.Left="0"
+                                      Canvas.Top="0"
+                                      Width="34"
+                                      Height="34"
+                                      UseLayoutRounding="False"
+                                      Stretch="Uniform" />
+                                <Path x:Name="SuccessCheck"
+                                      Fill="Transparent"
+                                      Stroke="White"
+                                      StrokeThickness="3.4"
+                                      StrokeEndLineCap="Round"
+                                      StrokeLineJoin="Round"
+                                      Data="M 9,18 L 15.5,24.5 L 26,13"
+                                      Canvas.Left="0"
+                                      Canvas.Top="0"
+                                      Width="34"
+                                      Height="34"
+                                      UseLayoutRounding="False"
+                                      Stretch="Uniform" />
+                            </Canvas>
+                        </Grid>
+                    </Button.Content>
+                </Button>
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>

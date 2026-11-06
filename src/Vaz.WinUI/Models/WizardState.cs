@@ -9,7 +9,10 @@ public enum WizardStep
     Step1Version = 1,
 
     /// <summary>Bước 2: chọn loader (+ loader version).</summary>
-    Step2Loader = 2
+    Step2Loader = 2,
+
+    /// <summary>Bước 3: xác nhận & tạo instance.</summary>
+    Step3Confirm = 3
 }
 
 /// <summary>
