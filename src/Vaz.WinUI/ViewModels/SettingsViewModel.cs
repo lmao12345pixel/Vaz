@@ -209,7 +209,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private string javaSpec = string.Empty;
 
     /// <summary>Dòng instance trong thẻ preview Discord; web lấy từ instance hiện tại.</summary>
-    [ObservableProperty] private string discordPreviewInstance = "Minecraft 1.21.1";
+    [ObservableProperty] private string discordPreviewInstance = "Chưa chọn instance";
 
     /// <summary>Ảnh block Minecraft (lớn) của preview — đổi sang bản grayscale khi RPC tắt.</summary>
     [ObservableProperty] private ImageSource? discordPreviewLargeArt;
