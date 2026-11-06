@@ -139,7 +139,7 @@ public sealed class JavaResolver : IJavaResolver
         return results
             .GroupBy(j => j.Path, StringComparer.OrdinalIgnoreCase)
             .Select(g => g.First())
-            .Where(j => j.MajorVersion >= _options.MinJavaVersion && j.MajorVersion <= _options.MaxJavaVersion)
+            .Where(j => IsSupportedJavaMajor(j.MajorVersion, _options.MinJavaVersion, _options.MaxJavaVersion))
             .ToList()
             .AsReadOnly();
     }
@@ -338,6 +338,13 @@ public sealed class JavaResolver : IJavaResolver
             return null;
         }
     }
+
+    /// <summary>
+    /// Java major có nằm trong khoảng hỗ trợ (inclusive) hay không. Tách khỏi
+    /// <see cref="DiscoverAsync"/> để test ranh giới 21/22/25/26 mà không cần file hệ thống.
+    /// </summary>
+    internal static bool IsSupportedJavaMajor(int majorVersion, int minMajorVersion, int maxMajorVersion) =>
+        majorVersion >= minMajorVersion && majorVersion <= maxMajorVersion;
 
     private bool VerifyChecksum(string filePath, string expectedChecksum)
     {

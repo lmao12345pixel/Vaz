@@ -24,9 +24,10 @@ public sealed class MinecraftOptions
     public int MinJavaVersion { get; set; } = 8;
 
     /// <summary>
-    /// Maximum Java major version cho phép.
+    /// Maximum Java major version cho phép detect. Java 22–25 tương thích ngược với
+    /// spec Java 21 (MC 1.20.5+), nên không được lọc mất (Phase E fix 18.7b).
     /// </summary>
-    public int MaxJavaVersion { get; set; } = 21;
+    public int MaxJavaVersion { get; set; } = 25;
 
     /// <summary>
     /// Microsoft Entra (Azure AD) Client ID cho OAuth.
