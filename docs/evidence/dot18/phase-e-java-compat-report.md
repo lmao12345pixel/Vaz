@@ -1,4 +1,4 @@
-# Đợt 18.7 Phase E — Java Compatibility (auto map Java theo MC version) + 18.7b fixes
+# Đợt 18.7 Phase E — Java Compatibility (auto map Java theo MC version) + 18.7b/18.7c fixes
 
 ## 1. Tổng quan
 
@@ -43,7 +43,11 @@ bằng kiểm tra + cảnh báo. `EnsureAsync` vẫn còn trong codebase và v�
 | 18.7b-1 | `f7b0b38` | `fix(java): extend MaxJavaVersion to 25 for Java 22-25 compatibility` |
 | 18.7b-2 | `a9636dd` | `fix(instance): replace hardcoded 1.21.1 fallback with Unknown` |
 | 18.7b-3 | `68cab32` | `fix(wizard): remove hardcoded minecraft version fallbacks` |
-| 18.7b-4 | *(commit docs)* | `docs(evidence): update Phase E report with 18.7b fixes` |
+| 18.7b-4 | `5dc606c` | `docs(evidence): update Phase E report with 18.7b fixes` |
+| 18.7c-1 | *(đã có từ `f7b0b38`)* | `MaxJavaVersion = 25` đã xong ở 18.7b; 18.7c verify không còn `21` (không tạo commit rỗng) |
+| 18.7c-2 | `9542f50` | `fix(java): relax IsMismatch to allow Java 22-25 for MC 1.20.5+` |
+| 18.7c-3 | `f51a6b5` | `test(java): add IsMismatch unit tests` |
+| 18.7c-4 | *(commit docs)* | `docs(evidence): record 18.7c IsMismatch relaxation` |
 
 ## 3. Danh sách file (Tạo / Sửa)
 
@@ -109,8 +113,11 @@ bằng kiểm tra + cảnh báo. `EnsureAsync` vẫn còn trong codebase và v�
 | Sau Phase E | **442/442** pass, 0 fail, 0 skip |
 | Baseline 18.7b | **442/442** pass |
 | Sau 18.7b | **452/452** pass, 0 fail, 0 skip |
+| Baseline 18.7c | **452/452** pass |
+| Sau 18.7c | **463/463** pass, 0 fail, 0 skip |
 | Test mới Phase E | **+22 test case** (6 mapping bắt buộc + 6 boundary/suffix + 5 Unknown + 5 warning/requirements) |
 | Test mới 18.7b | **+10 test case** (9 range theory 8–25 + 1 options default) |
+| Test mới 18.7c | **+11 test case** (6 cặp mismatch bắt buộc + 3 unknown + 2 instance-level) |
 | `check.ps1 -Scope static` | **PASSED** (build + test + agent config 12/12) |
 | `dotnet build Vaz.sln` | **0 error** (warning IL2026/CS8620 pre-existing) |
 | `dotnet build src/Vaz.WinUI` | **0 error**, 18 warning (pre-existing) |
@@ -147,10 +154,10 @@ java8path), Java 17 (bundled Temurin), **Java 21 (bundled Temurin 21.0.12.1)**, 
 
 ## 5. Bằng chứng (Evidence)
 
-**Automated (PASS — sau 18.7b):**
+**Automated (PASS — sau 18.7c):**
 ```
 dotnet test Vaz.sln
-Passed! - Failed: 0, Passed: 452, Skipped: 0, Total: 452
+Passed! - Failed: 0, Passed: 463, Skipped: 0, Total: 463
 
 check.ps1 -Scope static
 STATIC CHECK PASSED: build + test + agent config
@@ -158,6 +165,8 @@ CHECK PASSED: static
 ```
 `JavaResolverVersionRangeTests`: 10/10 PASS (22/23/24/25 accepted, 26/7 rejected,
 `MinecraftOptions` default MaxJavaVersion = 25).
+`JavaRequirementsMismatchTests`: 11/11 PASS — (17,21)=warn, (25,21)=OK, (25,8)=warn,
+(21,17)=warn, (21,21)=OK, (8,8)=OK; unknown 0/âm không warn.
 
 **Runtime UI (BLOCKED — không đủ bằng chứng):**
 - Ảnh Settings Java section: **BLOCKED**. Môi trường chạy lệnh chặn launch GUI
@@ -184,11 +193,11 @@ CHECK PASSED: static
 
 ## 6. Known issues / Hạn chế
 
-1. **~~Java 22+ bị lọc khỏi detect~~ — FIXED (18.7b).** `MaxJavaVersion` = **25** (default +
-   `appsettings.json`); Java 22/23/24/25 được detect, Java 26 vẫn bị lọc. **Còn lại:** cảnh báo
-   launch vẫn so sánh exact (`actual != required`), nên Java 25 + MC 1.21.1 (required 21) vẫn
-   hiện "Java version không phù hợp". Muốn hết hẳn cần đổi `JavaRequirements.IsMismatch` thành
-   "chỉ warn khi actual < required, hoặc actual > required với required < 21" (ngoài phạm vi 18.7b).
+1. **~~Java 22+ bị lọc khỏi detect~~ — FIXED (18.7b + 18.7c).** `MaxJavaVersion` = **25**
+   (default + `appsettings.json`); Java 22/23/24/25 được detect, Java 26 vẫn bị lọc.
+   **18.7c:** cảnh báo launch đã relax — `IsMismatch` chỉ warn khi `actual < required`, hoặc
+   `actual > required` với `required < 21`. Java 25 + MC 1.21.1 (required 21) **không còn** cảnh báo;
+   Java 25 + MC 1.16.5 (required 8) vẫn cảnh báo đúng.
 2. **Bỏ auto-download ở launch** là thay đổi hành vi có chủ đích theo nguyên tắc 2. Nếu user
    không có Java phù hợp, game sẽ fail thay vì tự cài — đúng yêu cầu "user tự cài".
 3. **Message dùng `InstanceId`**, không phải tên hiển thị: `LaunchParameters` chưa có `Name`.
@@ -207,8 +216,8 @@ CHECK PASSED: static
 
 ## 7. Đề xuất (sau đợt này)
 
-1. Nới `JavaRequirements.IsMismatch`: chỉ warn khi `actual < required`, hoặc `actual > required`
-   với `required < 21` — để Java 25 + MC 1.21.1 không còn cảnh báo giả.
+1. ~~Nới `JavaRequirements.IsMismatch`~~ — **DONE (18.7c)**: warn khi `actual < required`, hoặc
+   `actual > required` với `required < 21`.
 2. Thêm `JAVA_HOME` + registry scan (`HKLM\SOFTWARE\JavaSoft\JDK`) để detect đủ hơn.
 3. Đưa `InstanceName` vào `LaunchParameters` để message thân thiện hơn `InstanceId`.
 4. Cập nhật web prototype + contract `settings`/`java-compatibility` để giữ mô hình dual-target
@@ -236,6 +245,12 @@ CHECK PASSED: static
 - [x] Wizard thiếu MC version: chặn query loader + disable nút Tạo (không assume version).
 - [x] 452/452 test pass; `check.ps1 -Scope static` PASSED; build WinUI 0 error.
 - [x] Không sửa `LoaderInstallers`, `InstanceMigrationService`, `VersionManagementService`.
+
+**18.7c:**
+- [x] `MaxJavaVersion` verify = 25 ở cả default + appsettings; `grep` không còn `= 21` / `"MaxJavaVersion": 21`.
+- [x] `IsMismatch` relax đúng 6 cặp bắt buộc; actual/required <= 0 không warn.
+- [x] 463/463 test pass; `check.ps1 -Scope static` PASSED.
+- [x] Không sửa `LoaderInstallers`, `InstanceMigrationService`.
 
 **CHƯA KIỂM TRA (BLOCKED / MANUAL_REQUIRED):**
 - [ ] Runtime Settings Java section (ảnh) — BLOCKED do môi trường chặn launch GUI.
