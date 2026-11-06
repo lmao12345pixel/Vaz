@@ -32,11 +32,36 @@ public sealed record JavaRequirements
     };
 
     /// <summary>
-    /// True khi biết Java yêu cầu và Java thực tế khác yêu cầu.
-    /// Java thực tế không xác định (&lt;= 0) được coi là không đủ dữ kiện → không cảnh báo.
+    /// True khi Java thực tế không tương thích với yêu cầu (18.7c):
+    /// <list type="bullet">
+    /// <item><c>actual &lt; required</c> → thiếu Java, cảnh báo.</item>
+    /// <item><c>actual &gt; required</c> và <c>required &lt; 21</c> → MC cũ chạy Java mới, cảnh báo.</item>
+    /// <item><c>actual &gt; required</c> và <c>required &gt;= 21</c> → Java 22–25 chạy spec Java 21, OK.</item>
+    /// <item><c>actual == required</c> → OK.</item>
+    /// <item>Một trong hai &lt;= 0 (không xác định) → không cảnh báo.</item>
+    /// </list>
     /// </summary>
     public bool IsMismatch(int actualMajorVersion) =>
-        IsKnown && actualMajorVersion > 0 && actualMajorVersion != MajorVersion;
+        IsKnown && IsMismatch(actualMajorVersion, MajorVersion);
+
+    /// <summary>
+    /// Phiên bản static của quy tắc mismatch, cho phép test trực tiếp cặp
+    /// <paramref name="actualMajorVersion"/> / <paramref name="requiredMajorVersion"/>.
+    /// </summary>
+    public static bool IsMismatch(int actualMajorVersion, int requiredMajorVersion)
+    {
+        if (actualMajorVersion <= 0 || requiredMajorVersion <= 0)
+        {
+            return false;
+        }
+
+        if (actualMajorVersion < requiredMajorVersion)
+        {
+            return true;
+        }
+
+        return actualMajorVersion > requiredMajorVersion && requiredMajorVersion < 21;
+    }
 
     /// <summary>Message hiển thị cho user khi mismatch; không chứa quyết định block launch.</summary>
     public string BuildMismatchMessage(string? instanceName, int actualMajorVersion)
