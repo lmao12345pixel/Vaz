@@ -28,6 +28,12 @@ public sealed partial class WizardStep1Version : UserControl
     /// <summary>State dùng chung với wizard (dialog giữ instance).</summary>
     public WizardState State { get; set; } = new();
 
+    /// <summary>
+    /// Chế độ "Đổi phiên bản": đặt version cần preselect TRƯỚC khi control load
+    /// (OnLoaded áp dụng sau khi danh sách version được nạp).
+    /// </summary>
+    public string? PendingSelectVersionId { get; set; }
+
     /// <summary>User bấm "Tiếp tục" khi đã chọn version.</summary>
     public event EventHandler? ContinueRequested;
 
@@ -81,8 +87,13 @@ public sealed partial class WizardStep1Version : UserControl
 
             if (_allVersions.Count > 0)
             {
-                _allVersions[0].IsSelected = true;
-                State.SelectedVersion = _allVersions[0].Info.Id;
+                var pending = PendingSelectVersionId;
+                var preselected = !string.IsNullOrWhiteSpace(pending)
+                    ? _allVersions.FirstOrDefault(e => string.Equals(e.Info.Id, pending, StringComparison.OrdinalIgnoreCase))
+                    : null;
+                var selectedEntry = preselected ?? _allVersions[0];
+                selectedEntry.IsSelected = true;
+                State.SelectedVersion = selectedEntry.Info.Id;
                 ContinueButton.IsEnabled = true;
             }
 

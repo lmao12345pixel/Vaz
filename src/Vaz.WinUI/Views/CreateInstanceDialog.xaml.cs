@@ -11,6 +11,7 @@ using Microsoft.UI.Xaml.Media.Animation;
 using Vaz.WinUI.Helpers;
 using Vaz.WinUI.Models;
 using Vaz.WinUI.ViewModels;
+using Vazer.Core.Abstractions;
 using Vazer.Core.Versions;
 
 namespace Vaz.WinUI.Views;
@@ -25,18 +26,29 @@ public sealed partial class CreateInstanceDialog : ContentDialog
 {
     private readonly CreateInstanceViewModel _vm;
     private readonly WizardState _wizardState = new();
+    private readonly MinecraftInstance? _changeInstance;
     private int _currentStepIndex = 1;
 
     /// <summary>Id instance vừa tạo (null nếu user hủy hoặc tạo thất bại).</summary>
     public string? CreatedInstanceId { get; private set; }
 
-    public CreateInstanceDialog(CreateInstanceViewModel vm)
+    /// <summary>Chế độ "Đổi phiên bản" (khác null khi mở từ Instance Detail).</summary>
+    public bool ChangeMode => _changeInstance != null;
+
+    public CreateInstanceDialog(CreateInstanceViewModel vm, MinecraftInstance? changeInstance = null)
     {
         _vm = vm;
+        _changeInstance = changeInstance;
         DataContext = _vm;
         InitializeComponent();
 
         RequestedTheme = AppThemeManager.DialogTheme;
+
+        if (_changeInstance != null)
+        {
+            Title = "Đổi phiên bản instance";
+            CreateErrorBar.Title = "Đổi phiên bản thất bại";
+        }
 
         Step1.State = _wizardState;
         Step2.State = _wizardState;
@@ -58,6 +70,13 @@ public sealed partial class CreateInstanceDialog : ContentDialog
         Step3.SuccessConfirmed += (_, _) => Hide();
 
         _vm.PropertyChanged += OnViewModelPropertyChanged;
+
+        // Chế độ "Đổi phiên bản": preselect MC version + loader hiện tại, khóa tên instance.
+        if (_changeInstance != null)
+        {
+            Step1.PendingSelectVersionId = _changeInstance.MinecraftVersion;
+            _ = Step2.SelectLoaderAndVersionAsync(_changeInstance.LoaderType, _changeInstance.LoaderVersion);
+        }
 
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
@@ -113,7 +132,15 @@ public sealed partial class CreateInstanceDialog : ContentDialog
         {
             var loader = _wizardState.SelectedLoader ?? "Fabric";
             var mc = _wizardState.SelectedVersion ?? "1.21.1";
-            _ = Step3.SetDefaultNameAsync(null, loader, mc);
+            if (_changeInstance != null)
+            {
+                Step3.SetNameReadOnly(_changeInstance.Name);
+                Step3.SetActionLabel("Đổi phiên bản");
+            }
+            else
+            {
+                _ = Step3.SetDefaultNameAsync(null, loader, mc);
+            }
             Step3.PrepareStep3();
         }
 
@@ -216,7 +243,8 @@ public sealed partial class CreateInstanceDialog : ContentDialog
 
         Step3.BeginCreating();
 
-        var instance = await _vm.CreateFromWizardAsync(_wizardState, Step3.InstanceName);
+        var pinnedName = _changeInstance?.Name;
+        var instance = await _vm.CreateFromWizardAsync(_wizardState, pinnedName ?? Step3.InstanceName);
 
         if (instance == null)
         {

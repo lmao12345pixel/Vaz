@@ -1,9 +1,11 @@
+using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Navigation;
 using Vaz.WinUI.Helpers;
+using Vaz.WinUI.Messages;
 using Vaz.WinUI.ViewModels;
 
 namespace Vaz.WinUI.Views;
@@ -508,6 +510,26 @@ public sealed partial class InstanceDetailPage : Page
         var package = new Windows.ApplicationModel.DataTransfer.DataPackage();
         package.SetText(ViewModel.LogText ?? string.Empty);
         Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
+    }
+
+    private async void ChangeVersion_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel == null || ViewModel.IsGameRunning) return;
+
+        var current = ViewModel.Current;
+        if (current == null) return;
+
+        var vm = ((App)Application.Current).Services
+            .GetRequiredService<CreateInstanceViewModel>();
+        var dialog = new CreateInstanceDialog(vm, current) { XamlRoot = XamlRoot };
+        await dialog.ShowAsync();
+
+        // Sau khi đổi version: nạp lại chi tiết instance (name/path giữ nguyên) + báo Instances refresh.
+        if (dialog.CreatedInstanceId != null)
+        {
+            await ViewModel.LoadAsync();
+            WeakReferenceMessenger.Default.Send(new InstancesChangedMessage());
+        }
     }
 
     private async void DeleteInstance_Click(object sender, RoutedEventArgs e)

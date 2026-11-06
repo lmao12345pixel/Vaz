@@ -89,7 +89,11 @@ public sealed partial class WizardStep2Loader : UserControl
     private async void LoaderButton_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: string loader }) return;
+        await SelectLoaderAsync(loader);
+    }
 
+    private async Task SelectLoaderAsync(string loader)
+    {
         State.SelectedLoader = loader;
         State.SelectedLoaderVersion = null;
 
@@ -108,6 +112,39 @@ public sealed partial class WizardStep2Loader : UserControl
         await RefreshLoaderVersionAreaAsync(loader);
         UpdatePreview();
         ValidateCreate();
+    }
+
+    /// <summary>
+    /// Preselect loader (+ loader version nếu có) — dùng cho chế độ "Đổi phiên bản".
+    /// </summary>
+    public async Task SelectLoaderAndVersionAsync(string loaderType, string? loaderVersion)
+    {
+        // LoaderCards dùng tag hiển thị ("Fabric"...), Instance lưu lowercase ("fabric") — so khớp case-insensitive.
+        var match = LoaderCards().FirstOrDefault(c => string.Equals(c.Tag, loaderType, StringComparison.OrdinalIgnoreCase));
+        var loader = match.Tag;
+        if (loader == null)
+        {
+            loader = string.IsNullOrWhiteSpace(loaderType)
+                ? "Fabric"
+                : char.ToUpperInvariant(loaderType[0]) + loaderType[1..].ToLowerInvariant();
+        }
+
+        await SelectLoaderAsync(loader);
+
+        if (!string.IsNullOrWhiteSpace(loaderVersion) &&
+            LoaderVersionBox.ItemsSource is System.Collections.IEnumerable items)
+        {
+            var exists = items.Cast<object>()
+                .Select(o => o?.ToString())
+                .FirstOrDefault(s => string.Equals(s, loaderVersion, StringComparison.OrdinalIgnoreCase));
+            if (exists != null)
+            {
+                LoaderVersionBox.SelectedItem = exists;
+                State.SelectedLoaderVersion = exists;
+                UpdatePreview();
+                ValidateCreate();
+            }
+        }
     }
 
     private void AnimateLogoSpin(TextBlock? logo)

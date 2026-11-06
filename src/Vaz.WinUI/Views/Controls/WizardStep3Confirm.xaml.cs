@@ -58,6 +58,20 @@ public sealed partial class WizardStep3Confirm : UserControl
     /// <summary>Tên instance user nhập trong Step 3.</summary>
     public string InstanceName => NameBox.Text;
 
+    /// <summary>Đặt label nút hành động cuối cùng (Create: "Tạo Instance", change: "Đổi phiên bản").</summary>
+    public void SetActionLabel(string text) => ActionLabel.Text = text;
+
+    /// <summary>
+    /// Chế độ "Đổi phiên bản": khóa tên instance (không cho sửa) và pin tên hiện tại.
+    /// </summary>
+    public void SetNameReadOnly(string name)
+    {
+        NameBox.Text = name;
+        NameBox.IsReadOnly = true;
+        NameBox.IsEnabled = true; // giữ khả năng focus/scroll vào giữa text nếu cần
+        AnimateLabelFloat(isFloated: true);
+    }
+
     /// <summary>Đang hiển thị preview hay đã vào trạng thái loading.</summary>
     public bool IsCreating { get; private set; }
 

@@ -252,6 +252,15 @@
 
             <!-- Quick Action: Open Instance Folder -->
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                <Button x:Name="ChangeVersionButton"
+                        Click="ChangeVersion_Click"
+                        IsEnabled="{x:Bind ViewModel.CanManageMods, Mode=OneWay}"
+                        ToolTipService.ToolTip="Đổi Minecraft version + Mod Loader cho instance này (giữ nguyên world)">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon Glyph="&#xE8AB;" FontSize="13" />
+                        <TextBlock Text="Đổi phiên bản" />
+                    </StackPanel>
+                </Button>
                 <Button Command="{x:Bind ViewModel.OpenInstanceFolderCommand}" ToolTipService.ToolTip="Mở thư mục instance">
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <FontIcon Glyph="&#xED25;" FontSize="13" />
