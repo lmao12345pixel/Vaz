@@ -114,6 +114,7 @@ public static class MinecraftServiceCollectionExtensions
         // Phase B: CreateInstanceViewModel cần IMinecraftVersionService (fetch Mojang/Fabric/Quilt/NeoForge metadata).
         services.AddSingleton<IMinecraftVersionService, MinecraftVersionService>();
         services.AddSingleton<IInstanceManager, InstanceManager>();
+        services.AddSingleton<IInstanceMigrationService, InstanceMigrationService>();
         services.AddSingleton<IGameLauncher, CmlGameLauncher>();
 
         // Phase 2 services
