@@ -5,6 +5,20 @@
     xmlns:models="using:Vazer.Core.Versions"
     xmlns:vm="using:Vaz.WinUI.ViewModels">
 
+    <UserControl.Resources>
+        <Style x:Key="SettingsCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="{StaticResource VazRadiusMd}" />
+            <Setter Property="Padding" Value="{StaticResource VazPaddingMd}" />
+        </Style>
+        <Style x:Key="SettingsSectionTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+    </UserControl.Resources>
+
     <Border Style="{StaticResource SettingsCardStyle}">
         <StackPanel Spacing="16">
             <!-- Header section: title + subtitle -->
