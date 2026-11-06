@@ -42,14 +42,16 @@ public sealed class LoaderInstallersTests
     }
 
     [Fact]
-    public async Task ForgeInstaller_ThrowsNotSupported_OnInstall()
+    public async Task ForgeInstaller_ThrowsNotSupported_OnInstall_WhenLegacyMc()
     {
-        var svc = new ForgeInstaller();
+        var options = Options.Create(new MinecraftOptions { RootPath = Path.Combine(Path.GetTempPath(), "vaz-test-forge") });
+        var svc = new ForgeInstaller(new TestHttpClientFactory(), NullLogger<ForgeInstaller>.Instance, options);
 
         svc.LoaderType.Should().Be("forge");
-        svc.SupportsVersion("1.21.1").Should().BeFalse();
+        svc.SupportsVersion("1.20.1").Should().BeTrue();
+        svc.SupportsVersion("1.8.9").Should().BeFalse();
 
-        var act = async () => await svc.InstallAsync(Path.GetTempPath(), "1.21.1", null, null, CancellationToken.None);
+        var act = async () => await svc.InstallAsync(Path.GetTempPath(), "1.8.9", null, null, CancellationToken.None);
         await act.Should().ThrowAsync<NotSupportedException>();
     }
 
