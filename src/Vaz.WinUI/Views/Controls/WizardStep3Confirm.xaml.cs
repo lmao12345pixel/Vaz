@@ -12,6 +12,7 @@ using Vazer.Core.Abstractions;
 using Vazer.Core.Instances;
 using Vazer.Core.Loaders;
 using Vazer.Core.Versions;
+using Vaz.WinUI.ViewModels;
 
 namespace Vaz.WinUI.Views.Controls;
 
@@ -23,6 +24,7 @@ namespace Vaz.WinUI.Views.Controls;
 public sealed partial class WizardStep3Confirm : UserControl
 {
     private readonly DispatcherTimer _autoCloseTimer = new() { Interval = TimeSpan.FromMilliseconds(2500) };
+    private TaskCompletionSource<InstanceDetailViewModel.ModChangeOption>? _migrationTcs;
 
     public WizardStep3Confirm()
     {
@@ -54,6 +56,67 @@ public sealed partial class WizardStep3Confirm : UserControl
 
     /// <summary>Breadcrumb "Bước 3/3 · {Loader} {version}".</summary>
     public void SetBreadcrumb(string text) => BreadcrumbText.Text = text;
+
+    /// <summary>
+    /// Chế độ "Đổi phiên bản": hiện overlay cảnh báo migration (3 lựa chọn: giữ mods / xóa mods / hủy).
+    /// Trả về lựa chọn; panel tự ẩn sau khi chọn.
+    /// </summary>
+    public Task<InstanceDetailViewModel.ModChangeOption> RequestMigrationConfirmationAsync()
+    {
+        if (_migrationTcs != null)
+        {
+            return _migrationTcs.Task;
+        }
+
+        _migrationTcs = new TaskCompletionSource<InstanceDetailViewModel.ModChangeOption>();
+        MigrationWarningPanel.Visibility = Visibility.Visible;
+
+        if (AppThemeManager.IsReduceMotion)
+        {
+            MigrationWarningPanel.Opacity = 1;
+            return _migrationTcs.Task;
+        }
+
+        MigrationWarningPanel.Opacity = 0;
+        MigrationInnerPanel.RenderTransformOrigin = new Windows.Foundation.Point(0.5, 0.5);
+        var translate = new TranslateTransform { Y = 16 };
+        MigrationInnerPanel.RenderTransform = translate;
+
+        var duration = new Duration(TimeSpan.FromMilliseconds(220));
+        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+        var sb = new Storyboard();
+
+        var fade = new DoubleAnimation { To = 1.0, Duration = duration, EasingFunction = ease };
+        Storyboard.SetTarget(fade, MigrationWarningPanel);
+        Storyboard.SetTargetProperty(fade, nameof(UIElement.Opacity));
+
+        var slide = new DoubleAnimation { To = 0.0, Duration = duration, EasingFunction = ease };
+        Storyboard.SetTarget(slide, translate);
+        Storyboard.SetTargetProperty(slide, nameof(TranslateTransform.Y));
+
+        sb.Children.Add(fade);
+        sb.Children.Add(slide);
+        sb.Begin();
+
+        return _migrationTcs.Task;
+    }
+
+    private void CompleteMigration(InstanceDetailViewModel.ModChangeOption option)
+    {
+        MigrationWarningPanel.Visibility = Visibility.Collapsed;
+        var tcs = _migrationTcs;
+        _migrationTcs = null;
+        tcs?.TrySetResult(option);
+    }
+
+    private void KeepModsButton_Click(object sender, RoutedEventArgs e)
+        => CompleteMigration(InstanceDetailViewModel.ModChangeOption.KeepMods);
+
+    private void DeleteModsButton_Click(object sender, RoutedEventArgs e)
+        => CompleteMigration(InstanceDetailViewModel.ModChangeOption.DeleteMods);
+
+    private void CancelMigrationButton_Click(object sender, RoutedEventArgs e)
+        => CompleteMigration(InstanceDetailViewModel.ModChangeOption.Cancel);
 
     /// <summary>Tên instance user nhập trong Step 3.</summary>
     public string InstanceName => NameBox.Text;

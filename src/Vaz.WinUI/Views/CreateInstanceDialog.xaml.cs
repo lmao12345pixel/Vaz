@@ -270,9 +270,10 @@ public sealed partial class CreateInstanceDialog : ContentDialog
         var option = InstanceDetailViewModel.ModChangeOption.KeepMods;
 
         // Chế độ "Đổi phiên bản": hỏi giữ/xóa mods TRƯỚC khi bắt đầu cài.
+        // (WinUI 3 không cho ContentDialog lồng trong ContentDialog → dùng overlay panel của Step3.)
         if (_changeInstance != null && _changeAction != null)
         {
-            option = await ShowMigrationWarningAsync();
+            option = await Step3.RequestMigrationConfirmationAsync();
             if (option == InstanceDetailViewModel.ModChangeOption.Cancel)
             {
                 // Giữ nguyên wizard, không thay đổi gì.
@@ -322,34 +323,7 @@ public sealed partial class CreateInstanceDialog : ContentDialog
         Step3.CreationSucceeded();
     }
 
-    private async Task<InstanceDetailViewModel.ModChangeOption> ShowMigrationWarningAsync()
-    {
-        var confirm = new ContentDialog
-        {
-            XamlRoot = XamlRoot,
-            Title = "Đổi phiên bản?",
-            Content = "Đổi phiên bản có thể làm hỏng mods và world hiện tại. Bạn có muốn tiếp tục?",
-            PrimaryButtonText = "Đổi ngay, giữ mods",
-            SecondaryButtonText = "Đổi ngay, xóa mods",
-            CloseButtonText = "Hủy",
-            DefaultButton = ContentDialogButton.Close
-        };
-        confirm.Opened += (s, e) =>
-        {
-            if (s is ContentDialog cd)
-            {
-                UiAnimationHelper.AnimateDialogEntrance(cd);
-            }
-        };
 
-        var result = await confirm.ShowAsync();
-        return result switch
-        {
-            ContentDialogResult.Primary => InstanceDetailViewModel.ModChangeOption.KeepMods,
-            ContentDialogResult.Secondary => InstanceDetailViewModel.ModChangeOption.DeleteMods,
-            _ => InstanceDetailViewModel.ModChangeOption.Cancel
-        };
-    }
 
     private void OnCancel()
     {
