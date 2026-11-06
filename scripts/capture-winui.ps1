@@ -19,12 +19,25 @@ public class Win32 {
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+
     [StructLayout(LayoutKind.Sequential)]
     public struct RECT {
         public int Left;
         public int Top;
         public int Right;
         public int Bottom;
+    }
+
+    public static void BringToFront(IntPtr hWnd) {
+        ShowWindow(hWnd, 9);
+        SetWindowPos(hWnd, new IntPtr(-1), 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0040);
+        SetForegroundWindow(hWnd);
+        System.Threading.Thread.Sleep(200);
+        SetWindowPos(hWnd, new IntPtr(-2), 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0040);
+        SetForegroundWindow(hWnd);
     }
 }
 "@
@@ -38,9 +51,8 @@ if (-not $p) {
 }
 
 $hWnd = $p.MainWindowHandle
-[Win32]::ShowWindow($hWnd, 9) # SW_RESTORE
-[Win32]::SetForegroundWindow($hWnd)
-Start-Sleep -Milliseconds 300
+[Win32]::BringToFront($hWnd)
+Start-Sleep -Milliseconds 400
 
 $rect = New-Object Win32+RECT
 [Win32]::GetWindowRect($hWnd, [ref]$rect) | Out-Null
