@@ -12,6 +12,16 @@ public interface IJavaVersionMapper
     /// Trả về Java major tối thiểu (8, 17, 21) hoặc <see cref="JavaRequirements.Unknown"/>.
     /// </summary>
     int GetRequiredJavaVersion(string? minecraftVersion);
+
+    /// <summary>
+    /// So sánh Java thực tế với yêu cầu và phát cảnh báo (không chặn launch).
+    /// </summary>
+    /// <returns>True nếu đã phát cảnh báo.</returns>
+    bool WarnIfMismatch(
+        string? instanceName,
+        string? minecraftVersion,
+        int actualJavaMajor,
+        IJavaCompatibilityNotifier? notifier);
 }
 
 /// <summary>
@@ -110,13 +120,18 @@ public sealed class JavaVersionMapper : IJavaVersionMapper
     /// Không làm gì khi version không xác định hoặc Java khớp yêu cầu.
     /// </summary>
     /// <returns>True nếu đã phát cảnh báo.</returns>
-    public static bool WarnIfMismatch(
+    public bool WarnIfMismatch(
         string? instanceName,
         string? minecraftVersion,
         int actualJavaMajor,
         IJavaCompatibilityNotifier? notifier)
     {
-        var requirements = JavaRequirements.For(minecraftVersion);
+        var requirements = new JavaRequirements
+        {
+            MinecraftVersion = minecraftVersion ?? string.Empty,
+            MajorVersion = GetRequiredJavaVersion(minecraftVersion)
+        };
+
         if (!requirements.IsMismatch(actualJavaMajor) || notifier is null)
         {
             return false;

@@ -160,13 +160,12 @@ public sealed class CmlGameLauncher : IGameLauncher
             MajorVersion = _javaVersionMapper.GetRequiredJavaVersion(mcVersion)
         };
 
-        if (requirements.IsMismatch(actualJavaMajor))
+        if (_javaVersionMapper.WarnIfMismatch(
+                parameters.InstanceId, mcVersion, actualJavaMajor, _javaCompatibilityNotifier))
         {
-            var message = requirements.BuildMismatchMessage(parameters.InstanceId, actualJavaMajor);
             _logger.LogWarning(
                 "Java mismatch: instance {InstanceId}, MC {McVersion} requires Java {Required}, actual Java {Actual}. Launch continues (warning only).",
                 parameters.InstanceId, mcVersion, requirements.MajorVersion, actualJavaMajor);
-            _javaCompatibilityNotifier?.ShowWarning("Java version không phù hợp", message);
         }
 
         // Build launch parameters - use MLaunchOption with correct properties for CmlLib.Core 4.0.6

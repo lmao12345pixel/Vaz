@@ -71,7 +71,7 @@ public sealed class JavaVersionMapperTests
     {
         var notifier = new Mock<IJavaCompatibilityNotifier>();
 
-        var warned = JavaVersionMapper.WarnIfMismatch(
+        var warned = _mapper.WarnIfMismatch(
             "1.21.1 Fabric",
             "1.21.1",
             actualJavaMajor: 8,
@@ -90,7 +90,7 @@ public sealed class JavaVersionMapperTests
     {
         var notifier = new Mock<IJavaCompatibilityNotifier>();
 
-        var warned = JavaVersionMapper.WarnIfMismatch("instance", "1.20.4", 17, notifier.Object);
+        var warned = _mapper.WarnIfMismatch("instance", "1.20.4", 17, notifier.Object);
 
         warned.Should().BeFalse();
         notifier.VerifyNoOtherCalls();
@@ -101,7 +101,7 @@ public sealed class JavaVersionMapperTests
     {
         var notifier = new Mock<IJavaCompatibilityNotifier>();
 
-        var warned = JavaVersionMapper.WarnIfMismatch("instance", "snapshot-24w14a", 8, notifier.Object);
+        var warned = _mapper.WarnIfMismatch("instance", "snapshot-24w14a", 8, notifier.Object);
 
         warned.Should().BeFalse();
         notifier.VerifyNoOtherCalls();
