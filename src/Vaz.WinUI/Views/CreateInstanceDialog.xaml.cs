@@ -234,16 +234,9 @@ public sealed partial class CreateInstanceDialog : ContentDialog
     {
         CreateErrorBar.IsOpen = false;
 
-        _vm.Name = Step3.InstanceName;
-        _vm.SelectedLoader = _wizardState.SelectedLoader ?? "Vanilla";
-        _vm.SelectedMinecraftVersion = _wizardState.SelectedVersion ?? string.Empty;
-        _vm.SelectedLoaderVersion = string.IsNullOrWhiteSpace(_wizardState.SelectedLoaderVersion)
-            ? null
-            : _wizardState.SelectedLoaderVersion;
-
         Step3.BeginCreating();
 
-        var instance = await _vm.CreateAsync();
+        var instance = await _vm.CreateFromWizardAsync(_wizardState, Step3.InstanceName);
 
         if (instance == null)
         {

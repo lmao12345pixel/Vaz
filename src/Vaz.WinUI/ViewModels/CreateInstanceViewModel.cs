@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using Vaz.WinUI.Models;
 using Vazer.Core.Abstractions;
 using Vazer.Core.Instances;
 using Vazer.Core.Loaders;
@@ -187,6 +188,43 @@ public sealed partial class CreateInstanceViewModel : ObservableObject
         CreateWarningMessage = CanCreateInstance ? null : (loader != "Vanilla" && string.IsNullOrEmpty(SelectedLoaderVersion)) 
             ? $"Vui lòng chọn loader version cho {loader}." 
             : (mcSelected ? null : "Chọn Minecraft version.");
+    }
+
+    /// <summary>
+    /// Đồng bộ lựa chọn từ WizardState vào ViewModel.
+    /// </summary>
+    public void ApplyWizardState(WizardState? state, string? instanceName = null)
+    {
+        if (state == null) return;
+
+        if (!string.IsNullOrWhiteSpace(state.SelectedVersion))
+        {
+            SelectedMinecraftVersion = state.SelectedVersion;
+        }
+
+        if (!string.IsNullOrWhiteSpace(state.SelectedLoader))
+        {
+            SelectedLoader = state.SelectedLoader;
+        }
+
+        SelectedLoaderVersion = string.IsNullOrWhiteSpace(state.SelectedLoaderVersion)
+            ? null
+            : state.SelectedLoaderVersion;
+
+        if (!string.IsNullOrWhiteSpace(instanceName))
+        {
+            Name = instanceName;
+        }
+    }
+
+    /// <summary>
+    /// Tạo instance trực tiếp từ WizardState và instanceName.
+    /// Bind đầy đủ tiến trình thật qua InstallStage, InstallerProgressPercent, InstallMessage.
+    /// </summary>
+    public async Task<MinecraftInstance?> CreateFromWizardAsync(WizardState? state, string? instanceName = null)
+    {
+        ApplyWizardState(state, instanceName);
+        return await CreateAsync();
     }
 
     /// <summary>
