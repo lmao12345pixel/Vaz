@@ -75,7 +75,7 @@ public sealed partial class InstalledModRow : ObservableObject
     public string Category { get; set; } = "other";
     public string CategoryLabel { get; set; } = "Khác";
     public string Loader { get; set; } = "Fabric";
-    public string MinecraftVersion { get; set; } = "1.21.1";
+    public string MinecraftVersion { get; set; } = "Unknown";
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IconImageSource))]
     private string iconUri = "ms-appx:///Assets/mods/default.png";
@@ -321,6 +321,13 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
                 var currentId = Current.Id;
                 var currentLoader = Current.LoaderType;
                 var currentMcVersion = Current.MinecraftVersion;
+                if (string.IsNullOrWhiteSpace(currentMcVersion))
+                {
+                    // Không đoán 1.21.1: thiếu version là lỗi dữ liệu instance, cần user kiểm tra.
+                    _notificationService?.ShowWarning(
+                        "Không xác định được phiên bản MC",
+                        "Vui lòng kiểm tra lại instance.");
+                }
 
                 var loadedRows = await Task.Run(async () =>
                 {
