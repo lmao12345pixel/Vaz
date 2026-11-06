@@ -4,6 +4,10 @@
     <TargetFramework>net8.0-windows10.0.26100.0</TargetFramework>
     <RootNamespace>Vaz.WinUI</RootNamespace>
     <AssemblyName>Vaz.WinUI</AssemblyName>
+    <!-- Release v0.18.0 (Multi-Version). Unpackaged app: app.manifest carries the identity version. -->
+    <Version>0.18.0</Version>
+    <AssemblyVersion>0.18.0.0</AssemblyVersion>
+    <FileVersion>0.18.0.0</FileVersion>
     <UseWinUI>true</UseWinUI>
     <WindowsPackageType>None</WindowsPackageType>
     <!-- Unpackaged self-contained vẫn cần MSIX tooling cho logic nạp resource (tránh crash 0xC000027B khi khởi động). -->
