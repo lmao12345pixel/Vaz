@@ -32,6 +32,15 @@ public sealed partial class SettingsPage : Page
         _ = ViewModel.LoadCommand.ExecuteAsync(null);
     }
 
+    /// <summary>Chọn một Java trong bảng dò được làm mặc định cho app (Phase E).</summary>
+    private void SelectJava_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: DetectedJavaItem java })
+        {
+            ViewModel.SelectJavaCommand.Execute(java);
+        }
+    }
+
     // === Chip danh mục (SET-AC-01) ===
 
     private void CategoryChip_Loaded(object sender, RoutedEventArgs e)

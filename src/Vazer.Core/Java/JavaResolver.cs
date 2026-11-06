@@ -116,6 +116,25 @@ public sealed class JavaResolver : IJavaResolver
             }
         }
 
+        // Microsoft OpenJDK: %ProgramFiles%\Microsoft\jdk-*. Chỉ quét top-level
+        // để không đi vào các thư mục Microsoft khác (Edge, Office, ...).
+        var microsoftRoot = Environment.ExpandEnvironmentVariables(@"%ProgramFiles%\Microsoft");
+        if (Directory.Exists(microsoftRoot))
+        {
+            foreach (var dir in Directory.GetDirectories(microsoftRoot, "jdk-*", SearchOption.TopDirectoryOnly))
+            {
+                var javaExe = Path.Combine(dir, "bin", "java.exe");
+                if (File.Exists(javaExe))
+                {
+                    var probed = await TryProbeAsync(javaExe, ct);
+                    if (probed != null)
+                    {
+                        results.Add(probed with { Source = "system" });
+                    }
+                }
+            }
+        }
+
         // Deduplicate by path
         return results
             .GroupBy(j => j.Path, StringComparer.OrdinalIgnoreCase)

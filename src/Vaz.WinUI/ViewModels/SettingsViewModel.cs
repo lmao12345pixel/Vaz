@@ -20,15 +20,24 @@ namespace Vaz.WinUI.ViewModels;
 public sealed record SettingsOption(string Value, string Label, string? Glyph = null, string? ColorHex = null);
 
 /// <summary>
+/// Một Java runtime đã dò được trên máy, hiển thị trong bảng Java của Settings.
+/// </summary>
+public sealed record DetectedJavaItem(int MajorVersion, string Version, string Path, string Vendor)
+{
+    /// <summary>Nhãn ngắn cho badge, ví dụ "Java 21".</summary>
+    public string VersionLabel => $"Java {MajorVersion}";
+
+    /// <summary>Dòng phụ: full version + vendor.</summary>
+    public string DetailLabel => $"{Version} · {Vendor}";
+}
+
+/// <summary>
 /// ViewModel cho Settings page (SET-AC-01..SET-AC-10).
 /// Bám executable spec web: DEFAULT_GLOBAL_SETTINGS, JVM_PRESETS, ACCENT_PALETTES,
 /// syncGlobalSettingsUI / applyAccentColor / detectInstalledJava / exportDiagnosticReport.
 /// </summary>
 public sealed partial class SettingsViewModel : ObservableObject
 {
-    private const string DetectedJavaPath =
-        @"C:\Program Files\Eclipse Adoptium\jdk-21.0.4.7-hotspot\bin\javaw.exe";
-
     private const int RamStepMb = 512;
 
     private static readonly Dictionary<string, string> JvmPresetArgs = new(StringComparer.OrdinalIgnoreCase)
@@ -44,6 +53,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly IInstanceManager _instances;
     private readonly ActiveInstanceService _activeInstance;
     private readonly IVersionManagementService? _versionService;
+    private readonly IJavaResolver? _javaResolver;
     private readonly ImageSource _discordArtNormal;
     private readonly ImageSource _discordArtGrayscale;
     private readonly ImageSource _discordAvatarNormal;
@@ -183,6 +193,15 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private string errorMessage = string.Empty;
     [ObservableProperty] private bool isBusy;
 
+    // === Java detection (Phase E) ===
+    /// <summary>Các Java runtime dò được (Version | Path | Chọn).</summary>
+    public ObservableCollection<DetectedJavaItem> DetectedJavaVersions { get; } = new();
+
+    [ObservableProperty] private bool isDetectingJava;
+    [ObservableProperty] private bool hasDetectedJava;
+    [ObservableProperty] private bool hasJavaWarning;
+    [ObservableProperty] private string javaWarningText = string.Empty;
+
     [ObservableProperty] private string osSpec = string.Empty;
     [ObservableProperty] private string cpuSpec = string.Empty;
     [ObservableProperty] private string gpuSpec = string.Empty;
@@ -202,12 +221,14 @@ public sealed partial class SettingsViewModel : ObservableObject
         ISettingsService settings,
         IInstanceManager instances,
         ActiveInstanceService activeInstance,
-        IVersionManagementService? versionService = null)
+        IVersionManagementService? versionService = null,
+        IJavaResolver? javaResolver = null)
     {
         _settings = settings;
         _instances = instances;
         _activeInstance = activeInstance;
         _versionService = versionService;
+        _javaResolver = javaResolver;
 
         // Web dùng ảnh assets/blocks/grass_block.png + assets/skins/steve.png.
         // Bản grayscale 60% được bake sẵn (WinUI 3 không có filter grayscale runtime).
@@ -340,6 +361,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             StatusText = string.Empty;
             await UpdateDiscordPreviewInstanceAsync();
             _ = ScanVersionsAsync();
+            _ = DetectJavaAsync();
         }
         catch (Exception ex)
         {
@@ -408,13 +430,76 @@ public sealed partial class SettingsViewModel : ObservableObject
         }
     }
 
-    /// <summary>Dò Java mô phỏng theo detectInstalledJava() của web (không gọi Java thật).</summary>
+    /// <summary>
+    /// Dò Java thật trên máy (bundled, PATH, Program Files\Java, Eclipse Adoptium,
+    /// Microsoft OpenJDK) và hiển thị bảng chọn. Không tự tải Java.
+    /// </summary>
     [RelayCommand]
-    private void DetectJava()
+    private async Task DetectJavaAsync()
     {
-        JavaPath = DetectedJavaPath;
-        StatusText = "Đã tự động chọn Java 21 LTS.";
-        ShowNotification("Đã phát hiện: Java 21 LTS Adoptium (64-bit)");
+        if (_javaResolver == null)
+        {
+            StatusText = "Dịch vụ Java không khả dụng.";
+            return;
+        }
+
+        try
+        {
+            IsDetectingJava = true;
+            HasError = false;
+
+            // Quét ổ đĩa có thể chậm — chạy ngoài UI thread để không treo Settings.
+            var found = await Task.Run(() => _javaResolver.DiscoverAsync());
+
+            DetectedJavaVersions.Clear();
+            foreach (var java in found
+                         .OrderByDescending(j => j.MajorVersion)
+                         .ThenBy(j => j.Path, StringComparer.OrdinalIgnoreCase))
+            {
+                DetectedJavaVersions.Add(
+                    new DetectedJavaItem(java.MajorVersion, java.Version, java.Path, java.Vendor));
+            }
+
+            HasDetectedJava = DetectedJavaVersions.Count > 0;
+
+            var hasJava21 = DetectedJavaVersions.Any(j => j.MajorVersion >= 21);
+            HasJavaWarning = !hasJava21;
+            JavaWarningText = hasJava21
+                ? string.Empty
+                : "Bạn chưa có Java 21 — cần cài để chơi MC 1.20.5+.";
+
+            // Chỉ tự điền khi user chưa cấu hình đường dẫn Java.
+            if (string.IsNullOrWhiteSpace(JavaPath) && DetectedJavaVersions.Count > 0)
+            {
+                JavaPath = DetectedJavaVersions[0].Path;
+            }
+
+            StatusText = HasDetectedJava
+                ? $"Đã phát hiện {DetectedJavaVersions.Count} bản Java."
+                : "Không tìm thấy bản Java nào trên máy.";
+            ShowNotification(StatusText);
+        }
+        catch (Exception ex)
+        {
+            HasError = true;
+            ErrorMessage = ex.Message;
+            StatusText = "Dò Java thất bại.";
+        }
+        finally
+        {
+            IsDetectingJava = false;
+        }
+    }
+
+    /// <summary>Đặt một Java đã dò được làm mặc định cho app.</summary>
+    [RelayCommand]
+    private void SelectJava(DetectedJavaItem? java)
+    {
+        if (java == null) return;
+
+        JavaPath = java.Path;
+        StatusText = $"Đã chọn Java {java.MajorVersion} ({java.Vendor}).";
+        ShowNotification($"Đã chọn Java {java.MajorVersion} làm mặc định.");
     }
 
     /// <summary>Xóa cache mô phỏng: set 0 MB + status đúng contract. Dialog xác nhận ở code-behind.</summary>
