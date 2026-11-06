@@ -22,7 +22,7 @@
         </LinearGradientBrush>
     </UserControl.Resources>
 
-    <Grid RowDefinitions="Auto,*,Auto" RowSpacing="14" Padding="28,20,28,16">
+    <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10" Padding="24,10,24,6">
         <!-- Hero + breadcrumb -->
         <StackPanel Grid.Row="0" Spacing="4">
             <TextBlock Text="Chọn Mod Loader" FontSize="28" FontWeight="SemiBold" />

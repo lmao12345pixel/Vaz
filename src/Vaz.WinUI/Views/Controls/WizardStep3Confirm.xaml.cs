@@ -22,7 +22,7 @@ namespace Vaz.WinUI.Views.Controls;
 /// </summary>
 public sealed partial class WizardStep3Confirm : UserControl
 {
-    private readonly DispatcherTimer _autoCloseTimer = new() { Interval = TimeSpan.FromMilliseconds(1500) };
+    private readonly DispatcherTimer _autoCloseTimer = new() { Interval = TimeSpan.FromMilliseconds(2500) };
 
     public WizardStep3Confirm()
     {
@@ -43,6 +43,14 @@ public sealed partial class WizardStep3Confirm : UserControl
 
     /// <summary>State dùng chung với wizard (dialog giữ instance).</summary>
     public WizardState State { get; set; } = new();
+
+    /// <summary>Cập nhật toàn bộ preview card và trạng thái khi bước 3 được kích hoạt.</summary>
+    public void PrepareStep3()
+    {
+        UpdatePreview();
+        ValidateCreate();
+        AnimateLabelFloat(isFloated: !string.IsNullOrWhiteSpace(NameBox.Text));
+    }
 
     /// <summary>Breadcrumb "Bước 3/3 · {Loader} {version}".</summary>
     public void SetBreadcrumb(string text) => BreadcrumbText.Text = text;
@@ -137,13 +145,7 @@ public sealed partial class WizardStep3Confirm : UserControl
     private void UpdatePreview()
     {
         var loader = State.SelectedLoader ?? "Fabric";
-        LoaderTile.Background = loader.ToLowerInvariant() switch
-        {
-            "vanilla" => (Brush)Application.Current.Resources["VanillaGradient"],
-            "quilt" => (Brush)Application.Current.Resources["QuiltGradient"],
-            "neoforge" => (Brush)Application.Current.Resources["NeoForgeGradient"],
-            _ => (Brush)Application.Current.Resources["FabricGradient"]
-        };
+        LoaderTile.Background = GetLoaderGradient(loader);
 
         LoaderGlyph.Text = loader.ToLowerInvariant() switch
         {
@@ -164,6 +166,29 @@ public sealed partial class WizardStep3Confirm : UserControl
         };
 
         BreadcrumbText.Text = $"Bước 3/3 · {LoaderLine.Text}";
+    }
+
+    private Brush GetLoaderGradient(string loader)
+    {
+        var key = loader.ToLowerInvariant() switch
+        {
+            "vanilla" => "VanillaGradient",
+            "quilt" => "QuiltGradient",
+            "neoforge" => "NeoForgeGradient",
+            _ => "FabricGradient"
+        };
+
+        if (Resources.TryGetValue(key, out var res) && res is Brush brush)
+        {
+            return brush;
+        }
+
+        if (Application.Current?.Resources.TryGetValue(key, out var appRes) == true && appRes is Brush appBrush)
+        {
+            return appBrush;
+        }
+
+        return (Brush)Application.Current.Resources["VazAccentBrush"];
     }
 
     // === Footer / validation ===
@@ -270,20 +295,17 @@ public sealed partial class WizardStep3Confirm : UserControl
 
     private void AnimateLabelFloat(bool isFloated)
     {
+        var fg = isFloated
+            ? new SolidColorBrush(Windows.UI.Color.FromArgb(235, 255, 255, 255))
+            : new SolidColorBrush(Windows.UI.Color.FromArgb(180, 255, 255, 255));
+
         if (AppThemeManager.IsReduceMotion)
         {
             FloatingLabel.RenderTransform = null;
             FloatingLabel.FontSize = isFloated ? 11 : 15;
-            FloatingLabel.Foreground = isFloated
-                ? (Brush)Application.Current.Resources["VazAccentBrush"]
-                : (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
+            FloatingLabel.Foreground = fg;
             return;
         }
-
-        var target = isFloated ? new Thickness(0, -18, 0, 0) : new Thickness(12, 0, 0, 0);
-        var fg = isFloated
-            ? (Brush)Application.Current.Resources["VazAccentBrush"]
-            : (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
 
         var sb = new Storyboard();
 
@@ -299,8 +321,11 @@ public sealed partial class WizardStep3Confirm : UserControl
         sb.Children.Add(fontAnim);
 
         // Translate lên
-        FloatingLabel.RenderTransform = FloatingLabel.RenderTransform ?? new TranslateTransform();
-        var translate = (TranslateTransform)FloatingLabel.RenderTransform;
+        if (FloatingLabel.RenderTransform is not TranslateTransform translate)
+        {
+            translate = new TranslateTransform();
+            FloatingLabel.RenderTransform = translate;
+        }
         var translateY = new DoubleAnimation
         {
             To = isFloated ? -14.0 : 0.0,
@@ -337,39 +362,14 @@ public sealed partial class WizardStep3Confirm : UserControl
     {
         IsCreating = true;
         SetFooterButtonsEnabled(false);
+        CreateButton.IsHitTestVisible = false;
         StopCreatePulse();
         CreateGlow.Opacity = 0;
 
-        // Cross-fade: normal content → loading content (500ms BackEase).
-        NormalContent.Opacity = 1;
-        LoadingContent.Opacity = 0;
-        LoadingContent.Visibility = Visibility.Visible;
+        NormalContent.Visibility = Visibility.Collapsed;
         SuccessContent.Visibility = Visibility.Collapsed;
-
-        var sb = new Storyboard();
-        sb.Duration = new Duration(TimeSpan.FromMilliseconds(500));
-        var fadeOut = new DoubleAnimation { To = 0.0, Duration = new Duration(TimeSpan.FromMilliseconds(350)), EasingFunction = new BackEase { EasingMode = EasingMode.EaseIn, Amplitude = 0.1 } };
-        Storyboard.SetTarget(fadeOut, NormalContent);
-        Storyboard.SetTargetProperty(fadeOut, nameof(Opacity));
-
-        var fadeIn = new DoubleAnimation
-        {
-            From = 0.0,
-            To = 1.0,
-            BeginTime = TimeSpan.FromMilliseconds(120),
-            Duration = new Duration(TimeSpan.FromMilliseconds(380)),
-            EasingFunction = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.15 }
-        };
-        Storyboard.SetTarget(fadeIn, LoadingContent);
-        Storyboard.SetTargetProperty(fadeIn, nameof(Opacity));
-
-        sb.Children.Add(fadeOut);
-        sb.Children.Add(fadeIn);
-        sb.Completed += (_, _) =>
-        {
-            NormalContent.Visibility = Visibility.Collapsed;
-        };
-        sb.Begin();
+        LoadingContent.Visibility = Visibility.Visible;
+        LoadingContent.Opacity = 1.0;
 
         // Morph nút: thu nhỏ thành hình tròn + thay đổi layout (500ms BackEase).
         AnimateCreateButtonMorph();
@@ -379,6 +379,7 @@ public sealed partial class WizardStep3Confirm : UserControl
     public void CreationFailed()
     {
         IsCreating = false;
+        CreateButton.IsHitTestVisible = true;
 
         // Quay về trạng thái ban đầu.
         LoadingContent.Visibility = Visibility.Collapsed;
@@ -398,52 +399,34 @@ public sealed partial class WizardStep3Confirm : UserControl
         LoadingContent.Visibility = Visibility.Collapsed;
         NormalContent.Visibility = Visibility.Collapsed;
         SuccessContent.Visibility = Visibility.Visible;
-        SuccessContent.Opacity = 0;
+        SuccessContent.Opacity = 1.0;
 
-        // Vẽ vòng tròn (300ms) + check path (200ms).
-        var circleLength = Math.PI * SuccessCircle.Width; // ước lượng circumference
-        SuccessCircle.StrokeDashArray = new DoubleCollection { circleLength, circleLength };
-        SuccessCircle.StrokeDashOffset = circleLength;
-        SuccessCheck.StrokeDashArray = new DoubleCollection { 200, 200 };
-        SuccessCheck.StrokeDashOffset = 200;
-
-        var sb = new Storyboard();
-        sb.Duration = new Duration(TimeSpan.FromMilliseconds(560));
-
-        var circleAnim = new DoubleAnimation
+        // Success animation #10: scale 0 -> 1.2 -> 1 (500ms BackEase)
+        if (!AppThemeManager.IsReduceMotion)
         {
-            From = circleLength,
-            To = 0,
-            Duration = new Duration(TimeSpan.FromMilliseconds(300)),
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-        };
-        Storyboard.SetTarget(circleAnim, SuccessCircle);
-        Storyboard.SetTargetProperty(circleAnim, "(Path.StrokeDashOffset)");
-        sb.Children.Add(circleAnim);
+            SuccessContent.RenderTransformOrigin = new Windows.Foundation.Point(0.5, 0.5);
+            var scale = new ScaleTransform { ScaleX = 0.0, ScaleY = 0.0 };
+            SuccessContent.RenderTransform = scale;
 
-        var checkAnim = new DoubleAnimation
-        {
-            From = 200,
-            To = 0,
-            BeginTime = TimeSpan.FromMilliseconds(300),
-            Duration = new Duration(TimeSpan.FromMilliseconds(200)),
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-        };
-        Storyboard.SetTarget(checkAnim, SuccessCheck);
-        Storyboard.SetTargetProperty(checkAnim, "(Path.StrokeDashOffset)");
-        sb.Children.Add(checkAnim);
+            var sb = new Storyboard();
+            var duration = new Duration(TimeSpan.FromMilliseconds(500));
+            var ease = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.6 };
 
-        var fadeIn = new DoubleAnimation { From = 0, To = 1, Duration = new Duration(TimeSpan.FromMilliseconds(220)), EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
-        Storyboard.SetTarget(fadeIn, SuccessContent);
-        Storyboard.SetTargetProperty(fadeIn, nameof(Opacity));
-        sb.Children.Add(fadeIn);
+            var animX = new DoubleAnimation { From = 0.0, To = 1.0, Duration = duration, EasingFunction = ease };
+            Storyboard.SetTarget(animX, scale);
+            Storyboard.SetTargetProperty(animX, nameof(ScaleTransform.ScaleX));
 
-        sb.Completed += (_, _) =>
-        {
-            // Đóng dialog sau 1.5s.
-            _autoCloseTimer.Start();
-        };
-        sb.Begin();
+            var animY = new DoubleAnimation { From = 0.0, To = 1.0, Duration = duration, EasingFunction = ease };
+            Storyboard.SetTarget(animY, scale);
+            Storyboard.SetTargetProperty(animY, nameof(ScaleTransform.ScaleY));
+
+            sb.Children.Add(animX);
+            sb.Children.Add(animY);
+            sb.Begin();
+        }
+
+        // Đóng dialog sau 1.5s
+        _autoCloseTimer.Start();
     }
 
     private void OnAutoCloseTimerTick(object? sender, object e)
@@ -471,38 +454,10 @@ public sealed partial class WizardStep3Confirm : UserControl
     /// <summary>Cập nhật stage text (đang chạy) — gọi từ dialog với message thật từ VM.</summary>
     public void UpdateStageText(string stageText)
     {
-        // Cross-fade 200ms: text cũ fade out → text mới fade in.
-        StageTextOld.Text = StageTextNew.Text;
-        StageTextNew.Text = stageText;
-
-        if (AppThemeManager.IsReduceMotion)
+        if (StageText != null)
         {
-            StageTextOld.Opacity = 0;
-            StageTextNew.Opacity = 1;
-            return;
+            StageText.Text = stageText;
         }
-
-        var sb = new Storyboard();
-        sb.Duration = new Duration(TimeSpan.FromMilliseconds(220));
-
-        var fadeOut = new DoubleAnimation { To = 0, Duration = new Duration(TimeSpan.FromMilliseconds(120)), EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
-        Storyboard.SetTarget(fadeOut, StageTextOld);
-        Storyboard.SetTargetProperty(fadeOut, nameof(Opacity));
-
-        var fadeIn = new DoubleAnimation
-        {
-            From = 0,
-            To = 1,
-            BeginTime = TimeSpan.FromMilliseconds(100),
-            Duration = new Duration(TimeSpan.FromMilliseconds(160)),
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-        };
-        Storyboard.SetTarget(fadeIn, StageTextNew);
-        Storyboard.SetTargetProperty(fadeIn, nameof(Opacity));
-
-        sb.Children.Add(fadeOut);
-        sb.Children.Add(fadeIn);
-        sb.Begin();
     }
 
     private void AnimateCreateButtonMorph()

@@ -15,6 +15,7 @@
         CornerRadius="{StaticResource VazRadiusMd}">
         <Border
             x:Name="CardBorder"
+            IsHitTestVisible="False"
             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
             BorderBrush="{x:Bind IsSelected, Mode=OneWay, Converter={StaticResource BoolToActiveBorderBrush}}"
             BorderThickness="{x:Bind IsSelected, Mode=OneWay, Converter={StaticResource BoolToActiveBorderThickness}}"

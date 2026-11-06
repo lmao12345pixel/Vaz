@@ -79,6 +79,13 @@ public sealed partial class WizardStep1Version : UserControl
                 _allVersions.Add(new VersionEntry(v));
             }
 
+            if (_allVersions.Count > 0)
+            {
+                _allVersions[0].IsSelected = true;
+                State.SelectedVersion = _allVersions[0].Info.Id;
+                ContinueButton.IsEnabled = true;
+            }
+
             RebuildCards(_allVersions);
         }
         finally

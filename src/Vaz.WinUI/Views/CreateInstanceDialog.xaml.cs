@@ -114,7 +114,7 @@ public sealed partial class CreateInstanceDialog : ContentDialog
             var loader = _wizardState.SelectedLoader ?? "Fabric";
             var mc = _wizardState.SelectedVersion ?? "1.21.1";
             _ = Step3.SetDefaultNameAsync(null, loader, mc);
-            Step3.SetBreadcrumb($"Bước 3/3 · {loader} {mc}");
+            Step3.PrepareStep3();
         }
 
         AnimateStepTransition(oldHost, newHost, forward);
@@ -130,26 +130,23 @@ public sealed partial class CreateInstanceDialog : ContentDialog
 
     private void AnimateStepTransition(FrameworkElement oldHost, FrameworkElement newHost, bool forward)
     {
+        oldHost.Visibility = Visibility.Collapsed;
+        oldHost.Opacity = 0;
+        oldHost.RenderTransform = null;
+
+        newHost.Visibility = Visibility.Visible;
+        newHost.Opacity = 1;
+
         if (AppThemeManager.IsReduceMotion)
         {
-            oldHost.Visibility = Visibility.Collapsed;
-            oldHost.Opacity = 0;
-            newHost.Visibility = Visibility.Visible;
-            newHost.Opacity = 1;
+            newHost.RenderTransform = null;
             return;
         }
 
-        var slideWidth = 820.0;
-        var oldToX = forward ? -slideWidth : slideWidth;
-        var newFromX = forward ? slideWidth : -slideWidth;
-
-        var oldTranslate = new TranslateTransform { X = 0 };
-        oldHost.RenderTransform = oldTranslate;
-
-        var newTranslate = new TranslateTransform { X = newFromX };
-        newHost.RenderTransform = newTranslate;
+        var fromX = forward ? 140.0 : -140.0;
+        var translate = new TranslateTransform { X = fromX };
+        newHost.RenderTransform = translate;
         newHost.Opacity = 0.0;
-        newHost.Visibility = Visibility.Visible;
 
         var duration = new Duration(TimeSpan.FromMilliseconds(350));
         var ease = new CubicEase { EasingMode = EasingMode.EaseInOut };
@@ -157,33 +154,16 @@ public sealed partial class CreateInstanceDialog : ContentDialog
         var sb = new Storyboard();
         sb.Duration = duration;
 
-        // Old host: slide out + fade out
-        var animOldX = new DoubleAnimation { To = oldToX, Duration = duration, EasingFunction = ease };
-        Storyboard.SetTarget(animOldX, oldTranslate);
-        Storyboard.SetTargetProperty(animOldX, nameof(TranslateTransform.X));
+        var animX = new DoubleAnimation { From = fromX, To = 0.0, Duration = duration, EasingFunction = ease };
+        Storyboard.SetTarget(animX, translate);
+        Storyboard.SetTargetProperty(animX, nameof(TranslateTransform.X));
 
-        var animOldOp = new DoubleAnimation { To = 0.0, Duration = duration, EasingFunction = ease };
-        Storyboard.SetTarget(animOldOp, oldHost);
-        Storyboard.SetTargetProperty(animOldOp, nameof(UIElement.Opacity));
+        var animOp = new DoubleAnimation { From = 0.0, To = 1.0, Duration = duration, EasingFunction = ease };
+        Storyboard.SetTarget(animOp, newHost);
+        Storyboard.SetTargetProperty(animOp, nameof(UIElement.Opacity));
 
-        // New host: slide in + fade in
-        var animNewX = new DoubleAnimation { To = 0.0, Duration = duration, EasingFunction = ease };
-        Storyboard.SetTarget(animNewX, newTranslate);
-        Storyboard.SetTargetProperty(animNewX, nameof(TranslateTransform.X));
-
-        var animNewOp = new DoubleAnimation { To = 1.0, Duration = duration, EasingFunction = ease };
-        Storyboard.SetTarget(animNewOp, newHost);
-        Storyboard.SetTargetProperty(animNewOp, nameof(UIElement.Opacity));
-
-        sb.Children.Add(animOldX);
-        sb.Children.Add(animOldOp);
-        sb.Children.Add(animNewX);
-        sb.Children.Add(animNewOp);
-
-        sb.Completed += (_, _) =>
-        {
-            oldHost.Visibility = Visibility.Collapsed;
-        };
+        sb.Children.Add(animX);
+        sb.Children.Add(animOp);
         sb.Begin();
     }
 

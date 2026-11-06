@@ -68,6 +68,12 @@ public sealed partial class WizardStep2Loader : UserControl
         UpdatePreview();
         UpdateLoaderCardStyles();
         UpdatePreviewVisibility();
+
+        if (string.IsNullOrWhiteSpace(State.SelectedLoader))
+        {
+            State.SelectedLoader = "Fabric";
+            _ = RefreshLoaderVersionAreaAsync("Fabric");
+        }
     }
 
     private void OnSizeChanged(object sender, SizeChangedEventArgs e)
