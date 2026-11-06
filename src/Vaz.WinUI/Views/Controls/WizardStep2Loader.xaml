@@ -124,7 +124,6 @@
                             <ProgressRing x:Name="LoaderLoadingRing" Grid.Column="1" Width="16" Height="16" IsActive="False" Visibility="Collapsed" />
                         </Grid>
                         <ComboBox x:Name="LoaderVersionBox"
-                                  PlaceholderText="Chọn loader version"
                                   HorizontalAlignment="Stretch" />
                         <TextBlock x:Name="NoLoaderVersionsText"
                                    Text="Không có version tương thích"
