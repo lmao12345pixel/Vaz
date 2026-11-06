@@ -3,6 +3,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:Vaz.WinUI.Controls"
+    xmlns:settings="using:Vaz.WinUI.Views.Settings"
     xmlns:vm="using:Vaz.WinUI.ViewModels">
 
     <Page.Resources>
@@ -535,7 +536,12 @@
                     </StackPanel>
                 </Border>
 
-                <!-- 7. Thông tin & Chẩn đoán -->
+                <!-- 7. Quản lý Phiên bản (Versions Tab) -->
+                <settings:VersionsTab
+                    ViewModel="{x:Bind ViewModel}"
+                    Visibility="{x:Bind ViewModel.SelectedCategoryKey, Mode=OneWay, Converter={StaticResource SettingsSectionVis}, ConverterParameter=versions}" />
+
+                <!-- 8. Thông tin & Chẩn đoán -->
                 <Border
                     Style="{StaticResource SettingsCardStyle}"
                     Visibility="{x:Bind ViewModel.SelectedCategoryKey, Mode=OneWay, Converter={StaticResource SettingsSectionVis}, ConverterParameter=about}">

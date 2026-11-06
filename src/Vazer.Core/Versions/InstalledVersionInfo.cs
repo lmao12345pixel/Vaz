@@ -26,8 +26,14 @@ public sealed record InstalledVersionInfo
     /// <summary>True nếu đang có ít nhất 1 instance sử dụng.</summary>
     public bool IsInUse => UsedByInstances.Count > 0;
 
+    /// <summary>True nếu có thể xóa an toàn (không có instance nào dùng).</summary>
+    public bool CanDelete => !IsInUse;
+
     /// <summary>Chuỗi hiển thị dung lượng (KB, MB, GB).</summary>
     public string SizeDisplay => FormatBytes(SizeBytes);
+
+    /// <summary>Chuỗi hiển thị ngày cài đặt (local time).</summary>
+    public string InstalledAtDisplay => InstalledAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
 
     /// <summary>Chuỗi tóm tắt tình trạng sử dụng.</summary>
     public string UsageSummary => IsInUse

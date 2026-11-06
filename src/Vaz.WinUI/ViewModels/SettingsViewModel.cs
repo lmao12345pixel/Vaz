@@ -12,6 +12,7 @@ using Vaz.WinUI.Helpers;
 using Vaz.WinUI.Services;
 using Vazer.Core.Abstractions;
 using Vazer.Core.Settings;
+using Vazer.Core.Versions;
 
 namespace Vaz.WinUI.ViewModels;
 
@@ -42,6 +43,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly ISettingsService _settings;
     private readonly IInstanceManager _instances;
     private readonly ActiveInstanceService _activeInstance;
+    private readonly IVersionManagementService? _versionService;
     private readonly ImageSource _discordArtNormal;
     private readonly ImageSource _discordArtGrayscale;
     private readonly ImageSource _discordAvatarNormal;
@@ -57,6 +59,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         new("network", "Mạng & Tải", "\uE896"),
         new("discord", "Discord", "\uE717"),
         new("storage", "Lưu trữ", "\uE8B7"),
+        new("versions", "Phiên bản", "\uE8F1"),
         new("about", "Thông tin", "\uE946")
     };
 
@@ -198,11 +201,13 @@ public sealed partial class SettingsViewModel : ObservableObject
     public SettingsViewModel(
         ISettingsService settings,
         IInstanceManager instances,
-        ActiveInstanceService activeInstance)
+        ActiveInstanceService activeInstance,
+        IVersionManagementService? versionService = null)
     {
         _settings = settings;
         _instances = instances;
         _activeInstance = activeInstance;
+        _versionService = versionService;
 
         // Web dùng ảnh assets/blocks/grass_block.png + assets/skins/steve.png.
         // Bản grayscale 60% được bake sẵn (WinUI 3 không có filter grayscale runtime).
@@ -228,6 +233,99 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     public string VersionLabel => "Phiên bản 2.4.0 (Build 2026.10-release)";
 
+    // === Versions Tab State & Commands ===
+    public ObservableCollection<InstalledVersionInfo> InstalledVersions { get; } = new();
+
+    [ObservableProperty] private DiskUsageSummary? diskUsage;
+    [ObservableProperty] private bool isScanningVersions;
+    [ObservableProperty] private string diskUsageHeader = "Đang tải thông tin dung lượng...";
+    [ObservableProperty] private string versionsStatusText = string.Empty;
+    [ObservableProperty] private bool hasVersionsStatus;
+
+    [RelayCommand]
+    public async Task ScanVersionsAsync()
+    {
+        if (_versionService == null) return;
+        try
+        {
+            IsScanningVersions = true;
+            var list = await _versionService.ListInstalledVersionsAsync();
+            InstalledVersions.Clear();
+            foreach (var item in list)
+            {
+                InstalledVersions.Add(item);
+            }
+
+            var usage = await _versionService.GetDiskUsageAsync();
+            DiskUsage = usage;
+            DiskUsageHeader = $"Tổng dung lượng: {usage.TotalDisplay} (versions: {usage.VersionsDisplay}, libraries: {usage.LibrariesDisplay}, assets: {usage.AssetsDisplay})";
+        }
+        catch (Exception ex)
+        {
+            DiskUsageHeader = $"Không thể tải thông tin dung lượng: {ex.Message}";
+        }
+        finally
+        {
+            IsScanningVersions = false;
+        }
+    }
+
+    public async Task<DeleteResult> DeleteVersionAsync(InstalledVersionInfo item)
+    {
+        if (_versionService == null || item == null) return DeleteResult.Failed(item?.VersionId ?? "", "Dịch vụ không khả dụng.");
+
+        try
+        {
+            var res = await _versionService.DeleteVersionAsync(item.VersionId);
+            if (res.Success)
+            {
+                InstalledVersions.Remove(item);
+                var usage = await _versionService.GetDiskUsageAsync();
+                DiskUsage = usage;
+                DiskUsageHeader = $"Tổng dung lượng: {usage.TotalDisplay} (versions: {usage.VersionsDisplay}, libraries: {usage.LibrariesDisplay}, assets: {usage.AssetsDisplay})";
+                VersionsStatusText = $"Đã xóa version '{item.VersionId}', giải phóng {item.SizeDisplay}.";
+                HasVersionsStatus = true;
+            }
+            else
+            {
+                VersionsStatusText = res.Reason ?? "Không thể xóa version.";
+                HasVersionsStatus = true;
+            }
+            return res;
+        }
+        catch (Exception ex)
+        {
+            VersionsStatusText = $"Lỗi xóa version: {ex.Message}";
+            HasVersionsStatus = true;
+            return DeleteResult.Failed(item.VersionId, ex.Message);
+        }
+    }
+
+    public async Task<CleanupResult> CleanupOrphanVersionsAsync()
+    {
+        if (_versionService == null) return new CleanupResult { Success = false, Message = "Dịch vụ không khả dụng." };
+
+        try
+        {
+            IsScanningVersions = true;
+            var res = await _versionService.CleanupOrphanVersionsAsync();
+            await ScanVersionsAsync();
+            VersionsStatusText = res.Message ?? "Đã hoàn tất dọn dẹp.";
+            HasVersionsStatus = true;
+            return res;
+        }
+        catch (Exception ex)
+        {
+            VersionsStatusText = $"Lỗi dọn dẹp: {ex.Message}";
+            HasVersionsStatus = true;
+            return new CleanupResult { Success = false, Message = ex.Message };
+        }
+        finally
+        {
+            IsScanningVersions = false;
+        }
+    }
+
     /// <summary>Nạp từ settings.json; lỗi → defaults đã được service xử lý, chỉ còn lỗi unexpected.</summary>
     [RelayCommand]
     public async Task LoadAsync()
@@ -241,6 +339,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             ApplyFrom(settings);
             StatusText = string.Empty;
             await UpdateDiscordPreviewInstanceAsync();
+            _ = ScanVersionsAsync();
         }
         catch (Exception ex)
         {
