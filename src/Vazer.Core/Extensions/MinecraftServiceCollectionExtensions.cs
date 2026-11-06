@@ -115,6 +115,7 @@ public static class MinecraftServiceCollectionExtensions
         services.AddSingleton<IMinecraftVersionService, MinecraftVersionService>();
         services.AddSingleton<IInstanceManager, InstanceManager>();
         services.AddSingleton<IInstanceMigrationService, InstanceMigrationService>();
+        services.AddSingleton<IVersionManagementService, VersionManagementService>();
         services.AddSingleton<IGameLauncher, CmlGameLauncher>();
 
         // Phase 2 services
