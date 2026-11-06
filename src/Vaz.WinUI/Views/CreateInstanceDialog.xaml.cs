@@ -12,6 +12,7 @@ using Vaz.WinUI.Helpers;
 using Vaz.WinUI.Models;
 using Vaz.WinUI.ViewModels;
 using Vazer.Core.Abstractions;
+using Vazer.Core.Loaders;
 using Vazer.Core.Versions;
 
 namespace Vaz.WinUI.Views;
@@ -24,9 +25,20 @@ namespace Vaz.WinUI.Views;
 /// </summary>
 public sealed partial class CreateInstanceDialog : ContentDialog
 {
+    /// <summary>
+    /// Argument change-action (chế độ "Đổi phiên bản"): nhận WizardState + tên pinned +
+    /// option (giữ/xóa mods) + progress; trả instance sau khi đổi.
+    /// </summary>
+    public delegate Task<MinecraftInstance?> ChangeVersionAction(
+        WizardState state,
+        string pinnedName,
+        InstanceDetailViewModel.ModChangeOption option,
+        IProgress<InstallerProgress>? progress);
+
     private readonly CreateInstanceViewModel _vm;
     private readonly WizardState _wizardState = new();
     private readonly MinecraftInstance? _changeInstance;
+    private readonly ChangeVersionAction? _changeAction;
     private int _currentStepIndex = 1;
 
     /// <summary>Id instance vừa tạo (null nếu user hủy hoặc tạo thất bại).</summary>
@@ -35,10 +47,11 @@ public sealed partial class CreateInstanceDialog : ContentDialog
     /// <summary>Chế độ "Đổi phiên bản" (khác null khi mở từ Instance Detail).</summary>
     public bool ChangeMode => _changeInstance != null;
 
-    public CreateInstanceDialog(CreateInstanceViewModel vm, MinecraftInstance? changeInstance = null)
+    public CreateInstanceDialog(CreateInstanceViewModel vm, MinecraftInstance? changeInstance = null, ChangeVersionAction? changeAction = null)
     {
         _vm = vm;
         _changeInstance = changeInstance;
+        _changeAction = changeAction;
         DataContext = _vm;
         InitializeComponent();
 
@@ -241,10 +254,49 @@ public sealed partial class CreateInstanceDialog : ContentDialog
     {
         CreateErrorBar.IsOpen = false;
 
+        var pinnedName = _changeInstance?.Name;
+        var option = InstanceDetailViewModel.ModChangeOption.KeepMods;
+
+        // Chế độ "Đổi phiên bản": hỏi giữ/xóa mods TRƯỚC khi bắt đầu cài.
+        if (_changeInstance != null && _changeAction != null)
+        {
+            option = await ShowMigrationWarningAsync();
+            if (option == InstanceDetailViewModel.ModChangeOption.Cancel)
+            {
+                // Giữ nguyên wizard, không thay đổi gì.
+                return;
+            }
+        }
+
         Step3.BeginCreating();
 
-        var pinnedName = _changeInstance?.Name;
-        var instance = await _vm.CreateFromWizardAsync(_wizardState, pinnedName ?? Step3.InstanceName);
+        MinecraftInstance? instance;
+        if (_changeInstance != null && _changeAction != null)
+        {
+            // Map progress thật của installer vào VM để Step3 hiển thị (như luồng tạo mới).
+            var progress = new Progress<InstallerProgress>(p =>
+            {
+                _vm.InstallerProgressPercent = p.Percent;
+                _vm.InstallMessage = p.Message;
+                _vm.InstallStage = p.Stage.ToString();
+            });
+
+            try
+            {
+                instance = await _changeAction(_wizardState, pinnedName!, option, progress);
+            }
+            catch (Exception ex)
+            {
+                CreateErrorBar.Message = ex.Message;
+                CreateErrorBar.IsOpen = true;
+                Step3.CreationFailed();
+                return;
+            }
+        }
+        else
+        {
+            instance = await _vm.CreateFromWizardAsync(_wizardState, pinnedName ?? Step3.InstanceName);
+        }
 
         if (instance == null)
         {
@@ -256,6 +308,35 @@ public sealed partial class CreateInstanceDialog : ContentDialog
 
         CreatedInstanceId = instance.Id;
         Step3.CreationSucceeded();
+    }
+
+    private async Task<InstanceDetailViewModel.ModChangeOption> ShowMigrationWarningAsync()
+    {
+        var confirm = new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            Title = "Đổi phiên bản?",
+            Content = "Đổi phiên bản có thể làm hỏng mods và world hiện tại. Bạn có muốn tiếp tục?",
+            PrimaryButtonText = "Đổi ngay, giữ mods",
+            SecondaryButtonText = "Đổi ngay, xóa mods",
+            CloseButtonText = "Hủy",
+            DefaultButton = ContentDialogButton.Close
+        };
+        confirm.Opened += (s, e) =>
+        {
+            if (s is ContentDialog cd)
+            {
+                UiAnimationHelper.AnimateDialogEntrance(cd);
+            }
+        };
+
+        var result = await confirm.ShowAsync();
+        return result switch
+        {
+            ContentDialogResult.Primary => InstanceDetailViewModel.ModChangeOption.KeepMods,
+            ContentDialogResult.Secondary => InstanceDetailViewModel.ModChangeOption.DeleteMods,
+            _ => InstanceDetailViewModel.ModChangeOption.Cancel
+        };
     }
 
     private void OnCancel()

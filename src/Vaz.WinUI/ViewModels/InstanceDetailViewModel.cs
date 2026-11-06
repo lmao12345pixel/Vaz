@@ -14,7 +14,9 @@ using Vaz.WinUI.Models;
 using Vaz.WinUI.Services;
 using Vazer.Core.Abstractions;
 using Vazer.Core.GameOptions;
+using Vazer.Core.Instances;
 using Vazer.Core.Json;
+using Vazer.Core.Loaders;
 using Vazer.Core.Loaders.Optifine;
 using Vazer.Core.Modpacks;
 using Vazer.Core.Mods;
@@ -133,6 +135,10 @@ public sealed partial class InstalledModRow : ObservableObject
 /// </summary>
 public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposable
 {
+    /// <summary>Loại xử lý mods khi đổi version (chọn trên dialog cảnh báo).</summary>
+    public enum ModChangeOption { KeepMods, DeleteMods, Cancel }
+
+
     private static readonly System.Text.UTF8Encoding Utf8NoBom = new(false);
     private static readonly JsonSerializerOptions CamelCaseJsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true };
 
@@ -140,6 +146,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
     private readonly Dictionary<(string Name, DateTime LastWriteUtc, long Length), JarMetadata?> _jarMetaCache = new();
     private bool _diskCacheLoaded;
     private readonly IInstanceManager _instanceManager;
+    private readonly IInstanceCreationService _creationService;
     private readonly IModInstallService _modInstall;
     private readonly IMrpackImporter _mrpackImporter;
     private readonly IOptifineInstallerService _optifine;
@@ -222,9 +229,11 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         ActiveInstanceService activeInstance,
         MainViewModel mainViewModel,
         IGameOptionsService gameOptionsService,
-        INotificationService? notificationService = null)
+        INotificationService? notificationService = null,
+        IInstanceCreationService? creationService = null)
     {
         _instanceManager = instanceManager;
+        _creationService = creationService ?? throw new ArgumentNullException(nameof(creationService));
         _modInstall = modInstall;
         _mrpackImporter = mrpackImporter;
         _optifine = optifine;
@@ -1538,6 +1547,148 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         if (Current == null) return;
         Directory.CreateDirectory(Current.Path);
         Process.Start(new ProcessStartInfo("explorer.exe", Current.Path) { UseShellExecute = true });
+    }
+
+    /// <summary>
+    /// Đổi phiên bản Minecraft + loader cho instance hiện tại (in-place, cùng folder).
+    /// Backup TRƯỚC (instance.json + mods.json). Nếu cài mới thất bại → restore backup.
+    /// Mods chỉ bị xóa khi option == DeleteMods — và chỉ SAU KHI cài mới thành công.
+    /// World/saves/options.txt/config tuyệt đối không bị đụng.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Khi game đang chạy hoặc cài mới thất bại (đã rollback).</exception>
+    public async Task<MinecraftInstance> ChangeVersionAsync(
+        WizardState state,
+        string pinnedName,
+        ModChangeOption option,
+        IProgress<InstallerProgress>? progress,
+        CancellationToken ct = default)
+    {
+        var current = Current
+            ?? throw new InvalidOperationException("Chưa chọn instance.");
+
+        if ((_mainViewModel.IsRunning || _mainViewModel.IsLaunching) &&
+            _mainViewModel.RunningInstanceId == current.Id)
+        {
+            throw new InvalidOperationException("Không thể đổi phiên bản khi Minecraft đang chạy.");
+        }
+
+        if (option == ModChangeOption.Cancel)
+        {
+            // Dialog cảnh báo đã hỏi — Cancel không chạy tới đây (giữ Wizard, không đổi gì).
+            throw new InvalidOperationException("Người dùng đã hủy đổi phiên bản.");
+        }
+
+        var instancePath = current.Path;
+        var metaPath = Path.Combine(instancePath, "instance.json");
+        var metaBakPath = metaPath + ".bak";
+        var modsDir = Path.Combine(instancePath, "mods");
+        var modsJsonPath = Path.Combine(instancePath, "mods.json");
+        var modsJsonBakPath = modsJsonPath + ".bak";
+
+        // 1 + 2. Backup instance.json (+ mods.json) trước khi động vào bất kỳ file nào.
+        string? oldMetaJson = null;
+        var modsBackedUp = false;
+        try
+        {
+            if (File.Exists(metaPath))
+            {
+                oldMetaJson = await File.ReadAllTextAsync(metaPath, ct);
+                File.Copy(metaPath, metaBakPath, overwrite: true);
+            }
+            if (File.Exists(modsJsonPath))
+            {
+                File.Copy(modsJsonPath, modsJsonBakPath, overwrite: true);
+                modsBackedUp = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Không thể backup instance trước khi đổi phiên bản: {ex.Message}", ex);
+        }
+
+        try
+        {
+            // 3. Tái sử dụng facade tạo instance — name không đổi nên id/path giữ nguyên (in-place).
+            var mcVersion = string.IsNullOrWhiteSpace(state.SelectedVersion) ? current.MinecraftVersion : state.SelectedVersion!;
+            var loader = string.IsNullOrWhiteSpace(state.SelectedLoader) ? current.LoaderType : state.SelectedLoader!;
+            var info = await _creationService.CreateAsync(
+                pinnedName, mcVersion, loader, state.SelectedLoaderVersion, progress, ct);
+
+            // 4. Ghi lại instance.json: version mới, giữ name/path/createdAt/lastPlayedAt/iconPath.
+            var merged = info.ToMinecraftInstance() with
+            {
+                CreatedAt = current.CreatedAt,
+                LastPlayedAt = current.LastPlayedAt,
+                IconPath = current.IconPath
+            };
+            var json = JsonSerializer.Serialize(merged, CamelCaseJsonOptions);
+            await File.WriteAllTextAsync(metaPath, json, ct);
+
+            // 4b. Chỉ xóa mods SAU KHI cài mới thành công (lựa chọn B).
+            if (option == ModChangeOption.DeleteMods)
+            {
+                try
+                {
+                    if (Directory.Exists(modsDir))
+                    {
+                        Directory.Delete(modsDir, recursive: true);
+                    }
+                    if (File.Exists(modsJsonPath))
+                    {
+                        File.Delete(modsJsonPath);
+                    }
+                    StatusMessage = "Đã đổi phiên bản và xóa mods cũ.";
+                }
+                catch (Exception ex)
+                {
+                    // Cài mới đã thành công — không rollback vì lỗi xóa mods; chỉ báo.
+                    StatusMessage = $"Đã đổi phiên bản nhưng không xóa hết mods: {ex.Message}";
+                }
+            }
+            else
+            {
+                StatusMessage = "Đã đổi phiên bản thành công (giữ mods).";
+            }
+
+            return merged;
+        }
+        catch (OperationCanceledException)
+        {
+            // Rollback khi user hủy giữa chừng.
+            await RestoreBackupsAsync(metaPath, oldMetaJson, modsBackedUp, modsJsonPath, modsJsonBakPath, ct);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // 5. Rollback khi cài thất bại.
+            await RestoreBackupsAsync(metaPath, oldMetaJson, modsBackedUp, modsJsonPath, modsJsonBakPath, ct);
+            throw new InvalidOperationException($"Đổi phiên bản thất bại: {ex.Message}", ex);
+        }
+    }
+
+    private static async Task RestoreBackupsAsync(
+        string metaPath,
+        string? oldMetaJson,
+        bool modsBackedUp,
+        string modsJsonPath,
+        string modsJsonBakPath,
+        CancellationToken ct)
+    {
+        try
+        {
+            if (oldMetaJson != null)
+            {
+                await File.WriteAllTextAsync(metaPath, oldMetaJson, ct);
+            }
+            if (modsBackedUp && File.Exists(modsJsonBakPath))
+            {
+                File.Copy(modsJsonBakPath, modsJsonPath, overwrite: true);
+            }
+        }
+        catch
+        {
+            // Best effort — instance.json.bak luôn còn trên đĩa để user khôi phục thủ công.
+        }
     }
 
     [RelayCommand]
