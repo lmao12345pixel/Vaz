@@ -238,8 +238,26 @@ public sealed class MrpackImporterTests : IDisposable
     }
 
     [Fact]
-    public async Task Import_ForgeLoader_ThrowsNotSupportedException()
+    public async Task Import_ForgeLoader_CreatesForgeInstance()
     {
+        var instanceDir = Path.Combine(_tempRoot, "instances", "ForgeInst");
+        Directory.CreateDirectory(instanceDir);
+
+        var instance = new MinecraftInstance
+        {
+            Id = "forgeinst",
+            Name = "ForgeInst",
+            MinecraftVersion = "1.20.1",
+            LoaderType = "forge",
+            LoaderVersion = "47.1.0",
+            Path = instanceDir,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        _instanceManagerMock
+            .Setup(m => m.CreateForgeAsync("ForgeInst", "1.20.1", "47.1.0", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(instance);
+
         var packPath = CreateMrpack(
             dependencies: new Dictionary<string, string>
             {
@@ -247,14 +265,9 @@ public sealed class MrpackImporterTests : IDisposable
                 ["forge"] = "47.1.0"
             });
 
-        var act = () => _importer.ImportAsync(packPath, "ForgeInst");
+        await _importer.ImportAsync(packPath, "ForgeInst");
 
-        await act.Should().ThrowAsync<NotSupportedException>()
-            .WithMessage("Forge modpacks are not supported*");
-
-        _instanceManagerMock.Verify(m => m.CreateFabricAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
-        _instanceManagerMock.Verify(m => m.CreateNeoForgeAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
-        _instanceManagerMock.Verify(m => m.CreateVanillaAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _instanceManagerMock.Verify(m => m.CreateForgeAsync("ForgeInst", "1.20.1", "47.1.0", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

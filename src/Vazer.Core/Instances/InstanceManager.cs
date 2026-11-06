@@ -27,18 +27,21 @@ public sealed class InstanceManager : IInstanceManager
     private readonly MinecraftLauncher _launcher;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly Loaders.INeoForgeInstaller? _neoForgeInstaller;
+    private readonly Loaders.ForgeInstaller? _forgeInstaller;
 
     public InstanceManager(
         ILogger<InstanceManager> logger,
         IOptions<MinecraftOptions> options,
         IHttpClientFactory httpClientFactory,
-        Loaders.INeoForgeInstaller? neoForgeInstaller = null)
+        Loaders.INeoForgeInstaller? neoForgeInstaller = null,
+        Loaders.ForgeInstaller? forgeInstaller = null)
     {
         _logger = logger;
         _options = options.Value;
         _optionsAccessor = options;
         _httpClientFactory = httpClientFactory;
         _neoForgeInstaller = neoForgeInstaller;
+        _forgeInstaller = forgeInstaller;
         _launcher = new MinecraftLauncher(new MinecraftPath(Path.Combine(_options.RootPath, "instances")));
     }
 
@@ -256,6 +259,51 @@ public sealed class InstanceManager : IInstanceManager
         }
 
         _logger.LogInformation("Created NeoForge instance {Id} ({Version})", id, version);
+        return instance;
+    }
+
+    /// <inheritdoc />
+    public async Task<MinecraftInstance> CreateForgeAsync(string name, string minecraftVersion, string? forgeVersion = null, CancellationToken ct = default)
+    {
+        var svc = _forgeInstaller ?? new Loaders.ForgeInstaller(
+            _httpClientFactory,
+            NullLogger<Loaders.ForgeInstaller>.Instance,
+            _optionsAccessor);
+
+        var id = SanitizeId(name);
+        var instancePath = Path.Combine(_options.RootPath, "instances", id);
+        Directory.CreateDirectory(instancePath);
+
+        var version = forgeVersion ?? await svc.ResolveLatestVersionAsync(minecraftVersion, ct);
+        var fullVersion = version.StartsWith(minecraftVersion + "-", StringComparison.OrdinalIgnoreCase)
+            ? version
+            : $"{minecraftVersion}-{version}";
+        _logger.LogInformation("Installing Forge {Version} for MC {MC} on instance {Id}", fullVersion, minecraftVersion, id);
+
+        var instance = new MinecraftInstance
+        {
+            Id = id,
+            Name = name,
+            MinecraftVersion = minecraftVersion,
+            LoaderType = "forge",
+            LoaderVersion = fullVersion,
+            Path = instancePath,
+            IconPath = null,
+            CreatedAt = DateTimeOffset.UtcNow,
+            LastPlayedAt = null
+        };
+
+        await SaveMetaAsync(instance, ct);
+        await svc.InstallAsync(instancePath, minecraftVersion, fullVersion, null, ct);
+
+        var launchVersionName = DiscoverVersionName(instancePath);
+        if (launchVersionName != null)
+        {
+            instance = instance with { LaunchVersionName = launchVersionName };
+            await SaveMetaAsync(instance, ct);
+        }
+
+        _logger.LogInformation("Created Forge instance {Id} ({Version})", id, fullVersion);
         return instance;
     }
 

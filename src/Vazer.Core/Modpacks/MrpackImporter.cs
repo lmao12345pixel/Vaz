@@ -67,23 +67,7 @@ public sealed class MrpackImporter : IMrpackImporter
             throw new InvalidDataException("Minecraft version dependency missing.");
         }
 
-        if (index.Dependencies.ContainsKey("forge"))
-        {
-            throw new NotSupportedException("Forge modpacks are not supported. Use Fabric or NeoForge.");
-        }
-
-        string loaderType = "vanilla";
-        string? loaderVer = null;
-        if (index.Dependencies.TryGetValue("fabric-loader", out var fabricVer))
-        {
-            loaderType = "fabric";
-            loaderVer = fabricVer;
-        }
-        else if (index.Dependencies.TryGetValue("neoforge", out var neoforgeVer))
-        {
-            loaderType = "neoforge";
-            loaderVer = neoforgeVer;
-        }
+        var (loaderType, loaderVer) = ResolveLoader(index.Dependencies);
 
         MinecraftInstance? createdInstance = null;
         try
@@ -95,6 +79,14 @@ public sealed class MrpackImporter : IMrpackImporter
             else if (loaderType == "neoforge")
             {
                 createdInstance = await _instanceManager.CreateNeoForgeAsync(instanceName, mcVer, loaderVer, ct);
+            }
+            else if (loaderType == "quilt")
+            {
+                createdInstance = await _instanceManager.CreateQuiltAsync(instanceName, mcVer, loaderVer, ct);
+            }
+            else if (loaderType == "forge")
+            {
+                createdInstance = await _instanceManager.CreateForgeAsync(instanceName, mcVer, loaderVer, ct);
             }
             else
             {

@@ -121,6 +121,16 @@ public interface IInstanceManager
     Task<MinecraftInstance> CreateQuiltAsync(string name, string minecraftVersion, string? quiltVersion = null, CancellationToken ct = default);
 
     /// <summary>
+    /// Tạo instance với Forge loader.
+    /// </summary>
+    /// <param name="name">Tên instance.</param>
+    /// <param name="minecraftVersion">Minecraft version.</param>
+    /// <param name="forgeVersion">Forge loader version (optional, lấy latest nếu null).</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Instance vừa tạo.</returns>
+    Task<MinecraftInstance> CreateForgeAsync(string name, string minecraftVersion, string? forgeVersion = null, CancellationToken ct = default);
+
+    /// <summary>
     /// Xóa instance.
     /// </summary>
     /// <param name="id">Instance ID.</param>
