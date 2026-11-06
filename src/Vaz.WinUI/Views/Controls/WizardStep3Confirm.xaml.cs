@@ -266,7 +266,9 @@ public sealed partial class WizardStep3Confirm : UserControl
             return appBrush;
         }
 
-        return (Brush)Application.Current.Resources["VazAccentBrush"];
+        var accent = Application.Current?.Resources["VazAccentBrush"];
+        return accent as Brush
+            ?? throw new InvalidOperationException("VazAccentBrush resource is missing.");
     }
 
     // === Footer / validation ===

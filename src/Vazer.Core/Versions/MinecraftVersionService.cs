@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -12,6 +13,12 @@ namespace Vazer.Core.Versions;
 /// Service fetch và cache version manifest từ Mojang và loader metadata (Fabric/Quilt/NeoForge).
 /// Caches: %AppData%/Vazer/cache/versions-manifest.json, loader-versions/{loader}/{mcVersion}.json (TTL 24h).
 /// </summary>
+[UnconditionalSuppressMessage(
+    "Trimming",
+    "IL2026",
+    Justification = "Vazer.Core is not marked IsTrimmable and WinUI publishes with TrimMode=partial, " +
+                    "so these private version-metadata DTOs are not trimmed. Migrate to VazJsonContext " +
+                    "source-generated metadata in 19.2.")]
 public sealed class MinecraftVersionService : IMinecraftVersionService
 {
     private readonly ILogger<MinecraftVersionService> _logger;
@@ -114,7 +121,7 @@ public sealed class MinecraftVersionService : IMinecraftVersionService
     public Task<IReadOnlyList<LoaderVersionInfo>> GetForgeVersionsAsync(string mcVersion, CancellationToken ct = default)
         => GetLoaderVersionsAsync("forge", mcVersion, ct);
 
-    public async Task<bool> ClearCacheAsync(CancellationToken ct = default)
+    public Task<bool> ClearCacheAsync(CancellationToken ct = default)
     {
         if (Directory.Exists(_cacheRoot))
         {
@@ -123,15 +130,15 @@ public sealed class MinecraftVersionService : IMinecraftVersionService
                 Directory.Delete(_cacheRoot, recursive: true);
                 Directory.CreateDirectory(_cacheRoot);
                 _logger.LogInformation("Cleared version cache folder: {Path}", _cacheRoot);
-                return true;
+                return Task.FromResult(true);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to clear cache folder {Path}", _cacheRoot);
-                return false;
+                return Task.FromResult(false);
             }
         }
-        return true;
+        return Task.FromResult(true);
     }
 
     public Task<DateTimeOffset?> GetCacheTimestampAsync(string cacheFile, CancellationToken ct = default)

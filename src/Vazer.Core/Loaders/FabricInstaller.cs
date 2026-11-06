@@ -47,7 +47,9 @@ public sealed class FabricInstaller : ILoaderInstaller
         var loaders = await installer.GetLoaders(mcVersion);
 
         var selected = LoaderHelpers.SelectLatestStable(
-            loaders.Select(l => (l.Version, l.Stable)),
+            loaders
+                .Where(l => !string.IsNullOrEmpty(l.Version))
+                .Select(l => (l.Version!, l.Stable)),
             loaderVersion);
 
         var resolved = LoaderHelpers.RequireLoaderVersion(selected, mcVersion);

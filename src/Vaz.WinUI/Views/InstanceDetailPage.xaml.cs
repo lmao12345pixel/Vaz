@@ -522,8 +522,8 @@ public sealed partial class InstanceDetailPage : Page
         var vm = ((App)Application.Current).Services
             .GetRequiredService<CreateInstanceViewModel>();
         var dialog = new CreateInstanceDialog(vm, current,
-            changeAction: (state, name, option, progress) =>
-                ViewModel.ChangeVersionAsync(state, name, option, progress))
+            changeAction: async (state, name, option, progress) =>
+                await ViewModel.ChangeVersionAsync(state, name, option, progress))
         { XamlRoot = XamlRoot };
         await dialog.ShowAsync();
 

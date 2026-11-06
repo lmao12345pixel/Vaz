@@ -172,13 +172,19 @@ public sealed partial class WizardStep2Loader : UserControl
 
     private void UpdateLoaderCardStyles()
     {
+        var resources = Application.Current?.Resources;
+        if (resources is null)
+        {
+            return;
+        }
+
         var selected = State.SelectedLoader;
         foreach (var (button, tag) in LoaderCards())
         {
             var isSelected = string.Equals(selected, tag, StringComparison.OrdinalIgnoreCase);
             button.BorderBrush = isSelected
-                ? (Brush)Application.Current.Resources["VazAccentBrush"]
-                : (Brush)Application.Current.Resources["VazShellBackgroundBrush"];
+                ? (Brush)resources["VazAccentBrush"]
+                : (Brush)resources["VazShellBackgroundBrush"];
             button.BorderThickness = new Thickness(isSelected ? 2 : 1);
             if (!isSelected && Application.Current?.Resources.TryGetValue("CardStrokeColorDefaultBrush", out var stroke) == true && stroke is Brush s)
             {
