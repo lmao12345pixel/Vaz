@@ -6,6 +6,7 @@ using CmlLib.Core.ProcessBuilder;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Vazer.Core.Abstractions;
+using Vazer.Core.Java;
 
 namespace Vazer.Core.Launch;
 
@@ -74,16 +75,22 @@ public sealed class CmlGameLauncher : IGameLauncher
     private readonly ILogger<CmlGameLauncher> _logger;
     private readonly MinecraftOptions _options;
     private readonly IJavaResolver _javaResolver;
+    private readonly IJavaVersionMapper _javaVersionMapper;
+    private readonly IJavaCompatibilityNotifier? _javaCompatibilityNotifier;
     private readonly MinecraftLauncher _launcher;
 
     public CmlGameLauncher(
         ILogger<CmlGameLauncher> logger,
         IOptions<MinecraftOptions> options,
-        IJavaResolver javaResolver)
+        IJavaResolver javaResolver,
+        IJavaVersionMapper? javaVersionMapper = null,
+        IJavaCompatibilityNotifier? javaCompatibilityNotifier = null)
     {
         _logger = logger;
         _options = options.Value;
         _javaResolver = javaResolver;
+        _javaVersionMapper = javaVersionMapper ?? JavaVersionMapper.Default;
+        _javaCompatibilityNotifier = javaCompatibilityNotifier;
         _launcher = new MinecraftLauncher(new MinecraftPath(Path.Combine(_options.RootPath, "instances")));
     }
 
@@ -133,15 +140,33 @@ public sealed class CmlGameLauncher : IGameLauncher
             ? version.Id
             : parameters.MinecraftVersion;
 
-        // Ensure Java is available
+        // Java compatibility (Phase E): chỉ CẢNH BÁO khi mismatch, không tự tải Java
+        // và không chặn launch — user tự cài/chọn Java. Java major lấy từ JavaInstallation
+        // đã probe; nếu chưa có (0) thì probe lại đúng java.exe sắp dùng.
         var java = parameters.Java;
-        var requiredMajor = _javaResolver.RequiredJava(mcVersion);
-
-        if (java.MajorVersion < requiredMajor)
+        var actualJavaMajor = java.MajorVersion;
+        if (actualJavaMajor <= 0)
         {
-            _logger.LogInformation("Java {Current} < required {Required} for MC {Mc}, auto-downloading", java.MajorVersion, requiredMajor, mcVersion);
-            java = await _javaResolver.EnsureAsync(requiredMajor, null, ct);
-            _logger.LogInformation("Auto-downloaded Java {Major} from Adoptium", java.MajorVersion);
+            var probedJava = await _javaResolver.TryProbeAsync(java.Path, ct);
+            if (probedJava != null)
+            {
+                actualJavaMajor = probedJava.MajorVersion;
+            }
+        }
+
+        var requirements = new JavaRequirements
+        {
+            MinecraftVersion = mcVersion,
+            MajorVersion = _javaVersionMapper.GetRequiredJavaVersion(mcVersion)
+        };
+
+        if (requirements.IsMismatch(actualJavaMajor))
+        {
+            var message = requirements.BuildMismatchMessage(parameters.InstanceId, actualJavaMajor);
+            _logger.LogWarning(
+                "Java mismatch: instance {InstanceId}, MC {McVersion} requires Java {Required}, actual Java {Actual}. Launch continues (warning only).",
+                parameters.InstanceId, mcVersion, requirements.MajorVersion, actualJavaMajor);
+            _javaCompatibilityNotifier?.ShowWarning("Java version không phù hợp", message);
         }
 
         // Build launch parameters - use MLaunchOption with correct properties for CmlLib.Core 4.0.6

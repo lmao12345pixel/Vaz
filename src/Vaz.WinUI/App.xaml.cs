@@ -45,6 +45,9 @@ public partial class App : Application
         services.AddSingleton<IModrinthSearchService, ModrinthSearchService>();
         services.AddSingleton<IModDownloadManager, ModDownloadManager>();
         services.AddSingleton<INotificationService, NotificationService>();
+        services.AddSingleton<JavaCompatibilityNotifier>();
+        services.AddSingleton<Vazer.Core.Java.IJavaCompatibilityNotifier>(
+            sp => sp.GetRequiredService<JavaCompatibilityNotifier>());
         services.AddSingleton<CoverImageCacheService>();
 
         // ViewModels
