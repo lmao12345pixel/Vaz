@@ -72,7 +72,7 @@ public sealed partial class VersionsTab : UserControl
         {
             XamlRoot = XamlRoot,
             Title = "Dọn dẹp phiên bản không sử dụng",
-            Content = $"Xóa {orphans.Count} version không dùng? Thao tác này sẽ giải phóng {InstalledVersionInfo.FormatBytes(totalBytes)}.",
+            Content = $"Xóa {orphans.Count} version không dùng? Giải phóng {InstalledVersionInfo.FormatBytes(totalBytes)}.",
             PrimaryButtonText = "Dọn dẹp ngay",
             CloseButtonText = "Hủy",
             DefaultButton = ContentDialogButton.Close

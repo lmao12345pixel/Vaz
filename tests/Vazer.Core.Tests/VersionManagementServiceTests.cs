@@ -231,4 +231,27 @@ public sealed class VersionManagementServiceTests : IDisposable
         Directory.Exists(Path.Combine(_versionsDir, "1.20.6-orphan1")).Should().BeFalse();
         Directory.Exists(Path.Combine(_versionsDir, "1.21.0-orphan2")).Should().BeFalse();
     }
+
+    [Fact]
+    public async Task GetDiskUsageAsync_CalculatesTotalAndSubdirectoriesAccurately()
+    {
+        CreateVersionDir("1.20.1", "release", dummyFileBytes: 1000);
+
+        var libsDir = Path.Combine(_tempRoot, "instances", "libraries");
+        Directory.CreateDirectory(libsDir);
+        File.WriteAllBytes(Path.Combine(libsDir, "dummy-lib.jar"), new byte[2500]);
+
+        var assetsDir = Path.Combine(_tempRoot, "instances", "assets");
+        Directory.CreateDirectory(assetsDir);
+        File.WriteAllBytes(Path.Combine(assetsDir, "dummy-asset.bin"), new byte[4500]);
+
+        var svc = new VersionManagementService(_instanceManagerMock.Object, _options, NullLogger<VersionManagementService>.Instance);
+        var usage = await svc.GetDiskUsageAsync();
+
+        usage.VersionsBytes.Should().BeGreaterThan(1000);
+        usage.LibrariesBytes.Should().Be(2500);
+        usage.AssetsBytes.Should().Be(4500);
+        usage.TotalBytes.Should().Be(usage.VersionsBytes + usage.LibrariesBytes + usage.AssetsBytes);
+        usage.InstalledVersionsCount.Should().Be(1);
+    }
 }
