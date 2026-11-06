@@ -13,6 +13,9 @@ public interface IMinecraftVersionService
     /// <summary>Lấy danh sách loader versions (Fabric/Quilt) cho MC version cụ thể.</summary>
     Task<IReadOnlyList<LoaderVersionInfo>> GetLoaderVersionsAsync(string loader, string mcVersion, CancellationToken ct = default);
 
+    /// <summary>Lấy danh sách Forge loader versions cho MC version cụ thể.</summary>
+    Task<IReadOnlyList<LoaderVersionInfo>> GetForgeVersionsAsync(string mcVersion, CancellationToken ct = default);
+
     /// <summary>Xóa toàn bộ cache versions.</summary>
     Task<bool> ClearCacheAsync(CancellationToken ct = default);
 

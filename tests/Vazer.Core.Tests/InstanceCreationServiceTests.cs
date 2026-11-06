@@ -187,6 +187,9 @@ public sealed class InstanceCreationServiceTests : IDisposable
         public Task<IReadOnlyList<LoaderVersionInfo>> GetLoaderVersionsAsync(string loader, string mcVersion, CancellationToken ct = default)
             => Task.FromResult(LoaderVersions);
 
+        public Task<IReadOnlyList<LoaderVersionInfo>> GetForgeVersionsAsync(string mcVersion, CancellationToken ct = default)
+            => GetLoaderVersionsAsync("forge", mcVersion, ct);
+
         public Task<bool> ClearCacheAsync(CancellationToken ct = default) => Task.FromResult(true);
 
         public Task<DateTimeOffset?> GetCacheTimestampAsync(string cacheFile, CancellationToken ct = default)

@@ -90,6 +90,8 @@ public sealed class MinecraftVersionService : IMinecraftVersionService
                 versions = await FetchQuiltVersionsAsync(mcVersion, ct);
             else if (string.Equals(loader, "neoforge", StringComparison.OrdinalIgnoreCase))
                 versions = await FetchNeoForgeVersionsAsync(mcVersion, ct);
+            else if (string.Equals(loader, "forge", StringComparison.OrdinalIgnoreCase))
+                versions = await FetchForgeVersionsAsync(mcVersion, ct);
             else
                 _logger.LogWarning("Loader {Loader} không hỗ trợ fetch metadata", loader);
         }
@@ -108,6 +110,9 @@ public sealed class MinecraftVersionService : IMinecraftVersionService
 
         return Array.Empty<LoaderVersionInfo>();
     }
+
+    public Task<IReadOnlyList<LoaderVersionInfo>> GetForgeVersionsAsync(string mcVersion, CancellationToken ct = default)
+        => GetLoaderVersionsAsync("forge", mcVersion, ct);
 
     public async Task<bool> ClearCacheAsync(CancellationToken ct = default)
     {
@@ -294,6 +299,79 @@ public sealed class MinecraftVersionService : IMinecraftVersionService
             .ToList();
 
         return versions?.Count > 0 ? versions : Array.Empty<LoaderVersionInfo>();
+    }
+
+    private async Task<IReadOnlyList<LoaderVersionInfo>> FetchForgeVersionsAsync(string mcVersion, CancellationToken ct)
+    {
+        const string url = "https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json";
+        var response = await _httpClient.GetAsync(url, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Failed to fetch Forge promotions: HTTP {StatusCode}", response.StatusCode);
+            return Array.Empty<LoaderVersionInfo>();
+        }
+
+        var json = await response.Content.ReadAsStringAsync(ct);
+        using var doc = JsonDocument.Parse(json);
+        if (!doc.RootElement.TryGetProperty("promos", out var promosEl))
+        {
+            _logger.LogWarning("Forge promotions JSON missing 'promos' object");
+            return Array.Empty<LoaderVersionInfo>();
+        }
+
+        string? recommendedVer = null;
+        string? latestVer = null;
+
+        var recKey = $"{mcVersion}-recommended";
+        var latestKey = $"{mcVersion}-latest";
+
+        if (promosEl.TryGetProperty(recKey, out var recProp) && recProp.ValueKind == JsonValueKind.String)
+        {
+            recommendedVer = recProp.GetString();
+        }
+
+        if (promosEl.TryGetProperty(latestKey, out var latestProp) && latestProp.ValueKind == JsonValueKind.String)
+        {
+            latestVer = latestProp.GetString();
+        }
+
+        var result = new List<LoaderVersionInfo>();
+
+        if (!string.IsNullOrWhiteSpace(recommendedVer))
+        {
+            var fullVer = $"{mcVersion}-{recommendedVer}";
+            result.Add(new LoaderVersionInfo
+            {
+                Version = fullVer,
+                Loader = "forge",
+                MinecraftVersion = mcVersion,
+                Release = "stable",
+                IsRecommended = true,
+                Url = $"https://maven.minecraftforge.net/net/minecraftforge/forge/{fullVer}/forge-{fullVer}-installer.jar"
+            });
+        }
+
+        if (!string.IsNullOrWhiteSpace(latestVer) &&
+            !string.Equals(latestVer, recommendedVer, StringComparison.OrdinalIgnoreCase))
+        {
+            var fullVer = $"{mcVersion}-{latestVer}";
+            result.Add(new LoaderVersionInfo
+            {
+                Version = fullVer,
+                Loader = "forge",
+                MinecraftVersion = mcVersion,
+                Release = "beta",
+                IsRecommended = false,
+                Url = $"https://maven.minecraftforge.net/net/minecraftforge/forge/{fullVer}/forge-{fullVer}-installer.jar"
+            });
+        }
+
+        if (result.Count == 0)
+        {
+            _logger.LogWarning("No Forge versions found for Minecraft {Mc}", mcVersion);
+        }
+
+        return result;
     }
 
     private async Task SaveCacheAsync<T>(string path, T data, CancellationToken ct)

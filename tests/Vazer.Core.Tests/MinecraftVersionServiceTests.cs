@@ -130,6 +130,80 @@ public sealed class MinecraftVersionServiceTests : IDisposable
         versions.Should().BeEmpty();
     }
 
+    // ── 3c. GetLoaderVersionsAsync_Forge ──
+
+    [Fact]
+    public async Task GetLoaderVersionsAsync_Forge_FiltersAndMarksRecommended()
+    {
+        var promosJson = """
+        {
+          "homepage": "http://files.minecraftforge.net/maven/net/minecraftforge/forge/",
+          "promos": {
+            "1.20.1-recommended": "47.2.0",
+            "1.20.1-latest": "47.2.1",
+            "1.19.4-recommended": "45.4.0",
+            "1.19.4-latest": "45.4.5"
+          }
+        }
+        """;
+        _handler.MapJson(HttpMethod.Get, "https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json", HttpStatusCode.OK, promosJson);
+        _handler.MapJson(HttpMethod.Get, "/net/minecraftforge/forge/promotions_slim.json", HttpStatusCode.OK, promosJson);
+
+        var versions = await _service.GetLoaderVersionsAsync("forge", "1.20.1");
+
+        versions.Should().HaveCount(2);
+        versions[0].Version.Should().Be("1.20.1-47.2.0");
+        versions[0].IsRecommended.Should().BeTrue();
+        versions[0].Stable.Should().BeTrue();
+        versions[0].Loader.Should().Be("forge");
+        versions[0].MinecraftVersion.Should().Be("1.20.1");
+        versions[0].Url.Should().Be("https://maven.minecraftforge.net/net/minecraftforge/forge/1.20.1-47.2.0/forge-1.20.1-47.2.0-installer.jar");
+
+        versions[1].Version.Should().Be("1.20.1-47.2.1");
+        versions[1].IsRecommended.Should().BeFalse();
+        versions[1].Stable.Should().BeFalse();
+        versions[1].Installable.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task GetLoaderVersionsAsync_Forge_WhenSameRecommendedAndLatest_ReturnsSingleItem()
+    {
+        var promosJson = """
+        {
+          "promos": {
+            "1.20.1-recommended": "47.4.28",
+            "1.20.1-latest": "47.4.28"
+          }
+        }
+        """;
+        _handler.MapJson(HttpMethod.Get, "https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json", HttpStatusCode.OK, promosJson);
+        _handler.MapJson(HttpMethod.Get, "/net/minecraftforge/forge/promotions_slim.json", HttpStatusCode.OK, promosJson);
+
+        var versions = await _service.GetForgeVersionsAsync("1.20.1");
+
+        versions.Should().HaveCount(1);
+        versions[0].Version.Should().Be("1.20.1-47.4.28");
+        versions[0].IsRecommended.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task GetLoaderVersionsAsync_Forge_UnsupportedMc_ReturnsEmpty()
+    {
+        var promosJson = """
+        {
+          "promos": {
+            "1.20.1-recommended": "47.2.0"
+          }
+        }
+        """;
+        _handler.MapJson(HttpMethod.Get, "https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json", HttpStatusCode.OK, promosJson);
+        _handler.MapJson(HttpMethod.Get, "/net/minecraftforge/forge/promotions_slim.json", HttpStatusCode.OK, promosJson);
+
+        var versions = await _service.GetForgeVersionsAsync("26.3");
+
+        versions.Should().BeEmpty();
+    }
+
     // ── 4. GetLoaderVersionsAsync_UnsupportedLoader_EmptyList ──
 
     [Fact]

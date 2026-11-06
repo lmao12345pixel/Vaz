@@ -27,6 +27,18 @@ public record LoaderVersionInfo
     [JsonPropertyName("url")]
     public string? Url { get; set; }
 
+    /// <summary>Có phải bản recommended (dành cho Forge) hay không.</summary>
+    [JsonPropertyName("isRecommended")]
+    public bool IsRecommended { get; set; }
+
+    /// <summary>Alias cho Version (tương thích backward).</summary>
+    [JsonPropertyName("loaderVersion")]
+    public string LoaderVersion
+    {
+        get => Version;
+        set => Version = value;
+    }
+
     /// <summary>Nếu là release ổn định.</summary>
     public bool Stable => string.Equals(Release, "stable", StringComparison.OrdinalIgnoreCase);
 
