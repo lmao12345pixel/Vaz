@@ -70,10 +70,20 @@ Redesign dialog tạo instance thành Wizard 2 bước hiện đại:
 - Bổ sung hiệu ứng number roll (đếm số mượt mà) cho kích thước download trong panel Tóm tắt.
 - Cho phép user cấu hình mirror tải cover art hoặc tải thumbnail chính thức từ launcher meta Mojang.
 
-## 8. Self-review
+## 9. Đợt 18.3a.1 — Sửa lỗi UI/UX & Cover Images (2026-11-06)
 
-- [x] Không làm hỏng 390 test hiện tại.
-- [x] Không hardcode màu sắc — 100% dùng ThemeResource / static palette chuẩn.
-- [x] Toàn bộ animation dùng `CubicEase` / `BackEase`, tôn trọng cờ `ReduceMotion`.
-- [x] Đầy đủ bằng chứng video MP4 và 8+ ảnh screenshots ở cả hai chế độ Light/Dark.
-- [x] **KHÔNG tự claim PASS manual test** — chờ xác nhận trải nghiệm thực tế từ người dùng.
+### Nguyên nhân lỗi Cover Image & Cách khắc phục:
+1. **Nguyên nhân**: Endpoint cũ `https://minecraft.wiki/images/{v}_cover.png` không tồn tại trên Minecraft Wiki và thiếu `User-Agent` hợp lệ dẫn đến HTTP 403 Forbidden từ Cloudflare/MediaWiki.
+2. **Khắc phục**: Dùng MediaWiki Action API chuẩn: `https://minecraft.wiki/api.php?action=query&titles=Java_Edition_{version}&prop=pageimages&format=json&pithumbsize=400` với User-Agent `VazLauncher/1.0 (contact: info@vazlauncher.local)`. API trả về URL thumbnail CDN chính thức (vd: `https://minecraft.wiki/images/thumb/Java_Edition_1.21.1.png/400px-Java_Edition_1.21.1.png?ef236`) tải về thành công 100%. Ảnh tải về được cache vào `%AppData%/Vazer/cache/version-covers/{version}.png`.
+
+### Danh sách 4 sửa đổi:
+- **Việc 1 (Cover Image)**: Chuyển sang MediaWiki PageImages API + User-Agent, hiển thị ảnh bìa chính thức từ Wiki thay vì gradient fallback.
+- **Việc 2 (Lặp label)**: Xóa thuộc tính `Header="Loader version"` thừa trên `ComboBox x:Name="LoaderVersionBox"`, chỉ giữ 1 header duy nhất kèm ProgressRing.
+- **Việc 3 (Màu nút)**: Thống nhất kiểu dáng (Height 36, Padding 22,7, CornerRadius 6) và màu ngọc lục bảo (`VazAccentBrush` `#10B981`) cho cả nút "Tiếp tục →" và "Tạo Instance". Sửa `BoolToActiveBorderBrushConverter` dùng chung `VazAccentBrush` đồng bộ viền thẻ khi chọn.
+- **Việc 4 (Panel Tóm tắt)**: Tăng chiều rộng lên 270px, đổi layout sang `Grid ColumnDefinitions="Auto,*" ColumnSpacing="10"` cho phép `TextWrapping="Wrap"` hoạt động chính xác, căn `VerticalAlignment="Top"` để không bị cắt xén chữ khi nội dung dài.
+
+### Bằng chứng mới:
+- `docs/evidence/dot18/screenshots/wizard-step1-real-covers.png`: Thẻ phiên bản hiển thị ảnh bìa thật sắc nét từ Minecraft Wiki.
+- `docs/evidence/dot18/screenshots/wizard-step2-fixed-labels.png`: Step 2 với nhãn "Loader version" duy nhất, nút "Tạo Instance" đồng bộ màu sắc.
+- `docs/evidence/dot18/screenshots/wizard-step2-preview-panel.png`: Panel Tóm tắt hiển thị trọn vẹn văn bản nhiều dòng của NeoForge không bị cắt mép.
+
