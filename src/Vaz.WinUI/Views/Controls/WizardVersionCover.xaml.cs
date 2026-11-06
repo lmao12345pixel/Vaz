@@ -92,17 +92,17 @@ public sealed partial class WizardVersionCover : UserControl
     {
         try
         {
-            CoverImage.Source = new BitmapImage(new Uri(path, UriKind.Absolute));
-            CoverImage.ImageOpened += (_, _) =>
+            if (File.Exists(path))
             {
+                CoverImage.Source = new BitmapImage(new Uri(path, UriKind.Absolute));
                 CoverLoaded = true;
                 CoverImage.Visibility = Visibility.Visible;
                 FallbackText.Visibility = Visibility.Collapsed;
-            };
+            }
         }
         catch
         {
-            // giữ fallback
+            ApplyFallback(VersionId);
         }
     }
 }

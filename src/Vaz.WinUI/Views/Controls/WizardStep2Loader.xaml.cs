@@ -75,8 +75,8 @@ public sealed partial class WizardStep2Loader : UserControl
 
     private void UpdatePreviewVisibility()
     {
-        // Live preview panel bên phải khi đủ chiều rộng (≥ 700px để vừa cả 2 cột trên dialog).
-        PreviewPanel.Visibility = ActualWidth >= 700 ? Visibility.Visible : Visibility.Collapsed;
+        // Live preview panel bên phải hiển thị khi dialog có độ rộng hợp lý (hoặc khi chưa đo thì mặc định Visible).
+        PreviewPanel.Visibility = ActualWidth == 0 || ActualWidth >= 650 ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private async void LoaderButton_Click(object sender, RoutedEventArgs e)

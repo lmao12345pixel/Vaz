@@ -67,14 +67,14 @@ public sealed class CountToTextConverter : IValueConverter
 /// <summary>bool → Active instance highlight border brush (ngọc lục bảo khi active, stroke mặc định khi không).</summary>
 public sealed class BoolToActiveBorderBrushConverter : IValueConverter
 {
-    private static readonly SolidColorBrush FallbackActiveBrush = new(Windows.UI.Color.FromArgb(255, 0x4A, 0xDE, 0x80));
+    private static readonly SolidColorBrush FallbackActiveBrush = new(Windows.UI.Color.FromArgb(255, 0x10, 0xB9, 0x81));
     private static readonly SolidColorBrush FallbackInactiveBrush = new(Windows.UI.Color.FromArgb(30, 255, 255, 255));
 
     public object Convert(object value, Type targetType, object parameter, string language)
     {
         if (value is true)
         {
-            if (Application.Current?.Resources.TryGetValue("MinecraftEmeraldBorderBrush", out var brush) == true && brush is Brush b)
+            if (Application.Current?.Resources.TryGetValue("VazAccentBrush", out var brush) == true && brush is Brush b)
                 return b;
             return FallbackActiveBrush;
         }

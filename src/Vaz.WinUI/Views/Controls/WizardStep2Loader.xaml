@@ -124,7 +124,6 @@
                             <ProgressRing x:Name="LoaderLoadingRing" Grid.Column="1" Width="16" Height="16" IsActive="False" Visibility="Collapsed" />
                         </Grid>
                         <ComboBox x:Name="LoaderVersionBox"
-                                  Header="Loader version"
                                   PlaceholderText="Chọn loader version"
                                   HorizontalAlignment="Stretch" />
                         <TextBlock x:Name="NoLoaderVersionsText"
@@ -143,40 +142,41 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <!-- Live preview panel (ẩn khi hẹp < 1000px) -->
+            <!-- Live preview panel (tóm tắt cấu hình) -->
             <Border x:Name="PreviewPanel"
                     Grid.Column="1"
-                    Width="250"
-                    VerticalAlignment="Center"
+                    Width="270"
+                    VerticalAlignment="Top"
                     Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                     BorderThickness="1"
                     CornerRadius="{StaticResource VazRadiusMd}"
-                    Padding="16,18">
-                <StackPanel Spacing="12">
+                    Padding="18,20">
+                <StackPanel Spacing="14">
                     <TextBlock Text="Tóm tắt" FontSize="16" FontWeight="SemiBold" />
-                    <StackPanel Spacing="8">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon Glyph="&#xE8B5;" FontSize="13" Foreground="{StaticResource VazAccentBrush}" VerticalAlignment="Center" />
-                            <TextBlock x:Name="PreviewVersion" Text="Minecraft" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap" />
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon Glyph="&#xE902;" FontSize="13" Foreground="{StaticResource VazAccentBrush}" VerticalAlignment="Center" />
-                            <TextBlock x:Name="PreviewLoader" Text="Loader" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap" />
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon Glyph="&#xE896;" FontSize="13" Foreground="{StaticResource VazAccentBrush}" VerticalAlignment="Center" />
-                            <StackPanel>
-                                <TextBlock x:Name="PreviewSize" Text="~214 MB" FontSize="12" />
-                                <TextBlock Text="Ước tính tải xuống" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <StackPanel Spacing="10">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                            <FontIcon Glyph="&#xE8B5;" FontSize="14" Foreground="{StaticResource VazAccentBrush}" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" x:Name="PreviewVersion" Text="Minecraft" FontSize="13" FontWeight="Medium" VerticalAlignment="Center" TextWrapping="Wrap" />
+                        </Grid>
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                            <FontIcon Glyph="&#xE902;" FontSize="14" Foreground="{StaticResource VazAccentBrush}" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" x:Name="PreviewLoader" Text="Loader" FontSize="13" FontWeight="Medium" VerticalAlignment="Center" TextWrapping="Wrap" />
+                        </Grid>
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                            <FontIcon Glyph="&#xE896;" FontSize="14" Foreground="{StaticResource VazAccentBrush}" VerticalAlignment="Top" Margin="0,2,0,0" />
+                            <StackPanel Grid.Column="1" Spacing="2">
+                                <TextBlock x:Name="PreviewSize" Text="~214 MB" FontSize="13" FontWeight="SemiBold" />
+                                <TextBlock Text="Ước tính tải xuống" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </StackPanel>
-                        </StackPanel>
+                        </Grid>
                     </StackPanel>
                     <TextBlock x:Name="PreviewHint"
                                Text="Chọn loader để xem tóm tắt cấu hình."
                                FontSize="11"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                               TextWrapping="Wrap" />
+                               TextWrapping="Wrap"
+                               LineHeight="16" />
                 </StackPanel>
             </Border>
         </Grid>
@@ -186,15 +186,26 @@
             <Button x:Name="BackButton"
                     Grid.Column="0"
                     Content="← Quay lại"
+                    Height="36"
+                    Padding="16,7"
+                    CornerRadius="6"
                     Click="BackButton_Click" />
             <Button x:Name="CancelButton"
                     Grid.Column="1"
                     Content="Hủy"
+                    Height="36"
+                    Padding="16,7"
+                    CornerRadius="6"
                     Click="CancelButton_Click" />
             <Button x:Name="CreateButton"
                     Grid.Column="3"
                     Content="Tạo Instance"
                     Style="{StaticResource VazAccentButtonStyle}"
+                    Height="36"
+                    Padding="22,7"
+                    CornerRadius="6"
+                    FontWeight="SemiBold"
+                    FontSize="13"
                     Click="CreateButton_Click"
                     IsEnabled="False" />
         </Grid>

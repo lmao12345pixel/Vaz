@@ -4,17 +4,19 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <Border x:Name="GradientFallback" CornerRadius="8">
-        <Grid>
+        <Grid CornerRadius="8">
             <TextBlock
                 x:Name="FallbackText"
                 Text="1.21.1"
-                FontSize="26"
+                FontSize="24"
                 FontWeight="Bold"
                 Foreground="White"
-                Opacity="0.92"
+                Opacity="0.9"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center" />
-            <Image x:Name="CoverImage" Stretch="UniformToFill" Visibility="Collapsed" />
+            <Border CornerRadius="8">
+                <Image x:Name="CoverImage" Stretch="UniformToFill" Visibility="Collapsed" />
+            </Border>
         </Grid>
     </Border>
 </UserControl>
