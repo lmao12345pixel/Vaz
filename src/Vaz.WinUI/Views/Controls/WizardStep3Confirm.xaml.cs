@@ -107,6 +107,7 @@ public sealed partial class WizardStep3Confirm : UserControl
         "vanilla" => "Vanilla",
         "quilt" => "Quilt",
         "neoforge" => "NeoForge",
+        "forge" => "Forge",
         _ => "Fabric"
     };
 
