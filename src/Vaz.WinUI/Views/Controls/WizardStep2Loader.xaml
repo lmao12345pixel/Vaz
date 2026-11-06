@@ -27,7 +27,7 @@
         <StackPanel Grid.Row="0" Spacing="4">
             <TextBlock Text="Chọn Mod Loader" FontSize="28" FontWeight="SemiBold" />
             <TextBlock x:Name="BreadcrumbText"
-                       Text="Bước 2/2 · Minecraft"
+                       Text="Bước 2/3 · Minecraft"
                        FontSize="13"
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
         </StackPanel>
@@ -198,7 +198,7 @@
                     Click="CancelButton_Click" />
             <Button x:Name="CreateButton"
                     Grid.Column="3"
-                    Content="Tạo Instance"
+                    Content="Tiếp tục →"
                     Style="{StaticResource VazAccentButtonStyle}"
                     Height="36"
                     Padding="22,7"

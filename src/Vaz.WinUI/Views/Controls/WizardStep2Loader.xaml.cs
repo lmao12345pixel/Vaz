@@ -53,7 +53,7 @@ public sealed partial class WizardStep2Loader : UserControl
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        BreadcrumbText.Text = $"Bước 2/2 · Minecraft {State.SelectedVersion ?? "?"}";
+        BreadcrumbText.Text = $"Bước 2/3 · Minecraft {State.SelectedVersion ?? "?"}";
         if (string.IsNullOrWhiteSpace(NameBox.Text))
         {
             NameBox.Text = State.SelectedVersion != null ? $"Minecraft {State.SelectedVersion}" : "New Instance";

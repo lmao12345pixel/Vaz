@@ -5,34 +5,37 @@
     xmlns:local="using:Vaz.WinUI.Views.Controls"
     Title="Tạo instance mới"
     MaxWidth="880"
-    MaxHeight="660">
+    MaxHeight="700">
     <ContentDialog.Resources>
         <x:Double x:Key="ContentDialogMaxWidth">880</x:Double>
-        <x:Double x:Key="ContentDialogMaxHeight">660</x:Double>
+        <x:Double x:Key="ContentDialogMaxHeight">700</x:Double>
     </ContentDialog.Resources>
-    <Grid Width="820" Height="540" RowDefinitions="*,Auto,Auto,Auto" RowSpacing="4">
-        <!-- Step hosts -->
-        <Grid x:Name="Step1Host" Grid.Row="0">
-            <local:WizardStep1Version x:Name="Step1" />
-        </Grid>
-        <Grid x:Name="Step2Host" Grid.Row="0" Visibility="Collapsed" Opacity="0">
-            <local:WizardStep2Loader x:Name="Step2" />
+    <Grid x:Name="RootGrid" Width="820" Height="580" RowDefinitions="Auto,*,Auto,Auto" RowSpacing="6">
+        <!-- Top bar: Breadcrumb + Progress Indicator -->
+        <Grid Grid.Row="0" Margin="24,6,24,2">
+            <TextBlock x:Name="TopBreadcrumbText"
+                       Text="Bước 1/3 · Chọn phiên bản"
+                       FontSize="13"
+                       FontWeight="Medium"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                       VerticalAlignment="Center" />
+            <local:WizardProgressIndicator x:Name="ProgressIndicator"
+                                           HorizontalAlignment="Right"
+                                           VerticalAlignment="Center" />
         </Grid>
 
-        <!-- Progress UI khi đang cài -->
-        <StackPanel Grid.Row="1" Spacing="2" Margin="0,4,0,0" Visibility="{Binding IsInstalling, Converter={StaticResource BoolToVis}}">
-            <ProgressBar
-                Minimum="0"
-                Maximum="100"
-                Height="4"
-                IsIndeterminate="{Binding IsInstallerProgressIndeterminate}"
-                Value="{Binding InstallerProgressPercent}" />
-            <TextBlock
-                Text="{Binding InstallMessage}"
-                FontSize="12"
-                TextTrimming="CharacterEllipsis"
-                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-        </StackPanel>
+        <!-- Step container with 3 hosts -->
+        <Grid x:Name="StepContainer" Grid.Row="1">
+            <Grid x:Name="Step1Host">
+                <local:WizardStep1Version x:Name="Step1" />
+            </Grid>
+            <Grid x:Name="Step2Host" Visibility="Collapsed" Opacity="0">
+                <local:WizardStep2Loader x:Name="Step2" />
+            </Grid>
+            <Grid x:Name="Step3Host" Visibility="Collapsed" Opacity="0">
+                <local:WizardStep3Confirm x:Name="Step3" />
+            </Grid>
+        </Grid>
 
         <!-- InfoBars -->
         <InfoBar

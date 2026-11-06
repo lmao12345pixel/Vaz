@@ -1,6 +1,9 @@
+using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
@@ -13,13 +16,16 @@ using Vazer.Core.Versions;
 namespace Vaz.WinUI.Views;
 
 /// <summary>
-/// Wizard tạo instance mới (2 bước: chọn version → chọn loader).
-/// Validate qua CreateInstanceViewModel, tạo qua IInstanceCreationService.
+/// Wizard tạo instance mới 3 bước:
+/// Bước 1: Chọn Minecraft version.
+/// Bước 2: Chọn Mod Loader.
+/// Bước 3: Xác nhận & Tạo instance.
 /// </summary>
 public sealed partial class CreateInstanceDialog : ContentDialog
 {
     private readonly CreateInstanceViewModel _vm;
     private readonly WizardState _wizardState = new();
+    private int _currentStepIndex = 1;
 
     /// <summary>Id instance vừa tạo (null nếu user hủy hoặc tạo thất bại).</summary>
     public string? CreatedInstanceId { get; private set; }
@@ -30,97 +36,212 @@ public sealed partial class CreateInstanceDialog : ContentDialog
         DataContext = _vm;
         InitializeComponent();
 
-        // WinUI 3 ContentDialog không tự thừa hưởng theme từ MainWindow (AppThemeManager.DialogTheme).
         RequestedTheme = AppThemeManager.DialogTheme;
 
-        // Gán State dùng chung cho 2 step.
         Step1.State = _wizardState;
         Step2.State = _wizardState;
+        Step3.State = _wizardState;
 
-        // Đồng bộ khi user chọn xong ở Step 1 → chuyển sang Step 2.
-        Step1.ContinueRequested += (_, _) => SwitchToStep2();
+        // Step 1 navigation
+        Step1.ContinueRequested += (_, _) => SwitchToStep(2);
         Step1.CancelRequested += (_, _) => OnCancel();
 
-        Step2.BackRequested += (_, _) => SwitchToStep1();
+        // Step 2 navigation
+        Step2.BackRequested += (_, _) => SwitchToStep(1);
         Step2.CancelRequested += (_, _) => OnCancel();
-        Step2.CreateRequested += async (_, _) => await CreateInstanceAsync();
+        Step2.CreateRequested += (_, _) => SwitchToStep(3);
+
+        // Step 3 navigation
+        Step3.BackRequested += (_, _) => SwitchToStep(2);
+        Step3.CancelRequested += (_, _) => OnCancel();
+        Step3.CreateRequested += async (_, _) => await CreateInstanceAsync();
+        Step3.SuccessConfirmed += (_, _) => Hide();
+
+        _vm.PropertyChanged += OnViewModelPropertyChanged;
+
+        Loaded += OnLoaded;
+        Unloaded += OnUnloaded;
     }
 
-    private void OnCancel()
+    private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        if (!_vm.IsInstalling)
+        AnimateDialogOpen();
+        ApplyBackdropBlur();
+    }
+
+    private void OnUnloaded(object sender, RoutedEventArgs e)
+    {
+        _vm.PropertyChanged -= OnViewModelPropertyChanged;
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(CreateInstanceViewModel.InstallMessage) ||
+            e.PropertyName == nameof(CreateInstanceViewModel.InstallerProgressPercent) ||
+            e.PropertyName == nameof(CreateInstanceViewModel.InstallStage))
         {
-            Hide();
+            var msg = _vm.InstallMessage ?? "Đang tạo instance...";
+            Step3.UpdateProgress(_vm.InstallerProgressPercent, msg);
         }
     }
 
-    private void SwitchToStep2()
+    private void SwitchToStep(int targetStep)
     {
-        try { File.AppendAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Vazer", "nav_log.txt"), $"SwitchToStep2 version={_wizardState.SelectedVersion}\n"); } catch { }
-        _wizardState.CurrentStep = WizardStep.Step2Loader;
+        if (targetStep < 1 || targetStep > 3 || targetStep == _currentStepIndex) return;
 
-        if (!string.IsNullOrWhiteSpace(_wizardState.SelectedVersion))
+        var forward = targetStep > _currentStepIndex;
+        var oldHost = GetHostForStep(_currentStepIndex);
+        var newHost = GetHostForStep(targetStep);
+        _currentStepIndex = targetStep;
+
+        _wizardState.CurrentStep = (WizardStep)targetStep;
+        ProgressIndicator.SetStep(targetStep);
+
+        TopBreadcrumbText.Text = targetStep switch
         {
-            _vm.SelectedMinecraftVersion = _wizardState.SelectedVersion;
+            1 => "Bước 1/3 · Chọn phiên bản",
+            2 => "Bước 2/3 · Chọn Mod Loader",
+            3 => $"Bước 3/3 · {_wizardState.SelectedLoader ?? "Fabric"} {_wizardState.SelectedVersion ?? ""}".Trim(),
+            _ => ""
+        };
+
+        if (targetStep == 2)
+        {
+            Step2.SetBreadcrumb($"Bước 2/3 · Minecraft {_wizardState.SelectedVersion ?? "?"}");
         }
-        Step2.SetBreadcrumb($"Bước 2/2 · Minecraft {_wizardState.SelectedVersion ?? "?"}");
+        else if (targetStep == 3)
+        {
+            var loader = _wizardState.SelectedLoader ?? "Fabric";
+            var mc = _wizardState.SelectedVersion ?? "1.21.1";
+            _ = Step3.SetDefaultNameAsync(null, loader, mc);
+            Step3.SetBreadcrumb($"Bước 3/3 · {loader} {mc}");
+        }
 
-        // Fade + slide step1 out → step2 in.
-        Step1Host.Visibility = Visibility.Collapsed;
-        Step2Host.Visibility = Visibility.Visible;
-        AnimateHost(Step1Host, show: false);
-        AnimateHost(Step2Host, show: true);
+        AnimateStepTransition(oldHost, newHost, forward);
     }
 
-    private void SwitchToStep1()
+    private FrameworkElement GetHostForStep(int step) => step switch
     {
-        _wizardState.CurrentStep = WizardStep.Step1Version;
+        1 => Step1Host,
+        2 => Step2Host,
+        3 => Step3Host,
+        _ => Step1Host
+    };
 
-        Step2Host.Visibility = Visibility.Collapsed;
-        Step1Host.Visibility = Visibility.Visible;
-        AnimateHost(Step2Host, show: false);
-        AnimateHost(Step1Host, show: true);
-    }
-
-    private void AnimateHost(FrameworkElement host, bool show)
+    private void AnimateStepTransition(FrameworkElement oldHost, FrameworkElement newHost, bool forward)
     {
         if (AppThemeManager.IsReduceMotion)
         {
-            host.Opacity = show ? 1 : 0;
+            oldHost.Visibility = Visibility.Collapsed;
+            oldHost.Opacity = 0;
+            newHost.Visibility = Visibility.Visible;
+            newHost.Opacity = 1;
             return;
         }
 
-        var translate = new TranslateTransform { Y = show ? 12 : 0 };
-        host.RenderTransform = translate;
-        host.Opacity = show ? 0 : 1;
+        var slideWidth = 820.0;
+        var oldToX = forward ? -slideWidth : slideWidth;
+        var newFromX = forward ? slideWidth : -slideWidth;
+
+        var oldTranslate = new TranslateTransform { X = 0 };
+        oldHost.RenderTransform = oldTranslate;
+
+        var newTranslate = new TranslateTransform { X = newFromX };
+        newHost.RenderTransform = newTranslate;
+        newHost.Opacity = 0.0;
+        newHost.Visibility = Visibility.Visible;
+
+        var duration = new Duration(TimeSpan.FromMilliseconds(350));
+        var ease = new CubicEase { EasingMode = EasingMode.EaseInOut };
 
         var sb = new Storyboard();
-        var s = new Duration(TimeSpan.FromMilliseconds(220));
-        var animOp = new DoubleAnimation { To = show ? 1 : 0, Duration = s, EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
-        Storyboard.SetTarget(animOp, host);
-        Storyboard.SetTargetProperty(animOp, nameof(UIElement.Opacity));
-        var animY = new DoubleAnimation { To = 0, Duration = s, EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
-        Storyboard.SetTarget(animY, translate);
-        Storyboard.SetTargetProperty(animY, nameof(TranslateTransform.Y));
-        sb.Children.Add(animOp);
-        sb.Children.Add(animY);
+        sb.Duration = duration;
+
+        // Old host: slide out + fade out
+        var animOldX = new DoubleAnimation { To = oldToX, Duration = duration, EasingFunction = ease };
+        Storyboard.SetTarget(animOldX, oldTranslate);
+        Storyboard.SetTargetProperty(animOldX, nameof(TranslateTransform.X));
+
+        var animOldOp = new DoubleAnimation { To = 0.0, Duration = duration, EasingFunction = ease };
+        Storyboard.SetTarget(animOldOp, oldHost);
+        Storyboard.SetTargetProperty(animOldOp, nameof(UIElement.Opacity));
+
+        // New host: slide in + fade in
+        var animNewX = new DoubleAnimation { To = 0.0, Duration = duration, EasingFunction = ease };
+        Storyboard.SetTarget(animNewX, newTranslate);
+        Storyboard.SetTargetProperty(animNewX, nameof(TranslateTransform.X));
+
+        var animNewOp = new DoubleAnimation { To = 1.0, Duration = duration, EasingFunction = ease };
+        Storyboard.SetTarget(animNewOp, newHost);
+        Storyboard.SetTargetProperty(animNewOp, nameof(UIElement.Opacity));
+
+        sb.Children.Add(animOldX);
+        sb.Children.Add(animOldOp);
+        sb.Children.Add(animNewX);
+        sb.Children.Add(animNewOp);
+
+        sb.Completed += (_, _) =>
+        {
+            oldHost.Visibility = Visibility.Collapsed;
+        };
         sb.Begin();
     }
 
-    /// <summary>Tạo instance từ lựa chọn của wizard — giữ nguyên flow VM + error handling cũ.</summary>
+    private void AnimateDialogOpen()
+    {
+        if (AppThemeManager.IsReduceMotion) return;
+
+        RootGrid.RenderTransformOrigin = new Windows.Foundation.Point(0.5, 0.5);
+        var scale = new ScaleTransform { ScaleX = 0.92, ScaleY = 0.92 };
+        RootGrid.RenderTransform = scale;
+        RootGrid.Opacity = 0.0;
+
+        var sb = new Storyboard();
+        var duration = new Duration(TimeSpan.FromMilliseconds(300));
+        var ease = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.3 };
+
+        var animX = new DoubleAnimation { To = 1.0, Duration = duration, EasingFunction = ease };
+        Storyboard.SetTarget(animX, scale);
+        Storyboard.SetTargetProperty(animX, nameof(ScaleTransform.ScaleX));
+
+        var animY = new DoubleAnimation { To = 1.0, Duration = duration, EasingFunction = ease };
+        Storyboard.SetTarget(animY, scale);
+        Storyboard.SetTargetProperty(animY, nameof(ScaleTransform.ScaleY));
+
+        var animOp = new DoubleAnimation { To = 1.0, Duration = duration, EasingFunction = ease };
+        Storyboard.SetTarget(animOp, RootGrid);
+        Storyboard.SetTargetProperty(animOp, nameof(UIElement.Opacity));
+
+        sb.Children.Add(animX);
+        sb.Children.Add(animY);
+        sb.Children.Add(animOp);
+        sb.Begin();
+    }
+
+    private void ApplyBackdropBlur()
+    {
+        try
+        {
+            UiAnimationHelper.ApplyCompositionBackdrop(RootGrid, true);
+        }
+        catch
+        {
+            // Fallback graceful
+        }
+    }
+
     private async Task CreateInstanceAsync()
     {
         CreateErrorBar.IsOpen = false;
 
-        // Đồng bộ input từ wizard → VM.
-        _vm.Name = Step2.InstanceName;
+        _vm.Name = Step3.InstanceName;
         _vm.SelectedLoader = _wizardState.SelectedLoader ?? "Vanilla";
         _vm.SelectedMinecraftVersion = _wizardState.SelectedVersion ?? string.Empty;
         _vm.SelectedLoaderVersion = string.IsNullOrWhiteSpace(_wizardState.SelectedLoaderVersion)
             ? null
             : _wizardState.SelectedLoaderVersion;
 
-        Step2.SetCreateEnabled(false);
+        Step3.BeginCreating();
 
         var instance = await _vm.CreateAsync();
 
@@ -128,17 +249,22 @@ public sealed partial class CreateInstanceDialog : ContentDialog
         {
             CreateErrorBar.Message = _vm.ErrorMessage ?? "Không tạo được instance.";
             CreateErrorBar.IsOpen = true;
-            Step2.SetCreateEnabled(true);
+            Step3.CreationFailed();
             return;
         }
 
         CreatedInstanceId = instance.Id;
-
-        // Đóng dialog khi thành công.
-        Hide();
+        Step3.CreationSucceeded();
     }
 
-    /// <summary>Mở log NeoForge installer mới nhất (hoặc thư mục downloads nếu chưa có log).</summary>
+    private void OnCancel()
+    {
+        if (!Step3.IsCreating)
+        {
+            Hide();
+        }
+    }
+
     private void ViewInstallLogButton_Click(object sender, RoutedEventArgs e)
     {
         try
@@ -162,19 +288,6 @@ public sealed partial class CreateInstanceDialog : ContentDialog
         }
         catch
         {
-            // Không chặn flow khi không mở được log — thông điệp lỗi đã hiển thị trên InfoBar.
-        }
-    }
-
-    /// <summary>
-    /// WinUI 3 ContentDialog không có IsCloseButtonEnabled — chặn nút Hủy khi đang cài
-    /// bằng cách cancel CloseButtonClick (dialog giữ nguyên, cài đặt tiếp tục).
-    /// </summary>
-    private void Dialog_CloseButtonClick(ContentDialog sender, ContentDialogButtonClickEventArgs args)
-    {
-        if (_vm.IsInstalling)
-        {
-            args.Cancel = true;
         }
     }
 }

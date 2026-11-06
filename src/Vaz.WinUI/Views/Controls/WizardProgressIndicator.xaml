@@ -1,0 +1,53 @@
+<UserControl
+    x:Class="Vaz.WinUI.Views.Controls.WizardProgressIndicator"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+        <!-- Dot 1 -->
+        <Border x:Name="Dot1" Width="22" Height="22" CornerRadius="11"
+                Background="{StaticResource VazAccentBrush}"
+                BorderBrush="{StaticResource VazAccentBrush}"
+                BorderThickness="1.2" VerticalAlignment="Center">
+            <TextBlock x:Name="Label1" Text="1" FontSize="11" FontWeight="SemiBold"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                       Foreground="{ThemeResource SolidBackgroundFillColorBaseBrush}" />
+        </Border>
+
+        <!-- Connector 1 -> 2 -->
+        <Border x:Name="Line1" Width="64" Height="3" CornerRadius="1.5"
+                Background="{ThemeResource CardStrokeColorDefaultBrush}"
+                VerticalAlignment="Center">
+            <Border x:Name="Fill1" HorizontalAlignment="Stretch" Height="3" CornerRadius="1.5"
+                    Background="{StaticResource VazAccentBrush}" />
+        </Border>
+
+        <!-- Dot 2 -->
+        <Border x:Name="Dot2" Width="14" Height="14" CornerRadius="7"
+                Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1.2" VerticalAlignment="Center">
+            <TextBlock x:Name="Label2" Text="2" FontSize="10" FontWeight="SemiBold"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                       Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+        </Border>
+
+        <!-- Connector 2 -> 3 -->
+        <Border x:Name="Line2" Width="64" Height="3" CornerRadius="1.5"
+                Background="{ThemeResource CardStrokeColorDefaultBrush}"
+                VerticalAlignment="Center">
+            <Border x:Name="Fill2" HorizontalAlignment="Stretch" Height="3" CornerRadius="1.5"
+                    Background="{StaticResource VazAccentBrush}" />
+        </Border>
+
+        <!-- Dot 3 -->
+        <Border x:Name="Dot3" Width="14" Height="14" CornerRadius="7"
+                Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1.2" VerticalAlignment="Center">
+            <TextBlock x:Name="Label3" Text="3" FontSize="10" FontWeight="SemiBold"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                       Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+        </Border>
+    </StackPanel>
+</UserControl>
