@@ -39,6 +39,7 @@ public sealed partial class CreateInstanceDialog : ContentDialog
     private readonly WizardState _wizardState = new();
     private readonly MinecraftInstance? _changeInstance;
     private readonly ChangeVersionAction? _changeAction;
+    private string? _preselectMc;
     private int _currentStepIndex = 1;
 
     /// <summary>Id instance vừa tạo (null nếu user hủy hoặc tạo thất bại).</summary>
@@ -87,6 +88,7 @@ public sealed partial class CreateInstanceDialog : ContentDialog
         // Chế độ "Đổi phiên bản": preselect MC version + loader hiện tại, khóa tên instance.
         if (_changeInstance != null)
         {
+            _preselectMc = _changeInstance.MinecraftVersion;
             Step1.PendingSelectVersionId = _changeInstance.MinecraftVersion;
             _ = Step2.SelectLoaderAndVersionAsync(_changeInstance.LoaderType, _changeInstance.LoaderVersion);
         }
@@ -140,6 +142,16 @@ public sealed partial class CreateInstanceDialog : ContentDialog
         if (targetStep == 2)
         {
             Step2.SetBreadcrumb($"Bước 2/3 · Minecraft {_wizardState.SelectedVersion ?? "?"}");
+
+            // Change mode: user đã đổi MC version trong Step 1 → refresh loader versions cho MC mới
+            // (loại loader vẫn giữ, loader version về default mới nhất của MC mới).
+            if (_changeInstance != null && _wizardState.SelectedVersion != _preselectMc)
+            {
+                _preselectMc = _wizardState.SelectedVersion;
+                _ = Step2.SelectLoaderAndVersionAsync(
+                    _wizardState.SelectedLoader ?? _changeInstance.LoaderType,
+                    loaderVersion: null);
+            }
         }
         else if (targetStep == 3)
         {
