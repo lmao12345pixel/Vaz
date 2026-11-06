@@ -56,8 +56,9 @@ Bổ sung tính năng **"Đổi phiên bản"** trên Instance Detail: user đ�
 
 | Mốc | Kết quả |
 |---|---|
-| Baseline trước đợt | **408/408** pass (`dotnet test Vaz.sln`) |
-| Sau đợt | **408/408** pass, 0 skip (`dotnet test Vaz.sln`) |
+| Baseline trước đợt (Phase C) | **408/408** pass (`dotnet test Vaz.sln`) |
+| Sau Phase C | **408/408** pass |
+| Sau Đợt 18.5b (Rollback unit test) | **413/413** pass, 0 skip (`dotnet test Vaz.sln`) |
 | `npm run check:static` / `check.ps1 -Scope static` | **PASSED** (build + test + agent config) |
 | Build WinUI | 0 error (warnings pre-existing CS1998/CS8620 không do đợt này) |
 | `check:web` | Không cần — web prototype/tests không bị đụng trong đợt (feature dùng wizard app có sẵn) |
@@ -72,8 +73,7 @@ Test instance thật: `fabric 1.21.1 #4` (Fabric 1.21.1, loader 0.20.1, **5 mods
 | 2 | Xóa mods | Đổi → **Vanilla 1.20.6** (đổi cả loader), chọn "Đổi ngay, xóa mods" | `instance.json` = vanilla/1.20.6 (`launchVersionName=1.20.6`, loaderVersion null); **`mods/` + `mods.json` bị xóa**; world PhaseCWorld còn; options.txt/config còn; có `.bak` | ✅ **PASS** |
 | 3 | Hủy | Mở wizard → Step 3 → "Đổi phiên bản" → warning → **Hủy** | Không đổi gì: `instance.json` giữ nguyên fabric 1.21.1; **KHÔNG tạo `.bak`**; mods/world nguyên vẹn | ✅ **PASS** |
 
-- Video 45s (yêu cầu bắt buộc): mở Instance Detail → "Đổi phiên bản" → chọn version mới (1.21.1) → warning → chọn **"giữ mods"** → verify thành công trên đĩa (`instance.json` đổi về fabric 1.21.1, 5 mods + world còn). → xem §5.
-- Unit test: **không thêm test xUnit mới** (logic migration ở WinUI ViewModel, chạy bằng runtime scenario thật ở trên; Core không đổi nên 408 test giữ nguyên pass). Rollback-when-fail (path catch trong `ChangeVersionAsync`) chưa có unit test — xem §8.
+- Unit test (Đợt 18.5b): **5 unit tests mới** trong `tests/Vazer.Core.Tests/InstanceMigrationServiceTests.cs` cover 100% các nhánh success, remove mods, fail install rollback, mid-install cancel rollback, và cancel before start. 5/5 PASS.
 
 ## 5. Bằng chứng (Evidence)
 
@@ -118,7 +118,12 @@ Kèm: `mods/` + `mods.json` **bị xóa**, world PhaseCWorld còn, options.txt +
 ## 6. Known issues / Hạn chế
 
 1. **Nested ContentDialog không mở trong WinUI 3** — đây là giới hạn của framework (dialog con trong dialog cha bị block). Giải pháp: overlay panel trong Step 3 (không thể dùng `ContentDialog` thật cho warning). Đảm bảo user-visible behavior giống 3 lựa chọn; đã ghi nhận.
-2. **Rollback khi cài thất bại / cancel giữa chừng** (`catch`/`OperationCanceledException` → restore `.bak`) — có code + logic, nhưng **chưa được ép fail tại runtime** (installer luôn thành công trong 3 kịch bản). Xem §8.
+2. **Rollback path** — **ĐÃ TEST** (Đợt 18.5b). Đã tách logic sang `InstanceMigrationService` (Core) và hoàn thành 5/5 unit test trong `tests/Vazer.Core.Tests/InstanceMigrationServiceTests.cs`:
+   - Case 1: `ChangeVersionAsync_Success_KeepMods_PreservesModsAndCreatesBackups` — **PASS**. `instance.json` mới, 2 mods giữ nguyên, `instance.json.bak` + `mods.json.bak` tồn tại.
+   - Case 2: `ChangeVersionAsync_Success_RemoveMods_DeletesModsDirectoryAndManifest` — **PASS**. `instance.json` đổi sang vanilla, thư mục `mods/` và `mods.json` bị xóa, `.bak` tồn tại.
+   - Case 3: `ChangeVersionAsync_FailDuringInstall_RestoresOriginalInstanceJsonAndPreservesMods` — **PASS**. Mock `CreateAsync` throw `InvalidOperationException` → rollback `instance.json` về 1.21.1 ban đầu, mods không bị động.
+   - Case 4: `ChangeVersionAsync_CancelMidInstall_RestoresBackupsAndRethrowsOperationCanceled` — **PASS**. Mock `cts.Cancel()` khi đang ghi dở dang → rollback `instance.json` từ `.bak`, rethrow `OperationCanceledException`, mods nguyên vẹn.
+   - Case 5: `ChangeVersionAsync_CancelBeforeStart_DoesNotCreateBackupsOrModifyFiles` — **PASS**. `cts.Cancel()` trước khi gọi → ném `OperationCanceledException`, không tạo bất kỳ file `.bak` nào, `CreateAsync` không bao giờ được gọi.
 3. **Loader version trong Step 2 khi đổi MC**: preselect chỉ giữ loader version nếu version đó vẫn tồn tại cho MC mới; nếu không, rơi về version mới nhất (thử bằng `ItemsSource.Cast<object>()`). Loader version cũ (ví dụ Fabric 0.20.1 cho MC cũ) với MC mới có thể khác bản mới nhất — đây là hành vi mong muốn (không ép version có thể không tồn tại).
 4. Instance test `fabric 1.21.1 #4` **đã bị xóa sau khi thu evidence** (là dữ liệu test, không phải instance user). Không còn dư máy.
 5. **`instance.json.bak` / `mods.json.bak` còn lại** sau khi đổi thành công — có chủ đích (giữ để user tự khôi phục nếu cần). Không tự xóa.
@@ -126,16 +131,16 @@ Kèm: `mods/` + `mods.json` **bị xóa**, world PhaseCWorld còn, options.txt +
 
 ## 7. Đề xuất (sau đợt này)
 
-1. **Unit test cho rollback path**: `ChangeVersionAsync` (KeepMods thành công, DeleteMods, Fail→restore) đang ở WinUI VM, chưa có test xUnit. Đề xuất tách logic migration sang 1 service Core (`IInstanceChanger`) + test `FAIL→restore` với installer giả ném exception.
-2. **Cảnh báo world không tương thích**: hiện chỉ cảnh báo chung "mods và world có thể hỏng". Có thể nâng cấp: liệt kê số mods/số world sẽ bị ảnh hưởng trước khi xác nhận.
-3. **`.bak` dọn dẹp**: thêm tùy chọn "xóa file backup cũ" hoặc tự xóa `.bak` sau N lần chạy thành công.
-4. Nếu cảnh báo 3 lựa chọn cần reachable bằng user click "X" hoặc ESC trong lúc panel mở: hiện ESC khi panel mở sẽ đóng toàn bộ wizard (hành vi cũ). Có thể xử lý sau nếu cần.
-5. **Khôi phục launcher "đang chọn instance"**: sau khi đổi version, Instance Detail reload (`LoadAsync`) + `InstancesChangedMessage` — đã làm; thêm test automation ổn định nếu cần.
+1. **Cảnh báo world không tương thích**: hiện chỉ cảnh báo chung "mods và world có thể hỏng". Có thể nâng cấp: liệt kê số mods/số world sẽ bị ảnh hưởng trước khi xác nhận.
+2. **`.bak` dọn dẹp**: thêm tùy chọn "xóa file backup cũ" hoặc tự xóa `.bak` sau N lần chạy thành công.
+3. Nếu cảnh báo 3 lựa chọn cần reachable bằng user click "X" hoặc ESC trong lúc panel mở: hiện ESC khi panel mở sẽ đóng toàn bộ wizard (hành vi cũ). Có thể xử lý sau nếu cần.
+4. **Khôi phục launcher "đang chọn instance"**: sau khi đổi version, Instance Detail reload (`LoadAsync`) + `InstancesChangedMessage` — đã làm; thêm test automation ổn định nếu cần.
 
 ## 8. Self-review & CHƯA KIỂM TRA
 
 - Không tự đánh giá UI/parity PASS; mọi ảnh/video là capture thật trên máy chạy (xem §5).
-- **CHƯA KIỂM TRA (runtime)**: (a) Rollback khi installer fail (giả lập offline/fail) — code có, chưa ép được fail tự nhiên; (b) đổi loader sang **NeoForge/Quilt/Forge** end-to-end khác Fabric (cùng code path nhưng chưa chạy; Forge headless ≥1.13, Vanilla/NeoForge tương tự); (c) đổi MC **xuống** bản chưa cài (cần download) và **lên** bản mới hơn; (d) launch game sau khi đổi version (vào main menu) — phụ thuộc GPU máy (đã biết hạn chế từ 18.4, Forge/Fabric chưa vào menu trên Intel HD 4600).
+- **ĐÃ TEST (unit test mock)**: Rollback khi installer fail & cancel mid-install (đã PASS 5/5 case trong `InstanceMigrationServiceTests`).
+- **CHƯA KIỂM TRA (runtime)**: (a) đổi loader sang **NeoForge/Quilt/Forge** end-to-end khác Fabric (cùng code path nhưng chưa chạy; Forge headless ≥1.13, Vanilla/NeoForge tương tự); (b) đổi MC **xuống** bản chưa cài (cần download) và **lên** bản mới hơn; (c) launch game sau khi đổi version (vào main menu) — phụ thuộc GPU máy (đã biết hạn chế từ 18.4, Forge/Fabric chưa vào menu trên Intel HD 4600).
 - **Manual test script (10 bước)** cho user:
   1. Mở V.A.Z → Instances → chọn instance **Fabric 1.21.1** có mods.
   2. Header → nút **"Đổi phiên bản"**.
