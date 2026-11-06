@@ -256,23 +256,10 @@ public sealed class JavaResolver : IJavaResolver
     /// <inheritdoc />
     public int RequiredJava(string minecraftVersion)
     {
-        // Parse version
-        var parts = minecraftVersion.Split('.', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length < 2) return 17; // default
-
-        var major = int.TryParse(parts[0], out var m) ? m : 1;
-        var minor = int.TryParse(parts[1], out var n) ? n : 0;
-
-        // Version -> Java mapping
-        return (major, minor) switch
-        {
-            (1, <= 16) => 8,    // 1.8 - 1.16
-            (1, 17) => 16,      // 1.17
-            (1, 18) => 17,      // 1.18
-            (1, >= 19 and <= 20) => 17, // 1.19 - 1.20
-            (1, >= 21) => 21,   // 1.21+
-            _ => 17
-        };
+        // Một nguồn logic duy nhất: JavaVersionMapper (Phase E). Snapshot/custom
+        // không map được → giữ default 17 cho các luồng chọn Java hiện có.
+        var mapped = JavaVersionMapper.Default.GetRequiredJavaVersion(minecraftVersion);
+        return mapped == JavaRequirements.Unknown ? 17 : mapped;
     }
 
     /// <inheritdoc />

@@ -89,6 +89,7 @@ public static class MinecraftServiceCollectionExtensions
         services.AddSingleton<IAuthProvider, MsalAuthProvider>();
         services.AddSingleton<CompositeAuthProvider>();
         services.AddSingleton<IAdoptiumClient, AdoptiumClient>();
+        services.AddSingleton<IJavaVersionMapper, JavaVersionMapper>();
         services.AddSingleton<IJavaResolver, JavaResolver>();
         // Loader installers (Strategy pattern cho IInstanceCreationService).
         // NeoForgeInstaller cũng là INeoForgeInstaller (InstanceManager/MrpackImporter dùng).
