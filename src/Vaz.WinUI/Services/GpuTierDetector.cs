@@ -1,4 +1,4 @@
-using Vaz.WinUI.Helpers;
+using Microsoft.Win32;
 using Vaz.WinUI.Models;
 
 namespace Vaz.WinUI.Services;
@@ -8,8 +8,9 @@ namespace Vaz.WinUI.Services;
 /// composition backdrop). Intel HD Graphics 4600 (driver 2016) → Lite;
 /// NVIDIA / AMD / Intel Arc → Full; không xác định → Full (an toàn).
 ///
-/// Không thêm package: tái dùng <see cref="SystemSpecsProvider.Gpu"/> (đọc registry
-/// DriverDesc của display adapter). User có thể override qua Settings.
+/// Không thêm package: đọc trực tiếp registry DriverDesc của TẤT CẢ display adapter
+/// (SystemSpecsProvider.Gpu chỉ trả adapter đầu tiên, thường là "Hyper-V Video" trên VM).
+/// User có thể override qua Settings.
 /// </summary>
 public sealed class GpuTierDetector
 {
@@ -21,8 +22,9 @@ public sealed class GpuTierDetector
 
     public GpuTierDetector()
     {
-        DetectedName = SystemSpecsProvider.Gpu;
-        _detectedLowTier = IsLegacyIntelGpu(DetectedName);
+        var detection = DetectPrimaryAdapter();
+        DetectedName = detection.Name;
+        _detectedLowTier = detection.IsLowTier;
     }
 
     /// <summary>Tên GPU đọc được (hoặc "Không xác định").</summary>
@@ -46,6 +48,45 @@ public sealed class GpuTierDetector
 
     /// <summary>Áp lựa chọn của user (Auto / Full / Lite).</summary>
     public void ApplyOverride(GpuTier tier) => _override = tier;
+
+    private static (string Name, bool IsLowTier) DetectPrimaryAdapter()
+    {
+        const string displayClassKey =
+            @"SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}";
+
+        var names = new List<string>();
+        try
+        {
+            using var root = Registry.LocalMachine.OpenSubKey(displayClassKey);
+            if (root != null)
+            {
+                foreach (var subKeyName in root.GetSubKeyNames())
+                {
+                    using var adapter = root.OpenSubKey(subKeyName);
+                    if (adapter?.GetValue("DriverDesc") is string desc && !string.IsNullOrWhiteSpace(desc))
+                    {
+                        names.Add(desc.Trim());
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Registry bị chặn / không có key → không đủ căn cứ, mặc định Full.
+        }
+
+        // Bỏ adapter ảo (Hyper-V, Basic Display, USB virtual) rồi lấy GPU thật đầu tiên.
+        foreach (var name in names)
+        {
+            if (IsVirtualAdapter(name)) continue;
+            return (name, IsLegacyIntelGpu(name));
+        }
+
+        return (names.Count > 0 ? names[0] : "Không xác định", false);
+    }
+
+    private static bool IsVirtualAdapter(string name) =>
+        ContainsAny(name, "Hyper-V Video", "Basic Display Adapter", "Virtual Display", "Mirror", "Remote Display");
 
     private static bool IsLegacyIntelGpu(string? name)
     {
