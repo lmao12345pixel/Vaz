@@ -5,47 +5,47 @@
 
     <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
         <!-- Dot 1 -->
-        <Border x:Name="Dot1" Width="22" Height="22" CornerRadius="11"
-                Background="{StaticResource VazAccentBrush}"
-                BorderBrush="{StaticResource VazAccentBrush}"
+        <Border x:Name="Dot1" Width="22" Height="22" CornerRadius="{ThemeResource MkVibeBlockCorner}"
+                Background="{ThemeResource MkVibeEmeraldBrush}"
+                BorderBrush="{ThemeResource MkVibeEmeraldBrush}"
                 BorderThickness="1.2" VerticalAlignment="Center">
-            <TextBlock x:Name="Label1" Text="1" FontSize="11" FontWeight="SemiBold"
+            <TextBlock x:Name="Label1" Text="1" FontSize="11" FontFamily="{ThemeResource MkVibePixelFont}" FontWeight="SemiBold"
                        HorizontalAlignment="Center" VerticalAlignment="Center"
                        Foreground="{ThemeResource SolidBackgroundFillColorBaseBrush}" />
         </Border>
 
         <!-- Connector 1 -> 2 -->
-        <Border x:Name="Line1" Width="64" Height="3" CornerRadius="1.5"
+        <Border x:Name="Line1" Width="64" Height="3" CornerRadius="{ThemeResource MkVibeBlockCorner}"
                 Background="{ThemeResource CardStrokeColorDefaultBrush}"
                 VerticalAlignment="Center">
-            <Border x:Name="Fill1" HorizontalAlignment="Stretch" Height="3" CornerRadius="1.5"
-                    Background="{StaticResource VazAccentBrush}" />
+            <Border x:Name="Fill1" HorizontalAlignment="Stretch" Height="3" CornerRadius="{ThemeResource MkVibeBlockCorner}"
+                    Background="{ThemeResource MkVibeEmeraldBrush}" />
         </Border>
 
         <!-- Dot 2 -->
-        <Border x:Name="Dot2" Width="14" Height="14" CornerRadius="7"
+        <Border x:Name="Dot2" Width="14" Height="14" CornerRadius="{ThemeResource MkVibeBlockCorner}"
                 Background="{ThemeResource SubtleFillColorSecondaryBrush}"
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1.2" VerticalAlignment="Center">
-            <TextBlock x:Name="Label2" Text="2" FontSize="10" FontWeight="SemiBold"
+            <TextBlock x:Name="Label2" Text="2" FontSize="10" FontFamily="{ThemeResource MkVibePixelFont}" FontWeight="SemiBold"
                        HorizontalAlignment="Center" VerticalAlignment="Center"
                        Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
         </Border>
 
         <!-- Connector 2 -> 3 -->
-        <Border x:Name="Line2" Width="64" Height="3" CornerRadius="1.5"
+        <Border x:Name="Line2" Width="64" Height="3" CornerRadius="{ThemeResource MkVibeBlockCorner}"
                 Background="{ThemeResource CardStrokeColorDefaultBrush}"
                 VerticalAlignment="Center">
-            <Border x:Name="Fill2" HorizontalAlignment="Stretch" Height="3" CornerRadius="1.5"
-                    Background="{StaticResource VazAccentBrush}" />
+            <Border x:Name="Fill2" HorizontalAlignment="Stretch" Height="3" CornerRadius="{ThemeResource MkVibeBlockCorner}"
+                    Background="{ThemeResource MkVibeEmeraldBrush}" />
         </Border>
 
         <!-- Dot 3 -->
-        <Border x:Name="Dot3" Width="14" Height="14" CornerRadius="7"
+        <Border x:Name="Dot3" Width="14" Height="14" CornerRadius="{ThemeResource MkVibeBlockCorner}"
                 Background="{ThemeResource SubtleFillColorSecondaryBrush}"
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1.2" VerticalAlignment="Center">
-            <TextBlock x:Name="Label3" Text="3" FontSize="10" FontWeight="SemiBold"
+            <TextBlock x:Name="Label3" Text="3" FontSize="10" FontFamily="{ThemeResource MkVibePixelFont}" FontWeight="SemiBold"
                        HorizontalAlignment="Center" VerticalAlignment="Center"
                        Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
         </Border>

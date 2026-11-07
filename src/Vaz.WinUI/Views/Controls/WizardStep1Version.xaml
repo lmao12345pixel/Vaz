@@ -6,9 +6,11 @@
     <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10" Padding="24,10,24,6">
         <!-- Hero header -->
         <StackPanel Grid.Row="0" Spacing="4">
-            <TextBlock Text="Bạn muốn chơi phiên bản nào?" FontSize="28" FontWeight="SemiBold" />
+            <TextBlock Text="Bạn muốn chơi phiên bản nào?" Style="{StaticResource MkVibeTitleStyle}" />
             <TextBlock Text="Chọn phiên bản Minecraft — bản đã cài có nhãn &#8220;Đã cài&#8221;."
-                       FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                       FontSize="13"
+                       FontFamily="{ThemeResource MkVibePixelFont}"
+                       Foreground="{ThemeResource MkVibeMutedTextBrush}" />
         </StackPanel>
 
         <!-- Search -->
@@ -16,8 +18,8 @@
             x:Name="SearchGlow"
             Grid.Row="1"
             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-            BorderThickness="1.5"
-            CornerRadius="8"
+            BorderThickness="3"
+            CornerRadius="{ThemeResource MkVibeBlockCorner}"
             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
             Height="44">
             <Grid ColumnDefinitions="Auto,*">

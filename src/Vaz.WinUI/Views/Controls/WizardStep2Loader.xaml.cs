@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Vaz.WinUI.Helpers;
 using Vaz.WinUI.Models;
+using Vaz.WinUI.Services;
 using Vazer.Core.Loaders;
 using Vazer.Core.Versions;
 
@@ -60,10 +61,13 @@ public sealed partial class WizardStep2Loader : UserControl
             NameBox.Text = State.SelectedVersion != null ? $"Minecraft {State.SelectedVersion}" : "New Instance";
         }
 
-        // Staggered entrance cho hero + loader grid (#1).
-        foreach (UIElement child in ((Grid)Content).Children)
+        // Staggered entrance cho hero + loader grid (#1) — tắt trên GPU yếu.
+        if (GpuTierDetector.Current.IsHeavyEffectsEnabled)
         {
-            UiAnimationHelper.RunStaggeredEntrance(child, 0, fromY: 16, durationMs: 250);
+            foreach (UIElement child in ((Grid)Content).Children)
+            {
+                UiAnimationHelper.RunStaggeredEntrance(child, 0, fromY: 16, durationMs: 250);
+            }
         }
 
         UpdatePreview();
@@ -150,7 +154,7 @@ public sealed partial class WizardStep2Loader : UserControl
     private void AnimateLogoSpin(TextBlock? logo)
     {
         if (logo == null) return;
-        if (AppThemeManager.IsReduceMotion) return;
+        if (AppThemeManager.IsReduceMotion || !GpuTierDetector.Current.IsHeavyEffectsEnabled) return;
 
         logo.RenderTransformOrigin = new Windows.Foundation.Point(0.5, 0.5);
         var transform = new RotateTransform { Angle = 0 };

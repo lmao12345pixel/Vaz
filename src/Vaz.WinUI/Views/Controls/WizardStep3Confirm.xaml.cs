@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Shapes;
 using Vaz.WinUI.Helpers;
 using Vaz.WinUI.Models;
+using Vaz.WinUI.Services;
 using Vazer.Core.Abstractions;
 using Vazer.Core.Instances;
 using Vazer.Core.Loaders;
@@ -194,14 +195,17 @@ public sealed partial class WizardStep3Confirm : UserControl
         ValidateCreate();
         SetFooterButtonsEnabled(true);
 
-        // Staggered entrance cho hero + card + footer (#1 chỉ khi first load).
-        foreach (UIElement child in ((Grid)Content).Children)
+        // Staggered entrance (#1) — tắt trên GPU yếu.
+        if (GpuTierDetector.Current.IsHeavyEffectsEnabled)
         {
-            UiAnimationHelper.RunStaggeredEntrance(child, 0, fromY: 16, durationMs: 250);
+            foreach (UIElement child in ((Grid)Content).Children)
+            {
+                UiAnimationHelper.RunStaggeredEntrance(child, 0, fromY: 16, durationMs: 250);
+            }
         }
 
-        // Animated gradient cho preview card (10s loop, chậm, chỉ khi không reduce-motion).
-        if (!AppThemeManager.IsReduceMotion)
+        // Animated gradient cho preview card (10s loop) — chỉ khi GPU đủ mạnh.
+        if (!AppThemeManager.IsReduceMotion && GpuTierDetector.Current.IsHeavyEffectsEnabled)
         {
             StartGradientLoop();
         }
@@ -288,7 +292,7 @@ public sealed partial class WizardStep3Confirm : UserControl
     /// <summary>Pulse glow loop khi nút tạo đủ điều kiện (#6).</summary>
     private void UpdateCreatePulse()
     {
-        if (AppThemeManager.IsReduceMotion)
+        if (AppThemeManager.IsReduceMotion || !GpuTierDetector.Current.IsHeavyEffectsEnabled)
         {
             CreateGlow.Opacity = CreateButton.IsEnabled ? 0.9 : 0;
             return;

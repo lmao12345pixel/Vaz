@@ -38,11 +38,12 @@
     <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10" Padding="24,10,24,6">
         <!-- Hero + subtitle -->
         <StackPanel Grid.Row="0" Spacing="4">
-            <TextBlock Text="Xác nhận &amp; tạo" FontSize="26" FontWeight="SemiBold" />
+            <TextBlock Text="Xác nhận &amp; tạo" Style="{StaticResource MkVibeTitleStyle}" />
             <TextBlock x:Name="BreadcrumbText"
                        Text="Kiểm tra cấu hình trước khi tạo instance."
                        FontSize="13"
-                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                       FontFamily="{ThemeResource MkVibePixelFont}"
+                       Foreground="{ThemeResource MkVibeMutedTextBrush}" />
         </StackPanel>
 
         <!-- Preview card -->
@@ -52,7 +53,9 @@
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
                 Background="{StaticResource PreviewGradientBrush}"
-                CornerRadius="{StaticResource VazRadiusLg}"
+                BorderBrush="{ThemeResource MkVibeDirtBrush}"
+                BorderThickness="{ThemeResource MkVibeBlockThickness}"
+                CornerRadius="{ThemeResource MkVibeBlockCorner}"
                 Padding="26,22,26,18">
             <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="12">
                 <!-- Big loader tile -->
@@ -60,14 +63,14 @@
                         Grid.Row="0"
                         Width="104"
                         Height="104"
-                        CornerRadius="24"
+                        CornerRadius="{ThemeResource MkVibeBlockCorner}"
                         HorizontalAlignment="Center"
                         Background="{StaticResource FabricGradient}">
                     <TextBlock x:Name="LoaderGlyph"
                                Text="F"
                                FontSize="46"
                                FontWeight="Bold"
-                               Foreground="White"
+                               Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center" />
                 </Border>
@@ -77,7 +80,7 @@
                            Text="Minecraft 1.21.1"
                            FontSize="22"
                            FontWeight="SemiBold"
-                           Foreground="White"
+                           Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
                            HorizontalAlignment="Center" />
 
                 <TextBlock x:Name="LoaderLine"
@@ -85,7 +88,7 @@
                            Text="Fabric"
                            FontSize="13"
                            FontWeight="Medium"
-                           Foreground="#E8FFFFFF"
+                           Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
                            HorizontalAlignment="Center" />
 
                 <!-- Editable name -->
@@ -99,7 +102,7 @@
                              BorderBrush="#33FFFFFF"
                              BorderThickness="1"
                              CornerRadius="10"
-                             Foreground="White"
+                             Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
                              HorizontalAlignment="Stretch" />
                     <TextBlock x:Name="FloatingLabel"
                                Text="Tên instance"
@@ -144,7 +147,7 @@
                         CornerRadius="19"
                         BorderThickness="0"
                         Background="{StaticResource CreateGradient}"
-                        Foreground="White"
+                        Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
                         FontWeight="SemiBold"
                         FontSize="14"
                         IsEnabled="False"
@@ -173,19 +176,19 @@
                                               IsActive="True"
                                               Width="16"
                                               Height="16"
-                                              Foreground="White"
+                                              Foreground="{ThemeResource MkVibeFurnaceBrush}"
                                               VerticalAlignment="Center" />
                                 <TextBlock x:Name="StageText"
                                            Text="Đang chuẩn bị..."
                                            FontSize="13"
                                            FontWeight="SemiBold"
-                                           Foreground="White"
+                                           Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
                                            VerticalAlignment="Center" />
                                 <TextBlock x:Name="PercentText"
                                            Text=""
                                            FontSize="13"
                                            FontWeight="Bold"
-                                           Foreground="White"
+                                           Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
                                            Visibility="Collapsed"
                                            VerticalAlignment="Center" />
                             </StackPanel>
@@ -205,7 +208,7 @@
                                 <TextBlock Text="Đã tạo thành công!"
                                            FontSize="13"
                                            FontWeight="SemiBold"
-                                           Foreground="White"
+                                           Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
                                            VerticalAlignment="Center" />
                             </StackPanel>
                         </Grid>

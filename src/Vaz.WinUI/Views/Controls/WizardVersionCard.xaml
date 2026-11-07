@@ -15,11 +15,12 @@
         CornerRadius="{StaticResource VazRadiusMd}">
         <Border
             x:Name="CardBorder"
+            Style="{StaticResource MkVibeCardStyle}"
             IsHitTestVisible="False"
-            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            Background="{ThemeResource MkVibeBlockBrush}"
             BorderBrush="{x:Bind IsSelected, Mode=OneWay, Converter={StaticResource BoolToActiveBorderBrush}}"
             BorderThickness="{x:Bind IsSelected, Mode=OneWay, Converter={StaticResource BoolToActiveBorderThickness}}"
-            CornerRadius="{StaticResource VazRadiusMd}"
+            CornerRadius="{ThemeResource MkVibeBlockCorner}"
             Padding="8"
             Width="216"
             Height="180">
@@ -30,10 +31,10 @@
                     <Border
                         x:Name="CheckBadge"
                         Visibility="Collapsed"
-                        Background="{StaticResource VazAccentBrush}"
+                        Background="{ThemeResource MkVibeEmeraldBrush}"
                         Width="24"
                         Height="24"
-                        CornerRadius="12"
+                        CornerRadius="{ThemeResource MkVibeBlockCorner}"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Top"
                         Margin="8">
@@ -43,19 +44,28 @@
                     <Border
                         x:Name="InstalledBadge"
                         Visibility="Collapsed"
-                        Background="{StaticResource VazAccentSubtleBrush}"
-                        BorderBrush="{StaticResource VazAccentBrush}"
+                        Background="{ThemeResource MkVibeEmeraldBrush}"
+                        BorderBrush="{ThemeResource MkVibeDirtBrush}"
                         BorderThickness="1"
-                        CornerRadius="4"
+                        CornerRadius="{ThemeResource MkVibeBlockCorner}"
                         Padding="6,2"
                         HorizontalAlignment="Left"
                         VerticalAlignment="Top"
                         Margin="8">
-                        <TextBlock Text="Đã cài" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource VazAccentBrush}" />
+                        <TextBlock Text="Đã cài" FontSize="10" FontWeight="SemiBold" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" />
                     </Border>
+
+                    <!-- Enchantment glint: chỉ bật khi GPU đủ mạnh và card được chọn -->
+                    <Border
+                        x:Name="GlintOverlay"
+                        Style="{StaticResource MkVibeGlintStyle}"
+                        Visibility="Collapsed" />
                 </Grid>
 
-                <TextBlock Grid.Row="1" x:Name="VersionText" Text="1.21.1" FontSize="17" FontWeight="SemiBold" />
+                <TextBlock Grid.Row="1" x:Name="VersionText" Text="1.21.1" FontSize="17"
+                           FontFamily="{ThemeResource MkVibePixelFont}"
+                           FontWeight="SemiBold"
+                           Foreground="{ThemeResource MkVibeTextBrush}" />
 
                 <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                     <Border Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="4" Padding="6,2">

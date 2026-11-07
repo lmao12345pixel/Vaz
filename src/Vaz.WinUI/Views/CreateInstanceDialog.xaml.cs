@@ -10,6 +10,7 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Vaz.WinUI.Helpers;
 using Vaz.WinUI.Models;
+using Vaz.WinUI.Services;
 using Vaz.WinUI.ViewModels;
 using Vazer.Core.Abstractions;
 using Vazer.Core.Loaders;
@@ -189,7 +190,7 @@ public sealed partial class CreateInstanceDialog : ContentDialog
         newHost.Visibility = Visibility.Visible;
         newHost.Opacity = 1;
 
-        if (AppThemeManager.IsReduceMotion)
+        if (AppThemeManager.IsReduceMotion || !GpuTierDetector.Current.IsHeavyEffectsEnabled)
         {
             newHost.RenderTransform = null;
             return;
@@ -221,7 +222,7 @@ public sealed partial class CreateInstanceDialog : ContentDialog
 
     private void AnimateDialogOpen()
     {
-        if (AppThemeManager.IsReduceMotion) return;
+        if (AppThemeManager.IsReduceMotion || !GpuTierDetector.Current.IsHeavyEffectsEnabled) return;
 
         RootGrid.RenderTransformOrigin = new Windows.Foundation.Point(0.5, 0.5);
         var scale = new ScaleTransform { ScaleX = 0.92, ScaleY = 0.92 };
@@ -252,6 +253,9 @@ public sealed partial class CreateInstanceDialog : ContentDialog
 
     private void ApplyBackdropBlur()
     {
+        // GPU yếu (Intel HD 4600): bỏ composition backdrop — hiệu ứng nặng nhất.
+        if (!GpuTierDetector.Current.IsHeavyEffectsEnabled) return;
+
         try
         {
             UiAnimationHelper.ApplyCompositionBackdrop(RootGrid, true);

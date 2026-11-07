@@ -7,6 +7,7 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Vaz.WinUI.Helpers;
 using Vaz.WinUI.Models;
+using Vaz.WinUI.Services;
 using Vazer.Core.Versions;
 
 namespace Vaz.WinUI.Views.Controls;
@@ -57,8 +58,8 @@ public sealed partial class WizardStep1Version : UserControl
         if (_loaded) return;
         _loaded = true;
 
-        // Staggered entrance cho hero/search/footer (#1, nhẹ vì chỉ 4 phần tử).
-        if (Parent is Grid rootGrid)
+        // Staggered entrance cho hero/search/footer (#1) — tắt trên GPU yếu.
+        if (GpuTierDetector.Current.IsHeavyEffectsEnabled && Parent is Grid rootGrid)
         {
             foreach (UIElement child in rootGrid.Children)
             {
@@ -142,7 +143,7 @@ public sealed partial class WizardStep1Version : UserControl
             CardGrid.Children.Add(card);
 
             // #1 Card Staggered Entrance: trượt từ dưới lên 20px + fade, 30ms/thẻ (tối đa 25 thẻ đầu).
-            if (i < 25)
+            if (i < 25 && GpuTierDetector.Current.IsHeavyEffectsEnabled)
             {
                 UiAnimationHelper.RunStaggeredEntrance(card, i * 30, fromY: 20, durationMs: 250);
             }
@@ -259,6 +260,9 @@ public sealed partial class WizardStep1Version : UserControl
 
     private void AnimateSearchGlow(bool focused)
     {
+        // GPU yếu: giữ nguyên viền tĩnh, không chạy color animation.
+        if (!GpuTierDetector.Current.IsHeavyEffectsEnabled) return;
+
         // #6 Search Focus: border glow accent (150ms).
         var target = Windows.UI.Color.FromArgb(255, 60, 66, 74); // khớp CardStrokeColorDefaultBrush (dark-ish neutral)
         if (focused && Application.Current?.Resources.TryGetValue("VazAccentBrush", out var accent) == true && accent is SolidColorBrush accentBrush)

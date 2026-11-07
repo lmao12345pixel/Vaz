@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Media;
 using Vazer.Core.Versions;
 using Vaz.WinUI.Helpers;
+using Vaz.WinUI.Services;
 
 namespace Vaz.WinUI.Views.Controls;
 
@@ -86,18 +87,33 @@ public sealed partial class WizardVersionCard : UserControl
 
         // #3 Card Selected: check badge bounce (Scale 0 → 1.2 → 1, BackEase 400ms).
         self.CheckBadge.Visibility = selected ? Visibility.Visible : Visibility.Collapsed;
-        if (selected)
+        var heavyEffects = GpuTierDetector.Current.IsHeavyEffectsEnabled;
+        self.GlintOverlay.Visibility = selected && heavyEffects
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        if (selected && heavyEffects && !AppThemeManager.IsReduceMotion)
         {
             UiAnimationHelper.AnimateInstallSuccess(self.CheckBadge);
         }
     }
 
     private void OnPointerEntered(object sender, PointerRoutedEventArgs e)
-        // #2 Card Hover Lift: scale 1.05 + viền accent + 200ms CubicEase.
-        => UiAnimationHelper.AnimateCardHover(CardBorder, true, targetScale: 1.05, durationMs: 200);
+        // #2 Card Hover Lift: scale 1.05 + viền accent + 200ms CubicEase. GPU yếu → bỏ.
+    {
+        if (GpuTierDetector.Current.IsHeavyEffectsEnabled)
+        {
+            UiAnimationHelper.AnimateCardHover(CardBorder, true, targetScale: 1.05, durationMs: 200);
+        }
+    }
 
     private void OnPointerExited(object sender, PointerRoutedEventArgs e)
-        => UiAnimationHelper.AnimateCardHover(CardBorder, false, targetScale: 1.05, durationMs: 200);
+    {
+        if (GpuTierDetector.Current.IsHeavyEffectsEnabled)
+        {
+            UiAnimationHelper.AnimateCardHover(CardBorder, false, targetScale: 1.05, durationMs: 200);
+        }
+    }
 
     private static ScaleTransform EnsureScaleTransform(UIElement element)
     {
