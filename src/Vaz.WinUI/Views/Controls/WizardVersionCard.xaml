@@ -18,15 +18,17 @@
             Style="{StaticResource MkVibeCardStyle}"
             IsHitTestVisible="False"
             Background="{ThemeResource MkVibeBlockBrush}"
-            BorderBrush="{x:Bind IsSelected, Mode=OneWay, Converter={StaticResource BoolToActiveBorderBrush}}"
-            BorderThickness="{x:Bind IsSelected, Mode=OneWay, Converter={StaticResource BoolToActiveBorderThickness}}"
-            CornerRadius="{ThemeResource MkVibeBlockCorner}"
+            BorderBrush="{ThemeResource MkVibeStoneBrush}"
+            BorderThickness="3"
+            CornerRadius="0"
             Padding="8"
             Width="216"
             Height="180">
             <Grid RowDefinitions="104,Auto,Auto" RowSpacing="4">
                 <Grid Grid.Row="0">
-                    <local:WizardVersionCover x:Name="Cover" Height="104" VerticalAlignment="Stretch" IsHitTestVisible="False" />
+                    <Border BorderBrush="#1AFFFFFF" BorderThickness="1" CornerRadius="0">
+                        <local:WizardVersionCover x:Name="Cover" Height="104" VerticalAlignment="Stretch" IsHitTestVisible="False" />
+                    </Border>
 
                     <Border
                         x:Name="CheckBadge"
