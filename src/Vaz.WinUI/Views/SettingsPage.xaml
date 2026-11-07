@@ -427,6 +427,20 @@
                             </ListView>
                         </StackPanel>
 
+                        <!-- Đợt 21: auto-detect GPU tier + override thủ công -->
+                        <StackPanel Spacing="4">
+                            <ComboBox
+                                x:Name="GpuTierCombo"
+                                Header="Cấp độ hiệu ứng Minecraft Vibe (GPU)"
+                                HorizontalAlignment="Stretch"
+                                SelectionChanged="GpuTierCombo_SelectionChanged" />
+                            <TextBlock
+                                Text="{x:Bind ViewModel.GpuTier, Mode=OneWay, Converter={StaticResource GpuTierToText}}"
+                                Style="{StaticResource CaptionTextBlockStyle}"
+                                Foreground="{ThemeResource MkVibeMutedTextBrush}"
+                                TextWrapping="Wrap" />
+                        </StackPanel>
+
                         <ToggleSwitch
                             Header="Giảm chuyển động (Tắt hoạt ảnh trượt &amp; lò xo theo accessibility)"
                             IsOn="{x:Bind ViewModel.ReduceMotion, Mode=TwoWay}" />

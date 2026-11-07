@@ -45,6 +45,7 @@ public partial class App : Application
         services.AddSingleton<IModrinthSearchService, ModrinthSearchService>();
         services.AddSingleton<IModDownloadManager, ModDownloadManager>();
         services.AddSingleton<INotificationService, NotificationService>();
+        services.AddSingleton<GpuTierDetector>();
         services.AddSingleton<JavaCompatibilityNotifier>();
         services.AddSingleton<Vazer.Core.Java.IJavaCompatibilityNotifier>(
             sp => sp.GetRequiredService<JavaCompatibilityNotifier>());
@@ -69,6 +70,9 @@ public partial class App : Application
         services.AddSingleton<MainWindow>();
 
         Services = services.BuildServiceProvider();
+
+        // Đợt 21: mọi control/code-behind đọc chung một instance detector (đã detect GPU 1 lần).
+        GpuTierDetector.Current = Services.GetRequiredService<GpuTierDetector>();
     }
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)

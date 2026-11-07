@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using Vaz.WinUI.Helpers;
+using Vaz.WinUI.Models;
 using Vaz.WinUI.ViewModels;
 
 namespace Vaz.WinUI.Views;
@@ -29,7 +30,21 @@ public sealed partial class SettingsPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
+
+        // Đợt 21: nạp enum GpuTier vào ComboBox (không hard-code item trong XAML).
+        GpuTierCombo.ItemsSource = Enum.GetValues<GpuTier>();
+        GpuTierCombo.SelectedItem = ViewModel.GpuTier;
+
         _ = ViewModel.LoadCommand.ExecuteAsync(null);
+    }
+
+    /// <summary>Đợt 21: user override cấp hiệu ứng GPU.</summary>
+    private void GpuTierCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (GpuTierCombo.SelectedItem is GpuTier tier)
+        {
+            ViewModel.GpuTier = tier;
+        }
     }
 
     /// <summary>Chọn một Java trong bảng dò được làm mặc định cho app (Phase E).</summary>

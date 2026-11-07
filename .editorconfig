@@ -20,3 +20,9 @@ csharp_style_var_elsewhere = true:suggestion
 # Async rules (chống _ = fire-and-forget)
 dotnet_diagnostic.CS4014.severity = warning
 dotnet_diagnostic.VSTHRD110.severity = warning
+
+# Dot 21 — Minecraft Vibe design tokens (resource definitions only, never in usage sites):
+#   MkVibePixelFont  : pixel font token, fallback "Segoe UI" until Minecraftia.ttf is supplied
+#   MkVibe*Brush     : Light/Dark/Default variants in Resources/MinecraftTheme.xaml
+#   MkVibe*Style     : block-bordered styles in Resources/MinecraftStyles.xaml
+# Usage sites must reference them via {ThemeResource ...}; no hard-coded colors.

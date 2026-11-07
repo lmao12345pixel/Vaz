@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Vaz.WinUI.Helpers;
+using Vaz.WinUI.Models;
 using Vaz.WinUI.Services;
 using Vazer.Core.Abstractions;
 using Vazer.Core.Settings;
@@ -154,6 +155,9 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private string accentColor = "emerald";
     [ObservableProperty] private bool reduceMotion;
     [ObservableProperty] private bool uiSoundEnabled = true;
+
+    /// <summary>Đợt 21: override cấp hiệu ứng GPU (Auto / Full / Lite).</summary>
+    [ObservableProperty] private GpuTier gpuTier = GpuTier.Auto;
 
     [ObservableProperty] private int downloadThreads = 8;
     [ObservableProperty] private string downloadMirror = "cloudflare";
@@ -884,6 +888,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         // SET-AC-05: best-effort (WinUI chỉ hỗ trợ tắt dependent animation).
         AppThemeManager.SetReduceMotion(value);
     }
+
+    partial void OnGpuTierChanged(GpuTier value) => GpuTierDetector.Current.ApplyOverride(value);
 
     /// <summary>
     /// Web hiển thị "Tên instance · Loader Version" trong preview; ưu tiên instance đang active,
