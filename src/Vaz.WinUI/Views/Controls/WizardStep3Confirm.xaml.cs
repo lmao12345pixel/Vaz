@@ -218,6 +218,7 @@ public sealed partial class WizardStep3Confirm : UserControl
     {
         _autoCloseTimer.Stop();
         StopGradientLoop();
+        StopFlameFlicker();
         CreateButton.PointerEntered -= CreateButton_PointerEntered;
         CreateButton.PointerExited -= CreateButton_PointerExited;
     }
@@ -227,15 +228,7 @@ public sealed partial class WizardStep3Confirm : UserControl
     private void UpdatePreview()
     {
         var loader = State.SelectedLoader ?? "Fabric";
-        LoaderTile.Background = GetLoaderGradient(loader);
-
-        LoaderGlyph.Text = loader.ToLowerInvariant() switch
-        {
-            "vanilla" => "V",
-            "quilt" => "Q",
-            "neoforge" => "N",
-            _ => "F"
-        };
+        LoaderLogo.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri(GetLoaderIconUri(loader)));
 
         var mcVersion = State.SelectedVersion ?? "?";
         VersionLine.Text = $"Minecraft {mcVersion}";
@@ -250,30 +243,14 @@ public sealed partial class WizardStep3Confirm : UserControl
         BreadcrumbText.Text = $"Bước 3/3 · {LoaderLine.Text}";
     }
 
-    private Brush GetLoaderGradient(string loader)
+    private static string GetLoaderIconUri(string loader) => loader.ToLowerInvariant() switch
     {
-        var key = loader.ToLowerInvariant() switch
-        {
-            "vanilla" => "VanillaGradient",
-            "quilt" => "QuiltGradient",
-            "neoforge" => "NeoForgeGradient",
-            _ => "FabricGradient"
-        };
-
-        if (Resources.TryGetValue(key, out var res) && res is Brush brush)
-        {
-            return brush;
-        }
-
-        if (Application.Current?.Resources.TryGetValue(key, out var appRes) == true && appRes is Brush appBrush)
-        {
-            return appBrush;
-        }
-
-        var accent = Application.Current?.Resources["VazAccentBrush"];
-        return accent as Brush
-            ?? throw new InvalidOperationException("VazAccentBrush resource is missing.");
-    }
+        "vanilla" => "ms-appx:///Assets/loaders/vanilla-logo.png",
+        "quilt" => "ms-appx:///Assets/loaders/quilt-logo.png",
+        "neoforge" => "ms-appx:///Assets/loaders/neoforge-logo.png",
+        "forge" => "ms-appx:///Assets/loaders/forge-logo.png",
+        _ => "ms-appx:///Assets/loaders/fabric-logo.png"
+    };
 
     // === Footer / validation ===
 
@@ -454,6 +431,7 @@ public sealed partial class WizardStep3Confirm : UserControl
         SuccessContent.Visibility = Visibility.Collapsed;
         LoadingContent.Visibility = Visibility.Visible;
         LoadingContent.Opacity = 1.0;
+        StartFlameFlicker();
 
         // Morph nút: thu nhỏ thành hình tròn + thay đổi layout (500ms BackEase).
         AnimateCreateButtonMorph();
@@ -464,6 +442,7 @@ public sealed partial class WizardStep3Confirm : UserControl
     {
         IsCreating = false;
         CreateButton.IsHitTestVisible = true;
+        StopFlameFlicker();
 
         // Quay về trạng thái ban đầu.
         LoadingContent.Visibility = Visibility.Collapsed;
@@ -479,6 +458,7 @@ public sealed partial class WizardStep3Confirm : UserControl
     public void CreationSucceeded()
     {
         IsCreating = false;
+        StopFlameFlicker();
 
         LoadingContent.Visibility = Visibility.Collapsed;
         NormalContent.Visibility = Visibility.Collapsed;
@@ -519,17 +499,18 @@ public sealed partial class WizardStep3Confirm : UserControl
         SuccessConfirmed?.Invoke(this, EventArgs.Empty);
     }
 
-    /// <summary>Cập nhật stage text (đang chạy) — gọi từ dialog với message thật từ VM.</summary>
+    /// <summary>Cập nhật stage text (đang chạy) và tiến độ lò nung (ProgressBar 0-100).</summary>
     public void UpdateProgress(double percent, string stageText)
     {
-        if (percent >= 0 && percent <= 100)
+        var clamped = Math.Clamp(percent, 0, 100);
+        if (FurnaceProgressBar != null)
         {
-            PercentText.Visibility = Visibility.Visible;
-            PercentText.Text = $"{Math.Round(percent)}%";
+            FurnaceProgressBar.Value = clamped;
         }
-        else
+
+        if (PercentText != null)
         {
-            PercentText.Visibility = Visibility.Collapsed;
+            PercentText.Text = $"{Math.Round(clamped)}%";
         }
 
         UpdateStageText(stageText);
@@ -541,6 +522,75 @@ public sealed partial class WizardStep3Confirm : UserControl
         if (StageText != null)
         {
             StageText.Text = stageText;
+        }
+        ToolTipService.SetToolTip(CreateButton, stageText);
+    }
+
+    // === Furnace Flame Flicker animation ===
+
+    private Storyboard? _flameFlicker;
+
+    private void StartFlameFlicker()
+    {
+        if (AppThemeManager.IsReduceMotion || !GpuTierDetector.Current.IsHeavyEffectsEnabled)
+        {
+            return;
+        }
+
+        StopFlameFlicker();
+
+        var sb = new Storyboard { RepeatBehavior = RepeatBehavior.Forever, AutoReverse = true };
+        var duration = new Duration(TimeSpan.FromMilliseconds(200));
+        var ease = new CubicEase { EasingMode = EasingMode.EaseInOut };
+
+        // Rotate -5 to 5 độ
+        var rotateAnim = new DoubleAnimation
+        {
+            From = -5.0,
+            To = 5.0,
+            Duration = duration,
+            EasingFunction = ease
+        };
+        Storyboard.SetTarget(rotateAnim, FlameRotate);
+        Storyboard.SetTargetProperty(rotateAnim, nameof(RotateTransform.Angle));
+        sb.Children.Add(rotateAnim);
+
+        // Scale 1 to 1.1
+        var scaleXAnim = new DoubleAnimation
+        {
+            From = 1.0,
+            To = 1.1,
+            Duration = duration,
+            EasingFunction = ease
+        };
+        Storyboard.SetTarget(scaleXAnim, FlameScale);
+        Storyboard.SetTargetProperty(scaleXAnim, nameof(ScaleTransform.ScaleX));
+        sb.Children.Add(scaleXAnim);
+
+        var scaleYAnim = new DoubleAnimation
+        {
+            From = 1.0,
+            To = 1.1,
+            Duration = duration,
+            EasingFunction = ease
+        };
+        Storyboard.SetTarget(scaleYAnim, FlameScale);
+        Storyboard.SetTargetProperty(scaleYAnim, nameof(ScaleTransform.ScaleY));
+        sb.Children.Add(scaleYAnim);
+
+        _flameFlicker = sb;
+        sb.Begin();
+    }
+
+    private void StopFlameFlicker()
+    {
+        _flameFlicker?.Stop();
+        _flameFlicker = null;
+        if (FlameRotate != null) FlameRotate.Angle = 0;
+        if (FlameScale != null)
+        {
+            FlameScale.ScaleX = 1;
+            FlameScale.ScaleY = 1;
         }
     }
 

@@ -109,7 +109,7 @@ public sealed partial class WizardStep2Loader : UserControl
             "Quilt" => QuiltLogo,
             "NeoForge" => NeoForgeLogo,
             "Forge" => ForgeLogo,
-            _ => (TextBlock?)null
+            _ => (UIElement?)null
         });
 
         UpdateLoaderCardStyles();
@@ -151,7 +151,7 @@ public sealed partial class WizardStep2Loader : UserControl
         }
     }
 
-    private void AnimateLogoSpin(TextBlock? logo)
+    private void AnimateLogoSpin(UIElement? logo)
     {
         if (logo == null) return;
         if (AppThemeManager.IsReduceMotion || !GpuTierDetector.Current.IsHeavyEffectsEnabled) return;
