@@ -214,31 +214,31 @@
             <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Center">
                 <TextBlock
                     Text="{x:Bind ViewModel.Current.Name, Mode=OneWay}"
-                    FontSize="24"
-                    FontWeight="SemiBold" />
+                    Style="{StaticResource MkVibeTitleStyle}" />
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <Border
-                        Background="{ThemeResource SubtleFillColorSecondaryBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1"
-                        CornerRadius="6"
+                        Background="{ThemeResource MkVibeBlockBrush}"
+                        BorderBrush="{ThemeResource MkVibeStoneBrush}"
+                        BorderThickness="{ThemeResource MkVibeBlockThickness}"
+                        CornerRadius="{ThemeResource MkVibeBlockCorner}"
                         Padding="8,2">
                         <StackPanel Orientation="Horizontal" Spacing="4">
-                            <FontIcon Glyph="&#xE7F8;" FontSize="11" Foreground="{StaticResource VazAccentBrush}" />
+                            <FontIcon Glyph="&#xE7F8;" FontSize="11" Foreground="{ThemeResource MkVibeEmeraldBrush}" />
                             <TextBlock Text="{x:Bind ViewModel.Current.MinecraftVersion, Mode=OneWay}" FontSize="12" FontWeight="Medium" />
                         </StackPanel>
                     </Border>
                     <Border
-                        Background="{StaticResource VazAccentSubtleBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1"
-                        CornerRadius="6"
+                        Background="{ThemeResource MkVibeEmeraldBrush}"
+                        BorderBrush="{ThemeResource MkVibeDirtBrush}"
+                        BorderThickness="{ThemeResource MkVibeBlockThickness}"
+                        CornerRadius="{ThemeResource MkVibeBlockCorner}"
                         Padding="8,2">
                         <TextBlock
                             Text="{x:Bind ViewModel.LoaderDisplay, Mode=OneWay}"
                             FontSize="12"
+                            FontFamily="{ThemeResource MkVibePixelFont}"
                             FontWeight="SemiBold"
-                            Foreground="{StaticResource VazAccentBrush}" />
+                            Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" />
                     </Border>
                     <TextBlock
                         Text="{x:Bind ViewModel.LaunchStatus, Mode=OneWay}"
