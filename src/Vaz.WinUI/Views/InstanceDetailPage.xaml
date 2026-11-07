@@ -196,7 +196,7 @@
     <Grid x:Name="PageRoot" RowDefinitions="Auto,Auto,*" Padding="24,16,24,16" RowSpacing="10">
 
         <!-- Header -->
-        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" VerticalAlignment="Center">
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="14" VerticalAlignment="Center">
             <!-- Back Button -->
             <Button
                 Grid.Column="0"
@@ -210,8 +210,32 @@
                 <FontIcon Glyph="&#xE72B;" FontSize="16" />
             </Button>
 
+            <!-- Instance Icon (Item slot style: viền đen 2px, inner 1px #1AFFFFFF, góc vuông 0) -->
+            <Border
+                Grid.Column="1"
+                Width="42" Height="42"
+                Background="{ThemeResource MkVibeBlockBrush}"
+                BorderBrush="#000000"
+                BorderThickness="2"
+                CornerRadius="0"
+                VerticalAlignment="Center">
+                <Border
+                    BorderBrush="#1AFFFFFF"
+                    BorderThickness="1"
+                    CornerRadius="0">
+                    <TextBlock
+                        Text="F"
+                        FontSize="20"
+                        FontWeight="Bold"
+                        FontFamily="{ThemeResource MkVibePixelFont}"
+                        Foreground="{ThemeResource MkVibeEmeraldBrush}"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center" />
+                </Border>
+            </Border>
+
             <!-- Title & Metadata Badges -->
-            <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Center">
+            <StackPanel Grid.Column="2" Spacing="6" VerticalAlignment="Center">
                 <TextBlock
                     Text="{x:Bind ViewModel.Current.Name, Mode=OneWay}"
                     Style="{StaticResource MkVibeTitleStyle}" />
@@ -251,7 +275,7 @@
             </StackPanel>
 
             <!-- Quick Action: Open Instance Folder -->
-            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+            <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                 <Button x:Name="ChangeVersionButton"
                         Click="ChangeVersion_Click"
                         IsEnabled="{x:Bind ViewModel.CanManageMods, Mode=OneWay}"
@@ -285,7 +309,19 @@
 
         <!-- Tabs -->
         <TabView x:Name="DetailTabView" Grid.Row="2" IsAddTabButtonVisible="False" Margin="0" SelectionChanged="DetailTabView_SelectionChanged">
-            <TabViewItem IsClosable="False">
+            <TabView.Resources>
+                <CornerRadius x:Key="TabViewItemCornerRadius">0</CornerRadius>
+                <CornerRadius x:Key="TabViewItemHeaderCornerRadius">0</CornerRadius>
+                <Thickness x:Key="TabViewItemHeaderBorderThickness">0,0,0,2</Thickness>
+                <StaticResource x:Key="TabViewItemHeaderBorderBrush" ResourceKey="MkVibeStoneBrush" />
+                <StaticResource x:Key="TabViewItemHeaderBorderBrushSelected" ResourceKey="MkVibeEmeraldBrush" />
+                <Style TargetType="TabViewItem">
+                    <Setter Property="CornerRadius" Value="0" />
+                    <Setter Property="BorderThickness" Value="0,0,0,2" />
+                    <Setter Property="BorderBrush" Value="{ThemeResource MkVibeStoneBrush}" />
+                </Style>
+            </TabView.Resources>
+            <TabViewItem IsClosable="False" CornerRadius="0">
                 <TabViewItem.Header>
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <FontIcon Glyph="&#xE74C;" FontSize="14" Foreground="{StaticResource VazAccentBrush}" />
@@ -474,26 +510,33 @@
                                                     Background="Transparent"
                                                     BorderThickness="0"
                                                     Padding="0"
-                                                    CornerRadius="6"
+                                                    CornerRadius="0"
                                                     VerticalAlignment="Center">
                                                     <Border
                                                         Width="36" Height="36"
-                                                        CornerRadius="6"
+                                                        CornerRadius="0"
+                                                        BorderBrush="#000000"
+                                                        BorderThickness="2"
                                                         Background="{StaticResource VazAccentSubtleBrush}">
-                                                        <Grid>
-                                                            <FontIcon
-                                                                Glyph="&#xE74C;"
-                                                                FontSize="16"
-                                                                Foreground="{StaticResource VazAccentBrush}"
-                                                                HorizontalAlignment="Center"
-                                                                VerticalAlignment="Center" />
-                                                            <Image
-                                                                Source="{x:Bind IconImageSource, Mode=OneWay}"
-                                                                Width="32" Height="32"
-                                                                Stretch="Uniform"
-                                                                ImageOpened="ModIcon_Opened"
-                                                                ImageFailed="ModIcon_Failed" />
-                                                        </Grid>
+                                                        <Border
+                                                            BorderBrush="#1AFFFFFF"
+                                                            BorderThickness="1"
+                                                            CornerRadius="0">
+                                                            <Grid>
+                                                                <FontIcon
+                                                                    Glyph="&#xE74C;"
+                                                                    FontSize="16"
+                                                                    Foreground="{StaticResource VazAccentBrush}"
+                                                                    HorizontalAlignment="Center"
+                                                                    VerticalAlignment="Center" />
+                                                                <Image
+                                                                    Source="{x:Bind IconImageSource, Mode=OneWay}"
+                                                                    Width="30" Height="30"
+                                                                    Stretch="Uniform"
+                                                                    ImageOpened="ModIcon_Opened"
+                                                                    ImageFailed="ModIcon_Failed" />
+                                                            </Grid>
+                                                        </Border>
                                                     </Border>
                                                 </Button>
 
@@ -866,7 +909,7 @@
             </TabViewItem>
 
             <!-- TAB 2: RESOURCE PACKS (LIBRARY) -->
-            <TabViewItem x:Name="ResourcePacksTab" IsClosable="False">
+            <TabViewItem x:Name="ResourcePacksTab" IsClosable="False" CornerRadius="0">
                 <TabViewItem.Header>
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <FontIcon Glyph="&#xE790;" FontSize="14" Foreground="{StaticResource VazAccentBrush}" />
@@ -1186,7 +1229,7 @@
             </TabViewItem>
 
             <!-- TAB 3: SHADER PACKS -->
-            <TabViewItem x:Name="ShadersTab" IsClosable="False">
+            <TabViewItem x:Name="ShadersTab" IsClosable="False" CornerRadius="0">
                 <TabViewItem.Header>
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <FontIcon Glyph="&#xE706;" FontSize="14" Foreground="{StaticResource VazAccentBrush}" />
@@ -1532,7 +1575,7 @@
                 </TabViewItem.Content>
             </TabViewItem>
 
-            <TabViewItem IsClosable="False">
+            <TabViewItem IsClosable="False" CornerRadius="0">
                 <TabViewItem.Header>
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <FontIcon Glyph="&#xE756;" FontSize="14" Foreground="{StaticResource VazAccentBrush}" />
@@ -1602,7 +1645,7 @@
                         </Grid>
                     </TabViewItem.Content>
                 </TabViewItem>
-            <TabViewItem IsClosable="False">
+            <TabViewItem IsClosable="False" CornerRadius="0">
                 <TabViewItem.Header>
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <FontIcon Glyph="&#xE713;" FontSize="14" Foreground="{StaticResource VazAccentBrush}" />
