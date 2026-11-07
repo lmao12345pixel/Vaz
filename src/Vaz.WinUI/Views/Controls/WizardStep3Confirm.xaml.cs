@@ -317,8 +317,8 @@ public sealed partial class WizardStep3Confirm : UserControl
 
         var anim = new ColorAnimation
         {
-            From = Windows.UI.Color.FromArgb(255, 0x10, 0xB9, 0x81),   // VazAccentBrush base emerald
-            To = Windows.UI.Color.FromArgb(255, 0x06, 0xD6, 0xA0),     // teal-mint
+            From = Windows.UI.Color.FromArgb(255, 0x8B, 0x5A, 0x2B),   // wood brown light
+            To = Windows.UI.Color.FromArgb(255, 0xA0, 0x6C, 0x3A),     // wood brown lighter
             Duration = new Duration(TimeSpan.FromSeconds(5))
         };
         Storyboard.SetTarget(anim, GradientStop1);
@@ -326,8 +326,8 @@ public sealed partial class WizardStep3Confirm : UserControl
 
         var anim2 = new ColorAnimation
         {
-            From = Windows.UI.Color.FromArgb(255, 0x0D, 0x9C, 0x6E),   // pressed emerald
-            To = Windows.UI.Color.FromArgb(255, 0x0E, 0x9F, 0x8A),     // jade-teal
+            From = Windows.UI.Color.FromArgb(255, 0x6B, 0x44, 0x23),   // wood brown dark
+            To = Windows.UI.Color.FromArgb(255, 0x7A, 0x50, 0x2B),     // wood brown mid
             Duration = new Duration(TimeSpan.FromSeconds(5))
         };
         Storyboard.SetTarget(anim2, GradientStop2);
