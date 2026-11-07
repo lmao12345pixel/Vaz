@@ -52,9 +52,8 @@
         </ResourceDictionary>
     </ResourceDictionary.ThemeDictionaries>
 
-    <!-- Font: chưa có Minecraftia.ttf trong repo → fallback Segoe UI (không thêm asset).
-         Khi có font, chỉ đổi giá trị resource này, mọi control tự cập nhật. -->
-    <FontFamily x:Key="MkVibePixelFont">Segoe UI</FontFamily>
+    <!-- Font: PressStart2P-Regular.ttf → ms-appx:///Assets/Fonts/... -->
+    <FontFamily x:Key="MkVibePixelFont">ms-appx:///Assets/Fonts/PressStart2P-Regular.ttf#Press Start 2P</FontFamily>
 
     <!-- Block geometry tokens -->
     <x:Double x:Key="MkVibeBlockBorder">3</x:Double>

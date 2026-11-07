@@ -51,5 +51,6 @@
     <!-- Assets for Discord Preview, Mod icons, etc.
          Unpackaged WinUI load qua ms-appx:///Assets/... → file phải nằm cạnh exe. -->
     <Content Include="Assets\**\*.png;Assets\**\*.webp;Assets\**\*.jpg" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\Fonts\**\*.ttf" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
