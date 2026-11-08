@@ -242,8 +242,8 @@
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <Border
                         Background="{ThemeResource MkVibeBlockBrush}"
-                        BorderBrush="{ThemeResource MkVibeStoneBrush}"
-                        BorderThickness="{ThemeResource MkVibeBlockThickness}"
+                        BorderBrush="Transparent"
+                        BorderThickness="0"
                         CornerRadius="{ThemeResource MkVibeBlockCorner}"
                         Padding="8,2">
                         <StackPanel Orientation="Horizontal" Spacing="4">
@@ -253,8 +253,8 @@
                     </Border>
                     <Border
                         Background="{ThemeResource MkVibeEmeraldBrush}"
-                        BorderBrush="{ThemeResource MkVibeDirtBrush}"
-                        BorderThickness="{ThemeResource MkVibeBlockThickness}"
+                        BorderBrush="Transparent"
+                        BorderThickness="0"
                         CornerRadius="{ThemeResource MkVibeBlockCorner}"
                         Padding="8,2">
                         <TextBlock

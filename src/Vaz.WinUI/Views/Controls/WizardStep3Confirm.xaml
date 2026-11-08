@@ -58,7 +58,8 @@
                 <TextBlock x:Name="VersionLine"
                            Grid.Row="1"
                            Text="Minecraft 1.21.1"
-                           FontSize="22"
+                           FontFamily="{ThemeResource MkVibePixelFont}"
+                           FontSize="12"
                            FontWeight="SemiBold"
                            Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
                            HorizontalAlignment="Center" />
@@ -66,7 +67,8 @@
                 <TextBlock x:Name="LoaderLine"
                            Grid.Row="2"
                            Text="Fabric"
-                           FontSize="13"
+                           FontFamily="{ThemeResource MkVibePixelFont}"
+                           FontSize="10"
                            FontWeight="Medium"
                            Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
                            HorizontalAlignment="Center" />
@@ -86,7 +88,8 @@
                              HorizontalAlignment="Stretch" />
                     <TextBlock x:Name="FloatingLabel"
                                Text="Tên instance"
-                               FontSize="11"
+                               FontFamily="{ThemeResource MkVibePixelFont}"
+                               FontSize="9"
                                Foreground="#E0FFFFFF"
                                Margin="16,6,16,0"
                                VerticalAlignment="Top"
@@ -122,8 +125,8 @@
                         Height="52" />
                 <Button x:Name="CreateButton"
                         Height="38"
-                        MinWidth="170"
-                        Padding="20,7"
+                        Width="180"
+                        Padding="16,7"
                         CornerRadius="19"
                         BorderThickness="0"
                         Background="{StaticResource CreateGradient}"
@@ -133,7 +136,7 @@
                         IsEnabled="False"
                         Click="CreateButton_Click">
                     <Button.Content>
-                        <Grid>
+                        <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
                             <!-- Normal content -->
                             <StackPanel x:Name="NormalContent"
                                         Orientation="Horizontal"
@@ -147,10 +150,9 @@
                             <!-- Loading content: furnace animation (Grid 3 cột) -->
                             <Grid x:Name="LoadingContent"
                                   Visibility="Collapsed"
-                                  Opacity="0"
                                   ColumnDefinitions="Auto,*,Auto"
                                   ColumnSpacing="8"
-                                  Width="150"
+                                  Width="140"
                                   HorizontalAlignment="Center"
                                   VerticalAlignment="Center">
                                 <!-- Cột 1: TextBlock 🔥 (FlameFlicker) -->

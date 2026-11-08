@@ -363,7 +363,7 @@ public sealed partial class WizardStep3Confirm : UserControl
         if (AppThemeManager.IsReduceMotion)
         {
             FloatingLabel.RenderTransform = null;
-            FloatingLabel.FontSize = isFloated ? 11 : 15;
+            FloatingLabel.FontSize = isFloated ? 9 : 11;
             FloatingLabel.Foreground = fg;
             return;
         }
@@ -373,7 +373,7 @@ public sealed partial class WizardStep3Confirm : UserControl
         // FontSize shrink
         var fontAnim = new DoubleAnimation
         {
-            To = isFloated ? 11.0 : 15.0,
+            To = isFloated ? 9.0 : 11.0,
             Duration = new Duration(TimeSpan.FromMilliseconds(150)),
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
         };
@@ -432,9 +432,6 @@ public sealed partial class WizardStep3Confirm : UserControl
         LoadingContent.Visibility = Visibility.Visible;
         LoadingContent.Opacity = 1.0;
         StartFlameFlicker();
-
-        // Morph nút: thu nhỏ thành hình tròn + thay đổi layout (500ms BackEase).
-        AnimateCreateButtonMorph();
     }
 
     /// <summary>Dialog báo lỗi tạo instance — quay nút về trạng thái bình thường.</summary>
