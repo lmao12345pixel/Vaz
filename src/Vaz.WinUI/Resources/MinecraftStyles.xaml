@@ -23,7 +23,7 @@
     <!-- Tiêu đề pixel (font fallback + đậm) -->
     <Style x:Key="MkVibeTitleStyle" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{ThemeResource MkVibePixelFont}" />
-        <Setter Property="FontSize" Value="{ThemeResource MkVibeTitleSize}" />
+        <Setter Property="FontSize" Value="22" />
         <Setter Property="FontWeight" Value="Bold" />
         <Setter Property="Foreground" Value="{ThemeResource MkVibeTextBrush}" />
         <Setter Property="CharacterSpacing" Value="20" />

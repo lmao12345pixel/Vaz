@@ -18,9 +18,10 @@
     <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10" Padding="24,10,24,6">
         <!-- Hero + subtitle -->
         <StackPanel Grid.Row="0" Spacing="4">
-            <TextBlock Text="Xác nhận &amp; tạo" Style="{StaticResource MkVibeTitleStyle}" />
+            <TextBlock Text="Xác nhận &amp; tạo" Margin="0,0,0,16" Style="{StaticResource MkVibeTitleStyle}" />
             <TextBlock x:Name="BreadcrumbText"
                        Text="Kiểm tra cấu hình trước khi tạo instance."
+                       Margin="0,0,0,24"
                        FontSize="13"
                        FontFamily="{ThemeResource MkVibePixelFont}"
                        Foreground="{ThemeResource MkVibeMutedTextBrush}" />

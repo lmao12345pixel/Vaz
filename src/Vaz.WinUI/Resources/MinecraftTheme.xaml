@@ -59,6 +59,6 @@
     <x:Double x:Key="MkVibeBlockBorder">3</x:Double>
     <Thickness x:Key="MkVibeBlockThickness">3</Thickness>
     <CornerRadius x:Key="MkVibeBlockCorner">0</CornerRadius>
-    <x:Double x:Key="MkVibeTitleSize">26</x:Double>
+    <x:Double x:Key="MkVibeTitleSize">22</x:Double>
     <x:Double x:Key="MkVibeLabelSize">12</x:Double>
 </ResourceDictionary>

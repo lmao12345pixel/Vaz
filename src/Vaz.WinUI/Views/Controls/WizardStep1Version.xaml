@@ -6,8 +6,9 @@
     <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10" Padding="24,10,24,6">
         <!-- Hero header -->
         <StackPanel Grid.Row="0" Spacing="4">
-            <TextBlock Text="Bạn muốn chơi phiên bản nào?" Style="{StaticResource MkVibeTitleStyle}" />
+            <TextBlock Text="Bạn muốn chơi phiên bản nào?" Margin="0,0,0,16" Style="{StaticResource MkVibeTitleStyle}" />
             <TextBlock Text="Chọn phiên bản Minecraft — bản đã cài có nhãn &#8220;Đã cài&#8221;."
+                       Margin="0,0,0,24"
                        FontSize="13"
                        FontFamily="{ThemeResource MkVibePixelFont}"
                        Foreground="{ThemeResource MkVibeMutedTextBrush}" />

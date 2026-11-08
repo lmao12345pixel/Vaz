@@ -6,9 +6,10 @@
     <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10" Padding="24,10,24,6">
         <!-- Hero + breadcrumb -->
         <StackPanel Grid.Row="0" Spacing="4">
-            <TextBlock Text="Chọn Mod Loader" Style="{StaticResource MkVibeTitleStyle}" />
+            <TextBlock Text="Chọn Mod Loader" Margin="0,0,0,16" Style="{StaticResource MkVibeTitleStyle}" />
             <TextBlock x:Name="BreadcrumbText"
                        Text="Bước 2/3 · Minecraft"
+                       Margin="0,0,0,24"
                        FontSize="13"
                        FontFamily="{ThemeResource MkVibePixelFont}"
                        Foreground="{ThemeResource MkVibeMutedTextBrush}" />
