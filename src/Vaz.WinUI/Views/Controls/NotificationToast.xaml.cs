@@ -11,6 +11,7 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Vaz.WinUI.Models;
+using Vaz.WinUI.Helpers;
 using Windows.UI;
 
 namespace Vaz.WinUI.Views.Controls;
@@ -170,7 +171,7 @@ public sealed partial class NotificationToast : UserControl
         Opacity = 0.0;
         ToastTranslate.X = 450.0;
 
-        var sb = new Storyboard();
+        var sb = UiAnimationHelper.RentStoryboard();
         var duration = new Duration(TimeSpan.FromMilliseconds(350));
 
         var animX = new DoubleAnimation
@@ -195,6 +196,7 @@ public sealed partial class NotificationToast : UserControl
         Storyboard.SetTargetProperty(animOpacity, nameof(UIElement.Opacity));
         sb.Children.Add(animOpacity);
 
+        sb.Completed += (_, _) => UiAnimationHelper.ReturnStoryboard(sb);
         sb.Begin();
 
         if (Notification != null && !Notification.IsProgressMode)
@@ -263,7 +265,7 @@ public sealed partial class NotificationToast : UserControl
     public async Task AnimateSlideOutAsync()
     {
         var tcs = new TaskCompletionSource<bool>();
-        var sb = new Storyboard();
+        var sb = UiAnimationHelper.RentStoryboard();
         var duration = new Duration(TimeSpan.FromMilliseconds(250));
 
         var animX = new DoubleAnimation
@@ -286,7 +288,11 @@ public sealed partial class NotificationToast : UserControl
         Storyboard.SetTargetProperty(animOpacity, nameof(UIElement.Opacity));
         sb.Children.Add(animOpacity);
 
-        sb.Completed += (s, e) => tcs.TrySetResult(true);
+        sb.Completed += (s, e) =>
+        {
+            UiAnimationHelper.ReturnStoryboard(sb);
+            tcs.TrySetResult(true);
+        };
         sb.Begin();
 
         await tcs.Task;
@@ -379,7 +385,7 @@ public sealed partial class NotificationToast : UserControl
 
     private void AnimateScale(double target)
     {
-        var sb = new Storyboard();
+        var sb = UiAnimationHelper.RentStoryboard();
         var duration = new Duration(TimeSpan.FromMilliseconds(200));
 
         var animX = new DoubleAnimation { To = target, Duration = duration, EasingFunction = EaseOutCubic };
@@ -392,12 +398,13 @@ public sealed partial class NotificationToast : UserControl
         Storyboard.SetTargetProperty(animY, nameof(ScaleTransform.ScaleY));
         sb.Children.Add(animY);
 
+        sb.Completed += (_, _) => UiAnimationHelper.ReturnStoryboard(sb);
         sb.Begin();
     }
 
     private void AnimateCloseButtonOpacity(double target)
     {
-        var sb = new Storyboard();
+        var sb = UiAnimationHelper.RentStoryboard();
         var duration = new Duration(TimeSpan.FromMilliseconds(150));
 
         var anim = new DoubleAnimation
@@ -410,6 +417,7 @@ public sealed partial class NotificationToast : UserControl
         Storyboard.SetTargetProperty(anim, nameof(UIElement.Opacity));
         sb.Children.Add(anim);
 
+        sb.Completed += (_, _) => UiAnimationHelper.ReturnStoryboard(sb);
         sb.Begin();
     }
 
@@ -419,6 +427,9 @@ public sealed partial class NotificationToast : UserControl
         _dismissTimer = null;
         _progressStoryboard?.Stop();
         _progressStoryboard = null;
+
+        // Giải phóng BitmapImage để tránh leak native memory
+        RichMediaImage.Source = null;
 
         if (Notification != null)
         {
