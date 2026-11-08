@@ -143,7 +143,10 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
     private static readonly JsonSerializerOptions CamelCaseJsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true };
 
     // Cache metadata jar theo (tên file, ngày sửa, size) — tránh đọc lại zip mỗi lần Load
+    // LRU cap 200 entries để tránh leak RAM khi instance có nhiều mods/jars
+    private const int JarMetaCacheMaxSize = 200;
     private readonly Dictionary<(string Name, DateTime LastWriteUtc, long Length), JarMetadata?> _jarMetaCache = new();
+    private readonly LinkedList<(string Name, DateTime LastWriteUtc, long Length)> _jarMetaCacheOrder = new();
     private bool _diskCacheLoaded;
     private readonly IInstanceManager _instanceManager;
     private readonly IInstanceMigrationService _migrationService;
@@ -1162,6 +1165,14 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         }
 
         _jarMetaCache[key] = meta;
+        _jarMetaCacheOrder.AddLast(key);
+        // LRU eviction: nếu >200 entries, xoá entry cũ nhất
+        while (_jarMetaCache.Count > JarMetaCacheMaxSize && _jarMetaCacheOrder.First != null)
+        {
+            var oldest = _jarMetaCacheOrder.First.Value;
+            _jarMetaCache.Remove(oldest);
+            _jarMetaCacheOrder.RemoveFirst();
+        }
         return meta;
     }
 
