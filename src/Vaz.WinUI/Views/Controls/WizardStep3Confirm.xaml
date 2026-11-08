@@ -9,9 +9,9 @@
             <GradientStop x:Name="GradientStop2" Color="#6B4423" Offset="1" />
         </LinearGradientBrush>
         <LinearGradientBrush x:Key="CreateGradient" StartPoint="0,0" EndPoint="1,1">
-            <GradientStop Color="#22C55E" Offset="0" />
-            <GradientStop Color="#10B981" Offset="0.55" />
-            <GradientStop Color="#06D6A0" Offset="1" />
+            <GradientStop Color="{ThemeResource MkVibeCreateGradientStartColor}" Offset="0" />
+            <GradientStop Color="{ThemeResource MkVibeCreateGradientMidColor}" Offset="0.55" />
+            <GradientStop Color="{ThemeResource MkVibeCreateGradientEndColor}" Offset="1" />
         </LinearGradientBrush>
     </UserControl.Resources>
 
@@ -34,7 +34,7 @@
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
                 Background="{StaticResource PreviewGradientBrush}"
-                BorderBrush="#4A3018"
+                BorderBrush="{ThemeResource MkVibeWoodCardBorderBrush}"
                 BorderThickness="4"
                 CornerRadius="0"
                 Padding="26,22,26,18">
@@ -80,8 +80,8 @@
                              PlaceholderText=""
                              Padding="16,22,16,6"
                              FontSize="15"
-                             Background="#1AFFFFFF"
-                             BorderBrush="#33FFFFFF"
+                             Background="{ThemeResource MkVibeSlotHighlightBrush}"
+                             BorderBrush="{ThemeResource MkVibeSlotSubtleBorderBrush}"
                              BorderThickness="1"
                              CornerRadius="10"
                              Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
@@ -90,7 +90,7 @@
                                Text="Tên instance"
                                FontFamily="{ThemeResource MkVibePixelFont}"
                                FontSize="9"
-                               Foreground="#E0FFFFFF"
+                               Foreground="{ThemeResource MkVibeInputFloatingLabelBrush}"
                                Margin="16,6,16,0"
                                VerticalAlignment="Top"
                                IsHitTestVisible="False" />
@@ -201,7 +201,7 @@
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center">
                                 <Border Width="22" Height="22" CornerRadius="11" Background="White" VerticalAlignment="Center">
-                                    <FontIcon Glyph="&#xE73E;" FontSize="13" Foreground="#10B981" FontWeight="Bold"
+                                    <FontIcon Glyph="&#xE73E;" FontSize="13" Foreground="{ThemeResource MkVibeEmeraldBrush}" FontWeight="Bold"
                                               HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 </Border>
                                 <TextBlock Text="Đã tạo thành công!"
@@ -222,7 +222,7 @@
               Grid.Row="0" Grid.RowSpan="3"
               Visibility="Collapsed"
               Opacity="0"
-              Background="#99000000">
+              Background="{ThemeResource MkVibeOverlayDimBrush}">
             <Border x:Name="MigrationInnerPanel"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"

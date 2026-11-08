@@ -32,18 +32,18 @@
                                 <Border x:Name="VanillaLogo"
                                         Width="64" Height="64"
                                         CornerRadius="0"
-                                        BorderBrush="#000000"
+                                        BorderBrush="{ThemeResource MkVibePixelBorderBrush}"
                                         BorderThickness="2"
                                         HorizontalAlignment="Center">
                                     <Border.Background>
                                         <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                            <GradientStop Color="#5D9C3A" Offset="0.0" />
-                                            <GradientStop Color="#5D9C3A" Offset="0.3" />
-                                            <GradientStop Color="#8B5A2B" Offset="0.7" />
-                                            <GradientStop Color="#8B5A2B" Offset="1.0" />
+                                            <GradientStop Color="{ThemeResource MkVibeLoaderVanillaTopColor}" Offset="0.0" />
+                                            <GradientStop Color="{ThemeResource MkVibeLoaderVanillaTopColor}" Offset="0.3" />
+                                            <GradientStop Color="{ThemeResource MkVibeLoaderVanillaBottomColor}" Offset="0.7" />
+                                            <GradientStop Color="{ThemeResource MkVibeLoaderVanillaBottomColor}" Offset="1.0" />
                                         </LinearGradientBrush>
                                     </Border.Background>
-                                    <Border BorderBrush="#1AFFFFFF" BorderThickness="1" CornerRadius="0" />
+                                    <Border BorderBrush="{ThemeResource MkVibeSlotHighlightBrush}" BorderThickness="1" CornerRadius="0" />
                                 </Border>
                                 <TextBlock Text="Vanilla" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" />
                                 <TextBlock Text="Không mod" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -62,16 +62,16 @@
                                 <Border x:Name="FabricLogo"
                                         Width="64" Height="64"
                                         CornerRadius="0"
-                                        BorderBrush="#000000"
+                                        BorderBrush="{ThemeResource MkVibePixelBorderBrush}"
                                         BorderThickness="2"
                                         HorizontalAlignment="Center">
                                     <Border.Background>
                                         <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                            <GradientStop Color="#E8B84B" Offset="0.0" />
-                                            <GradientStop Color="#D4A43A" Offset="1.0" />
+                                            <GradientStop Color="{ThemeResource MkVibeLoaderFabricTopColor}" Offset="0.0" />
+                                            <GradientStop Color="{ThemeResource MkVibeLoaderFabricBottomColor}" Offset="1.0" />
                                         </LinearGradientBrush>
                                     </Border.Background>
-                                    <Border BorderBrush="#1AFFFFFF" BorderThickness="1" CornerRadius="0" />
+                                    <Border BorderBrush="{ThemeResource MkVibeSlotHighlightBrush}" BorderThickness="1" CornerRadius="0" />
                                 </Border>
                                 <TextBlock Text="Fabric" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" />
                                 <TextBlock Text="Nhanh, nhẹ" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -90,16 +90,16 @@
                                 <Border x:Name="QuiltLogo"
                                         Width="64" Height="64"
                                         CornerRadius="0"
-                                        BorderBrush="#000000"
+                                        BorderBrush="{ThemeResource MkVibePixelBorderBrush}"
                                         BorderThickness="2"
                                         HorizontalAlignment="Center">
                                     <Border.Background>
                                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                            <GradientStop Color="#7B68EE" Offset="0.0" />
-                                            <GradientStop Color="#9370DB" Offset="1.0" />
+                                            <GradientStop Color="{ThemeResource MkVibeLoaderQuiltTopColor}" Offset="0.0" />
+                                            <GradientStop Color="{ThemeResource MkVibeLoaderQuiltBottomColor}" Offset="1.0" />
                                         </LinearGradientBrush>
                                     </Border.Background>
-                                    <Border BorderBrush="#1AFFFFFF" BorderThickness="1" CornerRadius="0" />
+                                    <Border BorderBrush="{ThemeResource MkVibeSlotHighlightBrush}" BorderThickness="1" CornerRadius="0" />
                                 </Border>
                                 <TextBlock Text="Quilt" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" />
                                 <TextBlock Text="Tương thích" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -118,16 +118,16 @@
                                 <Border x:Name="NeoForgeLogo"
                                         Width="64" Height="64"
                                         CornerRadius="0"
-                                        BorderBrush="#000000"
+                                        BorderBrush="{ThemeResource MkVibePixelBorderBrush}"
                                         BorderThickness="2"
                                         HorizontalAlignment="Center">
                                     <Border.Background>
                                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                            <GradientStop Color="#DC2626" Offset="0.0" />
-                                            <GradientStop Color="#8B0000" Offset="1.0" />
+                                            <GradientStop Color="{ThemeResource MkVibeLoaderNeoForgeTopColor}" Offset="0.0" />
+                                            <GradientStop Color="{ThemeResource MkVibeLoaderNeoForgeBottomColor}" Offset="1.0" />
                                         </LinearGradientBrush>
                                     </Border.Background>
-                                    <Border BorderBrush="#1AFFFFFF" BorderThickness="1" CornerRadius="0" />
+                                    <Border BorderBrush="{ThemeResource MkVibeSlotHighlightBrush}" BorderThickness="1" CornerRadius="0" />
                                 </Border>
                                 <TextBlock Text="NeoForge" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" />
                                 <TextBlock Text="Hiện đại" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -146,16 +146,16 @@
                                 <Border x:Name="ForgeLogo"
                                         Width="64" Height="64"
                                         CornerRadius="0"
-                                        BorderBrush="#000000"
+                                        BorderBrush="{ThemeResource MkVibePixelBorderBrush}"
                                         BorderThickness="2"
                                         HorizontalAlignment="Center">
                                     <Border.Background>
                                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                            <GradientStop Color="#4A4A4A" Offset="0.0" />
-                                            <GradientStop Color="#2A2A2A" Offset="1.0" />
+                                            <GradientStop Color="{ThemeResource MkVibeLoaderForgeTopColor}" Offset="0.0" />
+                                            <GradientStop Color="{ThemeResource MkVibeLoaderForgeBottomColor}" Offset="1.0" />
                                         </LinearGradientBrush>
                                     </Border.Background>
-                                    <Border BorderBrush="#1AFFFFFF" BorderThickness="1" CornerRadius="0" />
+                                    <Border BorderBrush="{ThemeResource MkVibeSlotHighlightBrush}" BorderThickness="1" CornerRadius="0" />
                                 </Border>
                                 <TextBlock Text="Forge" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" />
                                 <TextBlock Text="Truyền thống" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
