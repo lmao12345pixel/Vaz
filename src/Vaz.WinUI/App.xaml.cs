@@ -81,7 +81,12 @@ public partial class App : Application
         {
             try
             {
-                var errPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Vazer", "crash.txt");
+                var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Vazer");
+                var errPath = Path.Combine(dir, "crash.txt");
+
+                // Rotate: nếu >1MB, rename thành crash-{timestamp}.txt, giữ tối đa 5 file cũ
+                RotateCrashLog(errPath, dir);
+
                 File.AppendAllText(errPath, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [FATAL] {e.Message}: {e.Exception}\n{e.Exception?.StackTrace}\n\n");
             }
             catch { }
@@ -101,5 +106,35 @@ public partial class App : Application
         var window = Services.GetRequiredService<MainWindow>();
         MainWindow = window;
         window.Activate();
+    }
+
+    /// <summary>Rotate crash.txt khi >1MB. Giữ tối đa 5 file backup.</summary>
+    private static void RotateCrashLog(string currentPath, string dir)
+    {
+        const long maxSize = 1_000_000; // 1MB
+        const int maxBackups = 5;
+
+        try
+        {
+            if (!File.Exists(currentPath)) return;
+            var info = new FileInfo(currentPath);
+            if (info.Length <= maxSize) return;
+
+            // Rename current → crash-{timestamp}.txt
+            var timestamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+            var backupPath = Path.Combine(dir, $"crash-{timestamp}.txt");
+            File.Move(currentPath, backupPath);
+
+            // Xoá backup cũ nhất nếu >5
+            var backups = Directory.GetFiles(dir, "crash-*.txt")
+                .OrderByDescending(f => f)
+                .Skip(maxBackups)
+                .ToArray();
+            foreach (var old in backups)
+            {
+                try { File.Delete(old); } catch { }
+            }
+        }
+        catch { }
     }
 }
