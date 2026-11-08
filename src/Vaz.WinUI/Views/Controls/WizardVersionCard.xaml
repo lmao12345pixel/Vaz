@@ -23,7 +23,7 @@
             CornerRadius="0"
             Padding="8"
             Width="216"
-            Height="180">
+            MinHeight="200">
             <Grid RowDefinitions="104,Auto,Auto" RowSpacing="4">
                 <Grid Grid.Row="0">
                     <Border BorderBrush="#1AFFFFFF" BorderThickness="1" CornerRadius="0">

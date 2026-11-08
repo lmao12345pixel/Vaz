@@ -29,9 +29,21 @@
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                 BorderThickness="3">
                             <StackPanel Padding="8,10" Spacing="6">
-                                <Border Height="52" CornerRadius="{ThemeResource MkVibeBlockCorner}" Background="{ThemeResource SubtleFillColorSecondaryBrush}">
-                                    <Image x:Name="VanillaLogo" Source="ms-appx:///Assets/loaders/vanilla-logo.png"
-                                           MaxWidth="38" MaxHeight="38" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                <Border x:Name="VanillaLogo"
+                                        Width="64" Height="64"
+                                        CornerRadius="0"
+                                        BorderBrush="#000000"
+                                        BorderThickness="2"
+                                        HorizontalAlignment="Center">
+                                    <Border.Background>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                            <GradientStop Color="#5D9C3A" Offset="0.0" />
+                                            <GradientStop Color="#5D9C3A" Offset="0.3" />
+                                            <GradientStop Color="#8B5A2B" Offset="0.7" />
+                                            <GradientStop Color="#8B5A2B" Offset="1.0" />
+                                        </LinearGradientBrush>
+                                    </Border.Background>
+                                    <Border BorderBrush="#1AFFFFFF" BorderThickness="1" CornerRadius="0" />
                                 </Border>
                                 <TextBlock Text="Vanilla" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" />
                                 <TextBlock Text="Không mod" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -47,9 +59,19 @@
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                 BorderThickness="3">
                             <StackPanel Padding="8,10" Spacing="6">
-                                <Border Height="52" CornerRadius="{ThemeResource MkVibeBlockCorner}" Background="{ThemeResource SubtleFillColorSecondaryBrush}">
-                                    <Image x:Name="FabricLogo" Source="ms-appx:///Assets/loaders/fabric-logo.png"
-                                           MaxWidth="38" MaxHeight="38" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                <Border x:Name="FabricLogo"
+                                        Width="64" Height="64"
+                                        CornerRadius="0"
+                                        BorderBrush="#000000"
+                                        BorderThickness="2"
+                                        HorizontalAlignment="Center">
+                                    <Border.Background>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                            <GradientStop Color="#E8B84B" Offset="0.0" />
+                                            <GradientStop Color="#D4A43A" Offset="1.0" />
+                                        </LinearGradientBrush>
+                                    </Border.Background>
+                                    <Border BorderBrush="#1AFFFFFF" BorderThickness="1" CornerRadius="0" />
                                 </Border>
                                 <TextBlock Text="Fabric" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" />
                                 <TextBlock Text="Nhanh, nhẹ" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -65,9 +87,19 @@
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                 BorderThickness="3">
                             <StackPanel Padding="8,10" Spacing="6">
-                                <Border Height="52" CornerRadius="{ThemeResource MkVibeBlockCorner}" Background="{ThemeResource SubtleFillColorSecondaryBrush}">
-                                    <Image x:Name="QuiltLogo" Source="ms-appx:///Assets/loaders/quilt-logo.png"
-                                           MaxWidth="38" MaxHeight="38" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                <Border x:Name="QuiltLogo"
+                                        Width="64" Height="64"
+                                        CornerRadius="0"
+                                        BorderBrush="#000000"
+                                        BorderThickness="2"
+                                        HorizontalAlignment="Center">
+                                    <Border.Background>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                            <GradientStop Color="#7B68EE" Offset="0.0" />
+                                            <GradientStop Color="#9370DB" Offset="1.0" />
+                                        </LinearGradientBrush>
+                                    </Border.Background>
+                                    <Border BorderBrush="#1AFFFFFF" BorderThickness="1" CornerRadius="0" />
                                 </Border>
                                 <TextBlock Text="Quilt" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" />
                                 <TextBlock Text="Tương thích" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -83,9 +115,19 @@
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                 BorderThickness="3">
                             <StackPanel Padding="8,10" Spacing="6">
-                                <Border Height="52" CornerRadius="{ThemeResource MkVibeBlockCorner}" Background="{ThemeResource SubtleFillColorSecondaryBrush}">
-                                    <Image x:Name="NeoForgeLogo" Source="ms-appx:///Assets/loaders/neoforge-logo.png"
-                                           MaxWidth="38" MaxHeight="38" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                <Border x:Name="NeoForgeLogo"
+                                        Width="64" Height="64"
+                                        CornerRadius="0"
+                                        BorderBrush="#000000"
+                                        BorderThickness="2"
+                                        HorizontalAlignment="Center">
+                                    <Border.Background>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                            <GradientStop Color="#DC2626" Offset="0.0" />
+                                            <GradientStop Color="#8B0000" Offset="1.0" />
+                                        </LinearGradientBrush>
+                                    </Border.Background>
+                                    <Border BorderBrush="#1AFFFFFF" BorderThickness="1" CornerRadius="0" />
                                 </Border>
                                 <TextBlock Text="NeoForge" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" />
                                 <TextBlock Text="Hiện đại" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -101,9 +143,19 @@
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                 BorderThickness="3">
                             <StackPanel Padding="8,10" Spacing="6">
-                                <Border Height="52" CornerRadius="{ThemeResource MkVibeBlockCorner}" Background="{ThemeResource SubtleFillColorSecondaryBrush}">
-                                    <Image x:Name="ForgeLogo" Source="ms-appx:///Assets/loaders/forge-logo.png"
-                                           MaxWidth="46" MaxHeight="32" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                <Border x:Name="ForgeLogo"
+                                        Width="64" Height="64"
+                                        CornerRadius="0"
+                                        BorderBrush="#000000"
+                                        BorderThickness="2"
+                                        HorizontalAlignment="Center">
+                                    <Border.Background>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                            <GradientStop Color="#4A4A4A" Offset="0.0" />
+                                            <GradientStop Color="#2A2A2A" Offset="1.0" />
+                                        </LinearGradientBrush>
+                                    </Border.Background>
+                                    <Border BorderBrush="#1AFFFFFF" BorderThickness="1" CornerRadius="0" />
                                 </Border>
                                 <TextBlock Text="Forge" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" />
                                 <TextBlock Text="Truyền thống" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
