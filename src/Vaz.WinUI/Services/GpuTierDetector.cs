@@ -22,9 +22,49 @@ public sealed class GpuTierDetector
 
     public GpuTierDetector()
     {
+        var saved = GpuTierStore.Load();
+        if (saved.HasValue && saved.Value != GpuTier.Auto)
+        {
+            _override = saved.Value;
+            DetectedName = $"Override ({saved.Value})";
+            _detectedLowTier = saved.Value == GpuTier.Lite;
+            return;
+        }
+
         var detection = DetectPrimaryAdapter();
         DetectedName = detection.Name;
         _detectedLowTier = detection.IsLowTier;
+        if (saved.HasValue)
+        {
+            _override = saved.Value;
+        }
+    }
+
+    private GpuTierDetector(GpuTier forcedTier)
+    {
+        _override = forcedTier;
+        DetectedName = $"Override ({forcedTier})";
+        _detectedLowTier = forcedTier == GpuTier.Lite;
+    }
+
+    /// <summary>
+    /// Đợt 21 — Đọc file trước. Nếu có giá trị hợp lệ khác Auto -> dùng override (không query GPU).
+    /// Nếu không có hoặc Auto -> detect GPU như hiện tại.
+    /// </summary>
+    public static async Task<GpuTierDetector> DetectAsync()
+    {
+        var saved = await GpuTierStore.LoadAsync();
+        if (saved.HasValue && saved.Value != GpuTier.Auto)
+        {
+            return new GpuTierDetector(saved.Value);
+        }
+
+        var detector = new GpuTierDetector();
+        if (saved.HasValue)
+        {
+            detector.ApplyOverride(saved.Value);
+        }
+        return detector;
     }
 
     /// <summary>Tên GPU đọc được (hoặc "Không xác định").</summary>

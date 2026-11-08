@@ -245,6 +245,19 @@ public sealed partial class SettingsViewModel : ObservableObject
 
         SelectedCategory = Categories.First();
         UpdateSystemSpecs();
+
+        var savedTier = GpuTierStore.Load();
+        if (savedTier.HasValue)
+        {
+            gpuTier = savedTier.Value;
+        }
+    }
+
+    /// <summary>Đợt 21 — Property alias cho GpuTier với setter lưu bền vững qua GpuTierStore.</summary>
+    public GpuTier SelectedGpuTier
+    {
+        get => GpuTier;
+        set => GpuTier = value;
     }
 
     public string SelectedCategoryKey => SelectedCategory?.Value ?? "all";
@@ -889,7 +902,11 @@ public sealed partial class SettingsViewModel : ObservableObject
         AppThemeManager.SetReduceMotion(value);
     }
 
-    partial void OnGpuTierChanged(GpuTier value) => GpuTierDetector.Current.ApplyOverride(value);
+    partial void OnGpuTierChanged(GpuTier value)
+    {
+        GpuTierDetector.Current.ApplyOverride(value);
+        GpuTierStore.Save(value);
+    }
 
     /// <summary>
     /// Web hiển thị "Tên instance · Loader Version" trong preview; ưu tiên instance đang active,
