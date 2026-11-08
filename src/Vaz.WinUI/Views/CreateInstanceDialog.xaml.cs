@@ -100,13 +100,37 @@ public sealed partial class CreateInstanceDialog : ContentDialog
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
+        UpdateDialogBounds();
+        if (XamlRoot != null)
+        {
+            XamlRoot.Changed += OnXamlRootChanged;
+        }
         AnimateDialogOpen();
         ApplyBackdropBlur();
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
+        if (XamlRoot != null)
+        {
+            XamlRoot.Changed -= OnXamlRootChanged;
+        }
         _vm.PropertyChanged -= OnViewModelPropertyChanged;
+    }
+
+    private void OnXamlRootChanged(XamlRoot sender, XamlRootChangedEventArgs args)
+    {
+        UpdateDialogBounds();
+    }
+
+    private void UpdateDialogBounds()
+    {
+        if (XamlRoot != null && XamlRoot.Size.Height > 0)
+        {
+            var maxH = Math.Min(720, Math.Max(530, XamlRoot.Size.Height * 0.9));
+            MaxHeight = maxH;
+            RootGrid.MaxHeight = maxH - 24;
+        }
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)

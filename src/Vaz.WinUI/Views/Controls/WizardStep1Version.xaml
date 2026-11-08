@@ -6,9 +6,9 @@
     <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10" Padding="24,10,24,6">
         <!-- Hero header -->
         <StackPanel Grid.Row="0" Spacing="4">
-            <TextBlock Text="Bạn muốn chơi phiên bản nào?" Margin="0,0,0,16" Style="{StaticResource MkVibeTitleStyle}" />
+            <TextBlock Text="Bạn muốn chơi phiên bản nào?" Margin="0,0,0,8" Style="{StaticResource MkVibeTitleStyle}" />
             <TextBlock Text="Chọn phiên bản Minecraft — bản đã cài có nhãn &#8220;Đã cài&#8221;."
-                       Margin="0,0,0,24"
+                       Margin="0,0,0,12"
                        FontSize="13"
                        FontFamily="{ThemeResource MkVibePixelFont}"
                        Foreground="{ThemeResource MkVibeMutedTextBrush}" />
@@ -39,7 +39,12 @@
         </Border>
 
         <!-- Cards grid — Grid do code dựng (ItemsRepeater/UniformGridLayout làm XamlCompiler 1.5 crash) -->
-        <ScrollViewer x:Name="CardScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto" SizeChanged="CardScroll_SizeChanged">
+        <ScrollViewer x:Name="CardScroll"
+                      Grid.Row="2"
+                      VerticalScrollBarVisibility="Visible"
+                      VerticalScrollMode="Enabled"
+                      IsScrollInertiaEnabled="True"
+                      SizeChanged="CardScroll_SizeChanged">
             <Grid x:Name="CardGrid" HorizontalAlignment="Center" VerticalAlignment="Top"
                   ColumnSpacing="14" RowSpacing="14" />
         </ScrollViewer>

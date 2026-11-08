@@ -23,11 +23,11 @@
             CornerRadius="0"
             Padding="8"
             Width="216"
-            MinHeight="200">
-            <Grid RowDefinitions="104,Auto,Auto" RowSpacing="4">
+            MinHeight="154">
+            <Grid RowDefinitions="84,Auto,Auto" RowSpacing="4">
                 <Grid Grid.Row="0">
                     <Border BorderBrush="#1AFFFFFF" BorderThickness="1" CornerRadius="0">
-                        <local:WizardVersionCover x:Name="Cover" Height="104" VerticalAlignment="Stretch" IsHitTestVisible="False" />
+                        <local:WizardVersionCover x:Name="Cover" Height="84" VerticalAlignment="Stretch" IsHitTestVisible="False" />
                     </Border>
 
                     <Border

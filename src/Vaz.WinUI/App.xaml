@@ -27,6 +27,7 @@
             <helpers:AccentHexToBrushConverter x:Key="AccentHexToBrush" />
             <helpers:IsInstalledVersionConverter x:Key="IsInstalledVersionConverter" />
             <models:GpuTierToTextConverter x:Key="GpuTierToText" />
+            <x:Double x:Key="ContentDialogMaxHeight">720</x:Double>
 
             <!-- Design tokens dùng chung — docs/design/tokens.json (spacing/radius) -->
             <x:Double x:Key="VazSpaceXs">4</x:Double>
