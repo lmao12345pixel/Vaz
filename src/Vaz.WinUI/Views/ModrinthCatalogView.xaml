@@ -205,6 +205,35 @@
                         </Button>
                     </StackPanel>
                 </Grid>
+
+                <!-- Install Progress Bar Row (Mod & Resource Pack) -->
+                <Grid Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolToVis}}" Margin="0,4,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock
+                            Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            FontSize="12"
+                            TextTrimming="CharacterEllipsis" />
+                        <ProgressBar
+                            Height="4"
+                            Maximum="100"
+                            IsIndeterminate="False"
+                            Value="{x:Bind ViewModel.ProgressPercent, Mode=OneWay}"
+                            Foreground="{StaticResource ModrinthAccentBrush}" />
+                    </StackPanel>
+                    <Button
+                        Grid.Column="1"
+                        Content="Hủy"
+                        Command="{x:Bind ViewModel.CancelInstallCommand}"
+                        VerticalAlignment="Center"
+                        Padding="12,4"
+                        FontSize="12"
+                        CornerRadius="4" />
+                </Grid>
             </StackPanel>
         </Border>
 

@@ -927,10 +927,12 @@ public partial class ModBrowserViewModel : ObservableObject
                 {
                     _notificationService?.CompleteProgress(progressId.Value, true, $"Đã cài {modName}");
                 }
+                var readyText = InstallNotificationHelper.GetReadyNotificationText(ProjectType);
+                var iconOrGallery = InstallNotificationHelper.ResolveNotificationImage(row.IconUrl, row.Hit?.Gallery);
                 _notificationService?.ShowSuccess(
                     $"Đã cài {modName}",
-                    "Mod đã sẵn sàng trong instance.",
-                    imageSource: row.IconUrl);
+                    readyText,
+                    imageSource: iconOrGallery);
             }
             else
             {
