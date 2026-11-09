@@ -56,6 +56,7 @@ public interface IPackManifestService
 {
     string GetManifestPath(string instancePath, string packType);
     Task<PacksManifest> LoadAsync(string instancePath, string packType, CancellationToken ct = default);
+    Task<PacksManifest> EnsureManifestWithMigrationAsync(string instancePath, string packType, CancellationToken ct = default);
     Task SaveAsync(string instancePath, string packType, PacksManifest manifest, CancellationToken ct = default);
     Task AddOrUpdateEntryAsync(string instancePath, string packType, PackManifestEntry entry, CancellationToken ct = default);
     Task RemoveEntryAsync(string instancePath, string packType, string fileName, CancellationToken ct = default);
@@ -103,6 +104,74 @@ public class PackManifestService : IPackManifestService
         {
             return new PacksManifest { PackType = NormalizePackType(packType) };
         }
+    }
+
+    public async Task<PacksManifest> EnsureManifestWithMigrationAsync(string instancePath, string packType, CancellationToken ct = default)
+    {
+        var manifestPath = GetManifestPath(instancePath, packType);
+        var normType = NormalizePackType(packType);
+        var targetFolder = Path.Combine(instancePath, normType == "shader" ? "shaderpacks" : "resourcepacks");
+
+        if (File.Exists(manifestPath))
+        {
+            var existing = await LoadAsync(instancePath, packType, ct);
+            if (Directory.Exists(targetFolder))
+            {
+                var files = Directory.GetFiles(targetFolder, "*.zip");
+                var changed = false;
+                foreach (var file in files)
+                {
+                    var fn = Path.GetFileName(file);
+                    if (!existing.Packs.Any(p => string.Equals(p.FileName, fn, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        var fi = new FileInfo(file);
+                        existing.Packs.Add(new PackManifestEntry
+                        {
+                            FileName = fn,
+                            Title = Path.GetFileNameWithoutExtension(fn),
+                            InstalledAt = fi.LastWriteTimeUtc
+                        });
+                        changed = true;
+                    }
+                }
+                if (changed)
+                {
+                    await SaveAsync(instancePath, packType, existing, ct);
+                }
+            }
+            return existing;
+        }
+
+        // Migration khi chưa có file manifest
+        var manifest = new PacksManifest
+        {
+            SchemaVersion = 1,
+            PackType = normType,
+            UpdatedAt = DateTimeOffset.UtcNow
+        };
+
+        if (Directory.Exists(targetFolder))
+        {
+            var files = Directory.GetFiles(targetFolder, "*.zip");
+            foreach (var file in files)
+            {
+                var fn = Path.GetFileName(file);
+                var fi = new FileInfo(file);
+                manifest.Packs.Add(new PackManifestEntry
+                {
+                    FileName = fn,
+                    Title = Path.GetFileNameWithoutExtension(fn),
+                    ProjectId = null,
+                    Slug = null,
+                    ThumbnailRemote = null,
+                    ThumbnailLocal = null,
+                    InstalledAt = fi.LastWriteTimeUtc
+                });
+            }
+        }
+
+        await SaveAsync(instancePath, packType, manifest, ct);
+        return manifest;
     }
 
     public async Task SaveAsync(string instancePath, string packType, PacksManifest manifest, CancellationToken ct = default)

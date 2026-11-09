@@ -20,6 +20,7 @@ using Vazer.Core.Loaders;
 using Vazer.Core.Loaders.Optifine;
 using Vazer.Core.Modpacks;
 using Vazer.Core.Mods;
+using Vazer.Core.Packs;
 
 namespace Vaz.WinUI.ViewModels;
 
@@ -214,6 +215,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
     private long _lastLogPosition;
     private readonly object _logLock = new();
     private string? _watchedInstancePath;
+    private readonly IPackManifestService _packManifestService;
 
     public bool IsNotBusy => !IsBusy;
     public bool HasInstance => Current != null;
@@ -233,7 +235,8 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         MainViewModel mainViewModel,
         IGameOptionsService gameOptionsService,
         INotificationService? notificationService = null,
-        IInstanceMigrationService? migrationService = null)
+        IInstanceMigrationService? migrationService = null,
+        IPackManifestService? packManifestService = null)
     {
         _instanceManager = instanceManager;
         _migrationService = migrationService ?? throw new ArgumentNullException(nameof(migrationService));
@@ -244,6 +247,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         _mainViewModel = mainViewModel;
         _gameOptionsService = gameOptionsService;
         _notificationService = notificationService;
+        _packManifestService = packManifestService ?? new PackManifestService();
         _activeInstance.CurrentChanged += OnActiveInstanceChanged;
         _mainViewModel.PropertyChanged += OnMainViewModelPropertyChanged;
         UpdateGameRunningState();

@@ -1030,9 +1030,9 @@
                                                                                Source="{x:Bind IconImageSource, Mode=OneWay}"
                                                                                Stretch="UniformToFill"
                                                                                ImageOpened="Thumbnail_ImageOpened" />
-                                                                        <!-- B5: badge "Đã cài" (chỉ hiện + bounce khi vừa cài thành công) -->
+                                                                        <!-- Badge "Đã cài" -->
                                                                         <Border x:Name="InstalledBadge"
-                                                                                Visibility="Collapsed"
+                                                                                Visibility="{x:Bind IsInstalled, Mode=OneWay, Converter={StaticResource BoolToVis}}"
                                                                                 VerticalAlignment="Bottom"
                                                                                 Background="{StaticResource VazAccentBrush}"
                                                                                 CornerRadius="0,0,6,6"
@@ -1383,9 +1383,9 @@
                                                                 <TextBlock Text="{x:Bind StyleLabel}" FontSize="11" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                                                             </Border>
 
-                                                            <!-- B5: badge "Đã cài" (chỉ hiện + bounce khi vừa cài thành công) -->
+                                                            <!-- Badge "Đã cài" -->
                                                             <Border x:Name="InstalledBadge"
-                                                                    Visibility="Collapsed"
+                                                                    Visibility="{x:Bind IsInstalled, Mode=OneWay, Converter={StaticResource BoolToVis}}"
                                                                     HorizontalAlignment="Left"
                                                                     VerticalAlignment="Top"
                                                                     Margin="10"

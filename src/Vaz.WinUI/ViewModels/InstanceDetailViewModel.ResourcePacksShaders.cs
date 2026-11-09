@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Vaz.WinUI.Models;
+using Vazer.Core.Packs;
 
 namespace Vaz.WinUI.ViewModels;
 
@@ -70,6 +71,7 @@ public sealed partial class ResourcePackRow : ObservableObject
     public string ViewDetailsAutomationName => $"Xem chi tiết {Name}";
     public string DeletePackAutomationName => $"Xóa gói {Name}";
     public string OpenFileAutomationName => $"Mở vị trí tệp {Name}";
+    public bool IsInstalled => true;
 
     public ResourcePackRow(ResourcePackItem pack)
     {
@@ -125,6 +127,7 @@ public sealed partial class ShaderPackRow : ObservableObject
     public string ViewDetailsAutomationName => $"Xem chi tiết {Name}";
     public string DeleteShaderAutomationName => $"Xóa shader {Name}";
     public string OpenFileAutomationName => $"Mở vị trí tệp {Name}";
+    public bool IsInstalled => true;
 
     public ShaderPackRow(ShaderPackItem shader)
     {
@@ -211,90 +214,81 @@ public partial class InstanceDetailViewModel
     private void LoadResourcePacksCore()
     {
         ResourcePacks.Clear();
-        var defaults = ResourcePackShaderData.DefaultResourcePacks;
-
         var instancePath = Current?.Path;
-
-        foreach (var p in defaults)
+        if (string.IsNullOrEmpty(instancePath))
         {
-            var row = new ResourcePackRow(p);
-            ResourcePacks.Add(row);
-
-            if (!string.IsNullOrEmpty(instancePath) && !string.IsNullOrEmpty(p.FileName))
-            {
-                var potentialZip = Path.Combine(instancePath, "resourcepacks", p.FileName);
-                if (File.Exists(potentialZip))
-                {
-                    LoadThumbnailInBackground(row, potentialZip);
-                }
-            }
+            RefreshResourcePackLists();
+            return;
         }
 
-        // Đọc thêm file zip từ thư mục resourcepacks của instance nếu có
-        if (!string.IsNullOrEmpty(instancePath))
+        var rpDir = Path.Combine(instancePath, "resourcepacks");
+        Directory.CreateDirectory(rpDir);
+
+        PacksManifest manifest;
+        try
         {
-            var rpDir = Path.Combine(instancePath, "resourcepacks");
-            if (Directory.Exists(rpDir))
+            manifest = _packManifestService.EnsureManifestWithMigrationAsync(instancePath, "resourcepack").GetAwaiter().GetResult();
+        }
+        catch
+        {
+            manifest = new PacksManifest { PackType = "resourcepack" };
+        }
+
+        foreach (var entry in manifest.Packs)
+        {
+            var zipPath = Path.Combine(rpDir, entry.FileName);
+            if (!File.Exists(zipPath)) continue;
+
+            var fi = new FileInfo(zipPath);
+            long sizeKb = fi.Length / 1024;
+            string sizeStr = sizeKb > 1024 ? $"{(sizeKb / 1024.0):F1} MB" : $"{sizeKb} KB";
+
+            string desc = "Gói tài nguyên đã cài đặt.";
+            string res = "32x";
+            int packFormat = 34;
+
+            try
             {
-                var zipFiles = Directory.GetFiles(rpDir, "*.zip");
-                foreach (var zip in zipFiles)
+                using var archive = ZipFile.OpenRead(zipPath);
+                var mcmetaEntry = archive.GetEntry("pack.mcmeta");
+                if (mcmetaEntry != null)
                 {
-                    var fName = Path.GetFileName(zip);
-                    if (!ResourcePacks.Any(rp => string.Equals(rp.FileName, fName, StringComparison.OrdinalIgnoreCase)))
+                    using var s = mcmetaEntry.Open();
+                    using var doc = JsonDocument.Parse(s);
+                    if (doc.RootElement.TryGetProperty("pack", out var packEl))
                     {
-                        var fi = new FileInfo(zip);
-                        long sizeKb = fi.Length / 1024;
-                        string sizeStr = sizeKb > 1024 ? $"{(sizeKb / 1024.0):F1} MB" : $"{sizeKb} KB";
-
-                        string desc = "Gói tài nguyên đã cài đặt.";
-                        string res = "32x";
-                        int packFormat = 34;
-
-                        try
+                        if (packEl.TryGetProperty("description", out var dEl))
                         {
-                            using var archive = ZipFile.OpenRead(zip);
-                            var mcmetaEntry = archive.GetEntry("pack.mcmeta");
-                            if (mcmetaEntry != null)
-                            {
-                                using var s = mcmetaEntry.Open();
-                                using var doc = JsonDocument.Parse(s);
-                                if (doc.RootElement.TryGetProperty("pack", out var packEl))
-                                {
-                                    if (packEl.TryGetProperty("description", out var dEl))
-                                    {
-                                        desc = dEl.ValueKind == JsonValueKind.String ? (dEl.GetString() ?? desc) : dEl.ToString();
-                                    }
-                                    if (packEl.TryGetProperty("pack_format", out var fEl) && fEl.TryGetInt32(out var pf))
-                                    {
-                                        packFormat = pf;
-                                    }
-                                }
-                            }
+                            desc = dEl.ValueKind == JsonValueKind.String ? (dEl.GetString() ?? desc) : dEl.ToString();
                         }
-                        catch { }
-
-                        var item = new ResourcePackItem
+                        if (packEl.TryGetProperty("pack_format", out var fEl) && fEl.TryGetInt32(out var pf))
                         {
-                            Id = Path.GetFileNameWithoutExtension(fName).ToLowerInvariant(),
-                            Slug = Path.GetFileNameWithoutExtension(fName).ToLowerInvariant(),
-                            Name = Path.GetFileNameWithoutExtension(fName),
-                            FileName = fName,
-                            Author = "Tùy biến",
-                            Description = desc,
-                            Resolution = res,
-                            Size = sizeStr,
-                            Version = "Unknown",
-                            PackFormat = packFormat,
-                            IsCompatible = packFormat == 34 || packFormat <= 0
-                        };
-
-                        var newRow = new ResourcePackRow(item);
-                        ResourcePacks.Add(newRow);
-
-                        LoadThumbnailInBackground(newRow, zip);
+                            packFormat = pf;
+                        }
                     }
                 }
             }
+            catch { }
+
+            var item = new ResourcePackItem
+            {
+                Id = entry.FileName,
+                Slug = entry.Slug ?? Path.GetFileNameWithoutExtension(entry.FileName).ToLowerInvariant(),
+                Name = !string.IsNullOrWhiteSpace(entry.Title) ? entry.Title : Path.GetFileNameWithoutExtension(entry.FileName),
+                FileName = entry.FileName,
+                Author = !string.IsNullOrWhiteSpace(entry.Author) ? entry.Author : "Tùy biến",
+                Description = desc,
+                Resolution = res,
+                Size = sizeStr,
+                Version = "Unknown",
+                PackFormat = packFormat,
+                IsCompatible = packFormat == 34 || packFormat <= 0,
+                IconUri = entry.ThumbnailRemote ?? string.Empty
+            };
+
+            var newRow = new ResourcePackRow(item);
+            ResourcePacks.Add(newRow);
+            LoadThumbnailInBackground(newRow, zipPath);
         }
 
         RefreshResourcePackLists();
@@ -397,6 +391,8 @@ public partial class InstanceDetailViewModel
                     return;
                 }
             }
+
+            _ = _packManifestService.RemoveEntryAsync(instancePath, "resourcepack", pack.FileName);
         }
 
         ResourcePacks.Remove(pack);
@@ -515,50 +511,59 @@ public partial class InstanceDetailViewModel
     private void LoadShadersCore()
     {
         Shaders.Clear();
-        var defaults = ResourcePackShaderData.DefaultShaders;
-
         var instancePath = Current?.Path;
-        if (!string.IsNullOrEmpty(instancePath))
+        if (string.IsNullOrEmpty(instancePath))
         {
-            var shDir = Path.Combine(instancePath, "shaderpacks");
-            Directory.CreateDirectory(shDir);
-
-            if (Directory.Exists(shDir))
-            {
-                var zipFiles = Directory.GetFiles(shDir, "*.zip");
-                foreach (var zip in zipFiles)
-                {
-                    var fName = Path.GetFileName(zip);
-                    if (!Shaders.Any(s => string.Equals(s.FileName, fName, StringComparison.OrdinalIgnoreCase)))
-                    {
-                        var fi = new FileInfo(zip);
-                        long sizeKb = fi.Length / 1024;
-                        string sizeStr = sizeKb > 1024 ? $"{(sizeKb / 1024.0):F1} MB" : $"{sizeKb} KB";
-
-                        var item = new ShaderPackItem
-                        {
-                            Id = Path.GetFileNameWithoutExtension(fName).ToLowerInvariant(),
-                            Name = Path.GetFileNameWithoutExtension(fName),
-                            Author = "Tùy biến",
-                            Description = "Shader pack đã cài đặt.",
-                            Style = "realistic",
-                            StyleLabel = "Thực tế",
-                            Version = "1.0.0",
-                            Size = sizeStr,
-                            AccentColor = "#3b82f6"
-                        };
-                        Shaders.Add(new ShaderPackRow(item));
-                    }
-                }
-            }
+            FilterShaders();
+            return;
         }
 
-        foreach (var s in defaults)
+        var shDir = Path.Combine(instancePath, "shaderpacks");
+        Directory.CreateDirectory(shDir);
+
+        PacksManifest manifest;
+        try
         {
-            if (!Shaders.Any(existing => existing.Id == s.Id))
+            manifest = _packManifestService.EnsureManifestWithMigrationAsync(instancePath, "shader").GetAwaiter().GetResult();
+        }
+        catch
+        {
+            manifest = new PacksManifest { PackType = "shader" };
+        }
+
+        foreach (var entry in manifest.Packs)
+        {
+            var zipPath = Path.Combine(shDir, entry.FileName);
+            if (!File.Exists(zipPath)) continue;
+
+            var fi = new FileInfo(zipPath);
+            long sizeKb = fi.Length / 1024;
+            string sizeStr = sizeKb > 1024 ? $"{(sizeKb / 1024.0):F1} MB" : $"{sizeKb} KB";
+
+            var imageUri = entry.ThumbnailLocal;
+            if (!string.IsNullOrEmpty(imageUri) && !Path.IsPathRooted(imageUri))
             {
-                Shaders.Add(new ShaderPackRow(s));
+                imageUri = Path.Combine(instancePath, imageUri);
             }
+            if (string.IsNullOrEmpty(imageUri))
+            {
+                imageUri = entry.ThumbnailRemote ?? string.Empty;
+            }
+
+            var item = new ShaderPackItem
+            {
+                Id = entry.FileName,
+                Name = !string.IsNullOrWhiteSpace(entry.Title) ? entry.Title : Path.GetFileNameWithoutExtension(entry.FileName),
+                Author = !string.IsNullOrWhiteSpace(entry.Author) ? entry.Author : "Tùy biến",
+                Description = "Shader pack đã cài đặt.",
+                Style = "realistic",
+                StyleLabel = "Thực tế",
+                Version = entry.VersionId ?? "1.0.0",
+                Size = sizeStr,
+                ImageUri = imageUri,
+                AccentColor = "#3b82f6"
+            };
+            Shaders.Add(new ShaderPackRow(item));
         }
 
         FilterShaders();
@@ -669,6 +674,8 @@ public partial class InstanceDetailViewModel
                     return;
                 }
             }
+
+            _ = _packManifestService.RemoveEntryAsync(instancePath, "shader", shader.FileName);
         }
 
         Shaders.Remove(shader);

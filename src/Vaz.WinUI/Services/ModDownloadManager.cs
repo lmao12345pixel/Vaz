@@ -79,21 +79,28 @@ public sealed class ModDownloadManager : IModDownloadManager
 
             try
             {
-                var slugLower = slug.Trim().ToLowerInvariant();
+                var manifest = await _packManifestService.EnsureManifestWithMigrationAsync(instance.Path, projectType, ct);
+                var slugLower = slug?.Trim().ToLowerInvariant();
                 var projIdLower = projectId?.Trim().ToLowerInvariant();
-                var files = Directory.GetFiles(targetFolder, "*.zip");
-                foreach (var file in files)
+
+                foreach (var pack in manifest.Packs)
                 {
-                    var fileName = Path.GetFileName(file).ToLowerInvariant();
-                    if (fileName.Contains(slugLower) || (!string.IsNullOrEmpty(projIdLower) && fileName.Contains(projIdLower)))
+                    bool match = (!string.IsNullOrEmpty(projIdLower) && string.Equals(pack.ProjectId, projIdLower, StringComparison.OrdinalIgnoreCase)) ||
+                                 (!string.IsNullOrEmpty(slugLower) && string.Equals(pack.Slug, slugLower, StringComparison.OrdinalIgnoreCase));
+
+                    if (match)
                     {
-                        return true;
+                        var filePath = Path.Combine(targetFolder, pack.FileName);
+                        if (File.Exists(filePath))
+                        {
+                            return true;
+                        }
                     }
                 }
             }
             catch
             {
-                // Bỏ qua lỗi IO khi quét thư mục
+                // Bỏ qua lỗi IO hoặc parse manifest khi quét
             }
             return false;
         }
