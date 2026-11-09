@@ -49,7 +49,7 @@ public sealed record UpdateCheckResult
 
 public sealed record ModUpdateInfo
 {
-    public InstalledMod CurrentMod { get; init; } = null!;
+    public required InstalledMod CurrentMod { get; init; }
     public string LatestVersionId { get; init; } = "";
     public string LatestVersionNumber { get; init; } = "";
     public bool HasUpdate { get; init; }

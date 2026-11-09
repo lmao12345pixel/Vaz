@@ -87,6 +87,7 @@ public sealed class ModSearchCollection : ObservableCollection<SearchHitRow>, IS
 /// </summary>
 public sealed partial class SearchHitRow : ObservableObject
 {
+    // TODO: required + JsonRequired after verify — WinUI XamlTypeInfo requires parameterless instantiation without CS8618
     public SearchHit Hit { get; init; } = null!;
 
     public string Title => Hit.Title;

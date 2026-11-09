@@ -27,6 +27,11 @@ public sealed class NeoForgeInstaller : INeoForgeInstaller, ILoaderInstaller
     private readonly MinecraftOptions _options;
     private readonly IJavaResolver? _javaResolver;
 
+    /// <summary>Khởi tạo NeoForgeInstaller.</summary>
+    /// <param name="httpClientFactory">Factory tạo HTTP client cho download installer.</param>
+    /// <param name="logger">Logger cho installer.</param>
+    /// <param name="options">Cấu hình Minecraft options.</param>
+    /// <param name="javaResolver">Nullable: khi null (ví dụ resolve mặc định hoặc unit test), installer tự động fallback tìm Java runtime trên PATH hệ thống.</param>
     public NeoForgeInstaller(
         IHttpClientFactory httpClientFactory,
         ILogger<NeoForgeInstaller> logger,

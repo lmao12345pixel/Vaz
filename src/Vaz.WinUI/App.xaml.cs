@@ -18,10 +18,10 @@ namespace Vaz.WinUI;
 public partial class App : Application
 {
     /// <summary>Dispatcher of the UI thread (set in OnLaunched).</summary>
-    public static DispatcherQueue Dispatcher { get; private set; } = null!;
+    public static DispatcherQueue Dispatcher { get; private set; } = null!; // Assigned in OnLaunched (WinUI lifecycle)
 
     /// <summary>Main window instance (set in OnLaunched). Needed for pickers.</summary>
-    public static Window MainWindow { get; private set; } = null!;
+    public static Window MainWindow { get; private set; } = null!; // Assigned in OnLaunched (WinUI lifecycle)
 
     /// <summary>Root service provider.</summary>
     public IServiceProvider Services { get; }

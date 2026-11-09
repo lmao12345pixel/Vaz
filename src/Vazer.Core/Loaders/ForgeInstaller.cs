@@ -41,6 +41,12 @@ public sealed class ForgeInstaller : ILoaderInstaller
 
     public string LoaderType => "forge";
 
+    /// <summary>Khởi tạo ForgeInstaller.</summary>
+    /// <param name="httpClientFactory">Factory tạo HTTP client cho download installer.</param>
+    /// <param name="logger">Logger cho installer.</param>
+    /// <param name="options">Cấu hình Minecraft options.</param>
+    /// <param name="javaResolver">Nullable: khi null, installer tự động fallback quét Java runtime từ biến môi trường PATH hệ thống.</param>
+    /// <param name="processRunner">Nullable: process runner function tùy chỉnh hoặc mock cho unit test.</param>
     public ForgeInstaller(
         IHttpClientFactory httpClientFactory,
         ILogger<ForgeInstaller> logger,

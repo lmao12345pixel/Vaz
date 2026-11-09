@@ -23,6 +23,12 @@ public class OptifineInstallerService : IOptifineInstallerService
     private readonly ConcurrentDictionary<string, (DateTimeOffset CachedAt, OptifineCatalog Catalog)> _cache =
         new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>Khởi tạo OptifineInstallerService.</summary>
+    /// <param name="httpClientFactory">Factory tạo HTTP client cho tải OptiFine và scrape catalog.</param>
+    /// <param name="options">Cấu hình Minecraft options.</param>
+    /// <param name="logger">Logger cho OptiFine service.</param>
+    /// <param name="modrinthClient">Nullable: khi null (ví dụ unit test không mock Modrinth), bỏ qua tìm kiếm Modrinth optifabric adapter, chỉ hỗ trợ cài đặt trực tiếp file OptiFine.</param>
+    /// <param name="fileDownloader">Nullable: downloader tùy chỉnh hoặc mock cho unit test.</param>
     public OptifineInstallerService(
         IHttpClientFactory httpClientFactory,
         IOptions<MinecraftOptions> options,
@@ -31,8 +37,8 @@ public class OptifineInstallerService : IOptifineInstallerService
         IFileDownloader? fileDownloader = null)
     {
         _httpClientFactory = httpClientFactory;
-        _options = options;
         _logger = logger;
+        _options = options;
         _modrinthClient = modrinthClient;
         _fileDownloader = fileDownloader ?? new FileDownloader(httpClientFactory);
     }

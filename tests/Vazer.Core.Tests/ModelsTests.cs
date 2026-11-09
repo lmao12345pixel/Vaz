@@ -168,4 +168,17 @@ public sealed class ModelsTests
         image.Description.Should().Be("FPS boost");
         image.Created.Should().Be(new DateTimeOffset(2024, 1, 2, 3, 4, 5, TimeSpan.Zero));
     }
+
+    private sealed class RequiredPropertyTestModel
+    {
+        public required string RequiredField { get; init; }
+    }
+
+    [Fact]
+    public void SystemTextJson_MissingRequiredProperty_ThrowsJsonException()
+    {
+        const string json = "{}";
+        var act = () => System.Text.Json.JsonSerializer.Deserialize<RequiredPropertyTestModel>(json);
+        act.Should().Throw<System.Text.Json.JsonException>();
+    }
 }

@@ -30,6 +30,7 @@ public sealed class MsalAuthProvider : IAuthProvider
     /// <inheritdoc />
     public AccountKind Kind => AccountKind.Microsoft;
 
+    /// <summary>Khởi tạo MsalAuthProvider với cấu hình production.</summary>
     public MsalAuthProvider(
         IHttpClientFactory httpClientFactory,
         ILogger<MsalAuthProvider> logger,
@@ -38,6 +39,11 @@ public sealed class MsalAuthProvider : IAuthProvider
     {
     }
 
+    /// <summary>Khởi tạo MsalAuthProvider phục vụ DI và unit test.</summary>
+    /// <param name="httpClientFactory">Factory tạo HTTP client cho OAuth requests.</param>
+    /// <param name="logger">Logger cho authentication provider.</param>
+    /// <param name="options">Cấu hình Minecraft options.</param>
+    /// <param name="msal">Nullable: khi null (ví dụ chế độ OfflineDemoMode hoặc unit test), provider bỏ qua MSAL interactive flow; login online sẽ ném lỗi rõ ràng thay vì crash.</param>
     internal MsalAuthProvider(
         IHttpClientFactory httpClientFactory,
         ILogger<MsalAuthProvider> logger,
