@@ -119,6 +119,13 @@
                 </Setter>
             </Style>
 
+            <!-- Global press-scale animation cho TẤT CẢ Buttons (A1).
+                 Reduce-motion gate nằm trong PressScale.cs → tự động skip khi bật.
+                 StoryboardPool + ConditionalWeakTable đảm bảo không leak RAM. -->
+            <Style TargetType="Button">
+                <Setter Property="helpers:PressScale.IsEnabled" Value="True" />
+            </Style>
+
             <!-- Minecraft emerald theme tokens -->
             <SolidColorBrush x:Key="MinecraftEmeraldBrush" Color="#22C55E" />
             <SolidColorBrush x:Key="MinecraftEmeraldHoverBrush" Color="#16A34A" />

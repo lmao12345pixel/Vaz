@@ -1155,7 +1155,7 @@ public static class UiAnimationHelper
         return newTt;
     }
 
-    private static ScaleTransform EnsureScaleTransform(UIElement element)
+    internal static ScaleTransform EnsureScaleTransform(UIElement element)
     {
         if (element.RenderTransform is ScaleTransform st) return st;
         if (element.RenderTransform is TransformGroup tg)
@@ -1221,6 +1221,55 @@ public static class UiAnimationHelper
         var created = new T();
         tg.Children.Add(created);
         return created;
+    }
+
+    #endregion
+
+    #region Storyboard Pool (RAM optimization)
+
+    /// <summary>
+    /// Object pool cho Storyboard để tránh GC churn khi nhiều animations chạy đồng thời.
+    /// Cap 32 items để tránh unbounded growth. Thread-safe qua ConcurrentBag.
+    /// </summary>
+    private static readonly System.Collections.Concurrent.ConcurrentBag<Storyboard> _storyboardPool = new();
+    private const int MaxStoryboardPoolSize = 32;
+
+    /// <summary>Rent a Storyboard from pool (or create new if empty).</summary>
+    internal static Storyboard RentStoryboard()
+    {
+        while (_storyboardPool.TryTake(out var sb))
+        {
+            try
+            {
+                sb.Stop();
+                sb.Children.Clear();
+                return sb;
+            }
+            catch
+            {
+                // Discard invalid / closed WinRT peer
+            }
+        }
+        return new Storyboard();
+    }
+
+    /// <summary>Return a Storyboard to pool after use. Clears children and stops.</summary>
+    internal static void ReturnStoryboard(Storyboard sb)
+    {
+        if (sb == null) return;
+        try
+        {
+            sb.Stop();
+            sb.Children.Clear();
+            if (_storyboardPool.Count < MaxStoryboardPoolSize)
+            {
+                _storyboardPool.Add(sb);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[UiAnimationHelper] Failed to return storyboard to pool: {ex.Message}");
+        }
     }
 
     #endregion
