@@ -1,5 +1,7 @@
+using System.Net;
 using FluentAssertions;
 using Vazer.Core.Packs;
+using Vazer.Core.Tests.TestHelpers;
 
 namespace Vazer.Core.Tests;
 
@@ -244,5 +246,75 @@ public sealed class PackManifestServiceTests : IDisposable
         loaded.Packs.Should().HaveCount(1);
         loaded.Packs[0].ProjectId.Should().Be("m0uik42B");
         loaded.Packs[0].Slug.Should().Be("bsl-shaders");
+    }
+
+    [Fact]
+    public void ManifestEntry_PrefersLocalThumbnail_WhenAvailable()
+    {
+        var entry = new PackManifestEntry
+        {
+            FileName = "bsl.zip",
+            ThumbnailLocal = "thumbnails/shader-bsl.jpg",
+            ThumbnailRemote = "https://cdn.modrinth.com/remote.png"
+        };
+
+        var chosen = !string.IsNullOrEmpty(entry.ThumbnailLocal) ? entry.ThumbnailLocal : entry.ThumbnailRemote;
+        chosen.Should().Be("thumbnails/shader-bsl.jpg");
+    }
+
+    [Fact]
+    public void ManifestEntry_FallbacksToRemoteThumbnail_WhenLocalIsNull()
+    {
+        var entry = new PackManifestEntry
+        {
+            FileName = "bsl.zip",
+            ThumbnailLocal = null,
+            ThumbnailRemote = "https://cdn.modrinth.com/remote.png"
+        };
+
+        var chosen = !string.IsNullOrEmpty(entry.ThumbnailLocal) ? entry.ThumbnailLocal : entry.ThumbnailRemote;
+        chosen.Should().Be("https://cdn.modrinth.com/remote.png");
+    }
+
+    [Fact]
+    public async Task DownloadThumbnail_SavesLocalFile_WhenRemoteReturnsSuccess()
+    {
+        // Arrange
+        var fakeHttp = new FakeHttpMessageHandler();
+        fakeHttp.Map(HttpMethod.Get, "/test-image.jpg", _ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 })
+        });
+
+        var httpClient = new HttpClient(fakeHttp) { BaseAddress = new Uri("https://cdn.modrinth.com") };
+        var serviceWithHttp = new PackManifestService(httpClient);
+
+        // Act
+        var localRelPath = await serviceWithHttp.DownloadThumbnailAsync(_tempDir, "shader", "bsl-shaders", "https://cdn.modrinth.com/test-image.jpg");
+
+        // Assert
+        localRelPath.Should().NotBeNull();
+        localRelPath.Should().Be("thumbnails/shader-bsl-shaders.jpg");
+
+        var fullPath = Path.Combine(_tempDir, localRelPath!);
+        File.Exists(fullPath).Should().BeTrue();
+        (await File.ReadAllBytesAsync(fullPath)).Should().HaveCount(4);
+    }
+
+    [Fact]
+    public async Task DownloadThumbnail_ReturnsNull_WhenRemoteFails_WithoutThrowing()
+    {
+        // Arrange
+        var fakeHttp = new FakeHttpMessageHandler();
+        fakeHttp.Map(HttpMethod.Get, "/not-found.jpg", _ => new HttpResponseMessage(HttpStatusCode.NotFound));
+
+        var httpClient = new HttpClient(fakeHttp) { BaseAddress = new Uri("https://cdn.modrinth.com") };
+        var serviceWithHttp = new PackManifestService(httpClient);
+
+        // Act
+        var localRelPath = await serviceWithHttp.DownloadThumbnailAsync(_tempDir, "shader", "bsl-shaders", "https://cdn.modrinth.com/not-found.jpg");
+
+        // Assert
+        localRelPath.Should().BeNull();
     }
 }

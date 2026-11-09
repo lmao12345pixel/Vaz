@@ -60,6 +60,7 @@ public interface IPackManifestService
     Task SaveAsync(string instancePath, string packType, PacksManifest manifest, CancellationToken ct = default);
     Task AddOrUpdateEntryAsync(string instancePath, string packType, PackManifestEntry entry, CancellationToken ct = default);
     Task RemoveEntryAsync(string instancePath, string packType, string fileName, CancellationToken ct = default);
+    Task<string?> DownloadThumbnailAsync(string instancePath, string packType, string slugOrId, string? remoteUrl, CancellationToken ct = default);
 }
 
 public class PackManifestService : IPackManifestService
@@ -70,6 +71,13 @@ public class PackManifestService : IPackManifestService
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         PropertyNameCaseInsensitive = true
     };
+
+    private readonly HttpClient _httpClient;
+
+    public PackManifestService(HttpClient? httpClient = null)
+    {
+        _httpClient = httpClient ?? new HttpClient();
+    }
 
     public string GetManifestPath(string instancePath, string packType)
     {
@@ -240,6 +248,45 @@ public class PackManifestService : IPackManifestService
         if (removed > 0)
         {
             await SaveAsync(instancePath, packType, manifest, ct);
+        }
+    }
+
+    public async Task<string?> DownloadThumbnailAsync(string instancePath, string packType, string slugOrId, string? remoteUrl, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(instancePath) || string.IsNullOrWhiteSpace(remoteUrl))
+        {
+            return null;
+        }
+
+        var normType = NormalizePackType(packType);
+        var thumbnailsDir = Path.Combine(instancePath, "thumbnails");
+        Directory.CreateDirectory(thumbnailsDir);
+
+        var safeSlug = string.Join("_", (slugOrId ?? "pack").Split(Path.GetInvalidFileNameChars()));
+        var fileName = $"{normType}-{safeSlug}.jpg";
+        var localFilePath = Path.Combine(thumbnailsDir, fileName);
+
+        try
+        {
+            using var response = await _httpClient.GetAsync(remoteUrl, HttpCompletionOption.ResponseHeadersRead, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                return null;
+            }
+
+            await using var srcStream = await response.Content.ReadAsStreamAsync(ct);
+            await using var destStream = File.Create(localFilePath);
+            await srcStream.CopyToAsync(destStream, ct);
+
+            return Path.Combine("thumbnails", fileName).Replace('\\', '/');
+        }
+        catch
+        {
+            if (File.Exists(localFilePath))
+            {
+                try { File.Delete(localFilePath); } catch { }
+            }
+            return null;
         }
     }
 

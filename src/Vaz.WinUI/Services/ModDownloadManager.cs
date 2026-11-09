@@ -282,6 +282,19 @@ public sealed class ModDownloadManager : IModDownloadManager
             // Bỏ qua lỗi mạng khi lấy project metadata bổ sung
         }
 
+        string? localThumbnail = null;
+        if (!string.IsNullOrEmpty(remoteThumbnail))
+        {
+            try
+            {
+                localThumbnail = await _packManifestService.DownloadThumbnailAsync(instance.Path, projectType, projectSlug, remoteThumbnail, ct);
+            }
+            catch
+            {
+                // Non-critical: giữ thumbnailRemote fallback
+            }
+        }
+
         var entry = new PackManifestEntry
         {
             FileName = safeFileName,
@@ -290,6 +303,7 @@ public sealed class ModDownloadManager : IModDownloadManager
             Title = projectTitle,
             VersionId = version.Id,
             ThumbnailRemote = remoteThumbnail,
+            ThumbnailLocal = localThumbnail,
             InstalledAt = DateTimeOffset.UtcNow,
             Author = author
         };
