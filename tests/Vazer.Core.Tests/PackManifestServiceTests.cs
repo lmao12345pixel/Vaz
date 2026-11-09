@@ -317,4 +317,66 @@ public sealed class PackManifestServiceTests : IDisposable
         // Assert
         localRelPath.Should().BeNull();
     }
+
+    [Fact]
+    public async Task LoadAsync_CorruptJson_ReturnsEmptyManifest_WithoutCrashing()
+    {
+        // Arrange
+        var manifestPath = Path.Combine(_tempDir, "shaderpacks.json");
+        await File.WriteAllTextAsync(manifestPath, "{ corrupt json content not valid !!! [");
+
+        // Act
+        var manifest = await _service.LoadAsync(_tempDir, "shader");
+
+        // Assert
+        manifest.Should().NotBeNull();
+        manifest.PackType.Should().Be("shader");
+        manifest.Packs.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task EnsureManifestWithMigration_ExistingZipWithoutManifest_CanBeVerifiedAsInstalled()
+    {
+        // Arrange
+        var shaderDir = Path.Combine(_tempDir, "shaderpacks");
+        Directory.CreateDirectory(shaderDir);
+        var zipPath = Path.Combine(shaderDir, "ExistingShader_v1.zip");
+        await File.WriteAllTextAsync(zipPath, "dummy-zip");
+
+        // Act: migration chạy khi manifest chưa tồn tại
+        var manifest = await _service.EnsureManifestWithMigrationAsync(_tempDir, "shader");
+
+        // Assert: kiểm tra manifest có entry và file tồn tại trên đĩa -> check installed true
+        manifest.Packs.Should().ContainSingle(p => p.FileName == "ExistingShader_v1.zip");
+        var isInstalled = manifest.Packs.Any(p => p.FileName == "ExistingShader_v1.zip") && File.Exists(zipPath);
+        isInstalled.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task DownloadThumbnail_HandlesNullSlug_AndSanitizesInvalidChars()
+    {
+        // Arrange
+        var fakeHttp = new FakeHttpMessageHandler();
+        fakeHttp.Map(HttpMethod.Get, "/img.jpg", _ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(new byte[] { 0x01, 0x02 })
+        });
+        var httpClient = new HttpClient(fakeHttp) { BaseAddress = new Uri("https://cdn.modrinth.com") };
+        var serviceWithHttp = new PackManifestService(httpClient);
+
+        // Act 1: slug null -> fallback "pack"
+        var pathNullSlug = await serviceWithHttp.DownloadThumbnailAsync(_tempDir, "shader", null!, "https://cdn.modrinth.com/img.jpg");
+
+        // Act 2: slug có ký tự cấm: : / \ * ? " < > |
+        var badSlug = "test:slug/with\\invalid*chars?in\"name<yes>pipe|";
+        var pathBadSlug = await serviceWithHttp.DownloadThumbnailAsync(_tempDir, "shader", badSlug, "https://cdn.modrinth.com/img.jpg");
+
+        // Assert
+        pathNullSlug.Should().Be("thumbnails/shader-pack.jpg");
+        File.Exists(Path.Combine(_tempDir, pathNullSlug!)).Should().BeTrue();
+
+        pathBadSlug.Should().NotBeNull();
+        pathBadSlug.Should().NotContainAny(":", "*", "?", "\"", "<", ">", "|");
+        File.Exists(Path.Combine(_tempDir, pathBadSlug!)).Should().BeTrue();
+    }
 }
