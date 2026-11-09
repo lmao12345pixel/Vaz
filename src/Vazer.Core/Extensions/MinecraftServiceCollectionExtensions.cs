@@ -15,6 +15,7 @@ using Vazer.Core.Loaders.Optifine;
 using Vazer.Core.Modpacks;
 using Vazer.Core.Modrinth;
 using Vazer.Core.Mods;
+using Vazer.Core.Packs;
 using Vazer.Core.Settings;
 using Vazer.Core.Store;
 using Vazer.Core.Versions;
@@ -122,6 +123,7 @@ public static class MinecraftServiceCollectionExtensions
         // Phase 2 services
         services.AddSingleton<IModrinthClient, ModrinthClient>();
         services.AddSingleton<IModInstallService, ModInstallService>();
+        services.AddSingleton<IPackManifestService, PackManifestService>();
         services.AddSingleton<IMrpackImporter, MrpackImporter>();
         services.AddSingleton<IGameOptionsService, GameOptionsService>();
         services.AddSingleton<IOptifineInstallerService>(sp => new OptifineInstallerService(

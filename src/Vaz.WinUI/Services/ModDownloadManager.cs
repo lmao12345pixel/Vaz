@@ -9,6 +9,7 @@ using Vazer.Core.Abstractions;
 using Vazer.Core.Http;
 using Vazer.Core.Modrinth;
 using Vazer.Core.Mods;
+using Vazer.Core.Packs;
 
 namespace Vaz.WinUI.Services;
 
@@ -22,6 +23,7 @@ public sealed class ModDownloadManager : IModDownloadManager
     private readonly IInstanceManager _instanceManager;
     private readonly IModrinthClient _modrinthClient;
     private readonly IFileDownloader _fileDownloader;
+    private readonly IPackManifestService _packManifestService;
     private readonly ConcurrentDictionary<string, bool> _activeInstalls = new(StringComparer.OrdinalIgnoreCase);
     private CancellationTokenSource? _globalInstallCts;
 
@@ -29,12 +31,14 @@ public sealed class ModDownloadManager : IModDownloadManager
         IModInstallService modInstallService,
         IInstanceManager instanceManager,
         IModrinthClient modrinthClient,
-        IFileDownloader? fileDownloader = null)
+        IFileDownloader? fileDownloader = null,
+        IPackManifestService? packManifestService = null)
     {
         _modInstallService = modInstallService ?? throw new ArgumentNullException(nameof(modInstallService));
         _instanceManager = instanceManager ?? throw new ArgumentNullException(nameof(instanceManager));
         _modrinthClient = modrinthClient ?? throw new ArgumentNullException(nameof(modrinthClient));
         _fileDownloader = fileDownloader ?? new FileDownloader();
+        _packManifestService = packManifestService ?? new PackManifestService();
     }
 
     public async Task<ModInstallState> CheckInstallStateAsync(string instanceId, string projectId, string slug, string projectType = "mod", CancellationToken ct = default)
@@ -251,6 +255,46 @@ public sealed class ModDownloadManager : IModDownloadManager
             File.Delete(destPath);
         }
         File.Move(partialPath, destPath);
+
+        // P1.2a: Lưu manifest cho Resource Pack / Shader Pack
+        string? projectTitle = projectSlug;
+        string? author = null;
+        string? remoteThumbnail = null;
+        try
+        {
+            var project = await _modrinthClient.GetProjectAsync(projectSlug, ct);
+            if (project != null)
+            {
+                projectTitle = !string.IsNullOrWhiteSpace(project.Title) ? project.Title : projectSlug;
+                author = project.Team;
+                remoteThumbnail = project.IconUrl ?? (project.Gallery != null && project.Gallery.Length > 0 ? project.Gallery[0].Url : null);
+            }
+        }
+        catch
+        {
+            // Bỏ qua lỗi mạng khi lấy project metadata bổ sung
+        }
+
+        var entry = new PackManifestEntry
+        {
+            FileName = safeFileName,
+            ProjectId = version.ProjectId,
+            Slug = projectSlug,
+            Title = projectTitle,
+            VersionId = version.Id,
+            ThumbnailRemote = remoteThumbnail,
+            InstalledAt = DateTimeOffset.UtcNow,
+            Author = author
+        };
+
+        try
+        {
+            await _packManifestService.AddOrUpdateEntryAsync(instance.Path, projectType, entry, ct);
+        }
+        catch
+        {
+            // Non-critical: không làm gián đoạn việc tải file nếu ghi manifest lỗi
+        }
 
         progress?.Report(new InstallProgress
         {

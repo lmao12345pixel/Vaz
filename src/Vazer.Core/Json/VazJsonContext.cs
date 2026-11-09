@@ -5,6 +5,7 @@ using Vazer.Core.Auth;
 using Vazer.Core.Modpacks;
 using Vazer.Core.Modrinth;
 using Vazer.Core.Mods;
+using Vazer.Core.Packs;
 using Vazer.Core.Settings;
 using Vazer.Core.Store;
 
@@ -21,6 +22,8 @@ namespace Vazer.Core.Json;
 [JsonSerializable(typeof(AccountsFile))]
 [JsonSerializable(typeof(ModsManifest))]
 [JsonSerializable(typeof(InstalledMod))]
+[JsonSerializable(typeof(PacksManifest))]
+[JsonSerializable(typeof(PackManifestEntry))]
 [JsonSerializable(typeof(MrpackIndex))]
 [JsonSerializable(typeof(MrpackFile))]
 [JsonSerializable(typeof(MrpackEnv))]
