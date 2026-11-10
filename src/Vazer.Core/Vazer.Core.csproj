@@ -13,6 +13,7 @@
     <IsPackable>false</IsPackable>
     <RootNamespace>Vazer.Core</RootNamespace>
     <AssemblyName>Vazer.Core</AssemblyName>
+    <Version>0.19.0</Version>
     <Product>Vazer Launcher</Product>
     <Company>Vazer</Company>
     <Description>Core domain library for Vazer Launcher - Minecraft authentication, instances, Java resolution, mod and modpack management.</Description>

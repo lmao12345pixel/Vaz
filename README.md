@@ -1,16 +1,21 @@
-# Vazer Launcher (`Vaz`) — v0.18.0 "Multi-Version"
+# Vazer Launcher (`Vaz`) — v0.19.0
 
 Standalone Minecraft launcher + mod management project, extracted from the
 `UltraPcOptimizer` solution. This repository is fully independent — it has no
 project reference to, and no dependency on, UltraPcOptimizer.
 
-**Current release:** `v0.18.0` (2026-11-06) ·
-[CHANGELOG.md](CHANGELOG.md) · 463/463 tests · 0 build warnings.
+**Current release:** `v0.19.0` (2026-11-10) ·
+[CHANGELOG.md](CHANGELOG.md) · 493/493 tests · 0 build warnings.
 
 ## Highlights
 
 - **Five loaders**: Vanilla, Fabric, Quilt, NeoForge and Forge (headless ≥ 1.13),
   plus OptiFine installer support.
+- **Resource Packs & Shaders Manifest & Persistence**: Dedicated manifest storage
+  (`resourcepacks.json` & `shaderpacks.json`) with auto-migration, offline thumbnail
+  caching, and persistent "Installed" state across app restarts.
+- **Unified Install UX & Feedback**: Real-time progress bar for Resource Pack downloads,
+  rich media toast notifications with cover/gallery images for Shaders.
 - **3-step Create Instance wizard**: version cards with real covers + search,
   loader/version selection and an animated confirm step.
 - **Change Version in-place**: switch Minecraft version + loader on an existing

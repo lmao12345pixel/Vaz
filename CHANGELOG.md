@@ -3,6 +3,43 @@
 All notable changes to V.A.Z Launcher are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow SemVer.
 
+## [0.19.0] — 2026-11-10
+
+Major release consolidating Minecraft Vibe UI, Performance optimizations, Resource Pack & Shader Manifest persistence, unified Install UX feedback, and critical stability fixes.
+
+> **Note on Visual UX:** Visual UX verification has not been performed manually on the release candidate — please report any visual or interaction defects via GitHub Issues.
+
+### Added
+- **Resource Packs & Shaders Manifest Persistence (P1.2a/b/c)**
+  - Dedicated `resourcepacks.json` and `shaderpacks.json` metadata manifests per instance.
+  - Automatic migration for existing instances with legacy zip files (`EnsureManifestWithMigrationAsync`).
+  - Offline local thumbnail caching (`thumbnails/<type>-<slug>.jpg`) with remote CDN fallback.
+  - Persistent "Installed" state tracking matching Modrinth project ID/slug across application restarts.
+- **Unified Install UX Feedback (P1.3)**
+  - Real-time download `ProgressBar` with percentage and cancel command in `ModrinthCatalogView` for Resource Packs.
+  - Rich-media Toast notifications with gallery/cover image fallback for Shaders (`InstallNotificationHelper`).
+  - Customized toast ready messages per item type (`"Shader đã sẵn sàng..."`, `"Resource Pack đã sẵn sàng..."`).
+- **Minecraft Vibe UI (Đợt 21)**
+  - Authentic Minecraft Emerald theme tokens, card shine sweeps, micro-interactions and GPU tier gating.
+
+### Changed
+- **DI & Nullability Audit (C2.1, C2.2)**
+  - Re-audited nullable injection points across services; documented intentional optional fallbacks.
+  - Added XML documentation for nullable parameters in `MsalAuthProvider`, `ForgeInstaller`, `NeoForgeInstaller`, and `OptifineInstallerService`.
+  - Migrated DTOs to C# 11 `required` properties where runtime JSON validation is active.
+
+### Fixed
+- **UI Block & Hit-Test Overlay on Install (P0.2)**
+  - Added proactive `IsHitTestVisible = false` and 300ms fallback auto-collapse for `ModrinthBrowserHostGrid` and `ModBrowserHostGrid` to prevent transparent overlay click blocks.
+  - Eliminated `.GetAwaiter().GetResult()` from `ResourcePacksShaders.cs` by converting to fully asynchronous `LoadResourcePacksCoreAsync` and `LoadShadersCoreAsync`, preventing sync-over-async dispatcher deadlocks.
+  - Added `.ConfigureAwait(false)` throughout `PackManifestService` I/O operations.
+- **Application Auto-Close 45–60s (P0.1)**
+  - Fixed `COMException 0x800F1000` in `PressScale.cs` caused by accumulated anonymous event handlers and button unload during pointer dispatch (`e98b18f`).
+- **Performance & Resource Cleanup (Đợt 22)**
+  - Automated log rotation for `crash.txt` when exceeding 1MB (maximum 5 backups, `65d2474`).
+  - LRU eviction cap of 200 entries for `_jarMetaCache` (`da74651`).
+  - BitmapImage memory cleanup in `NotificationToast` on element unload (`f3607b2`).
+
 ## [0.18.0] — 2026-11-06 — "Multi-Version"
 
 First packaged release of the Multi-Version line: a full instance-creation wizard,

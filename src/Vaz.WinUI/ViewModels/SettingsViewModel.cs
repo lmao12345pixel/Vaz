@@ -269,7 +269,7 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     public double DiscordPreviewOpacity => DiscordRpc ? 1.0 : 0.45;
 
-    public string VersionLabel => "Phiên bản 0.18.0 (Build 2026.11-release)";
+    public string VersionLabel => "Phiên bản 0.19.0 (Build 2026.11-release)";
 
     // === Versions Tab State & Commands ===
     public ObservableCollection<InstalledVersionInfo> InstalledVersions { get; } = new();
@@ -534,8 +534,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         ShowNotification("Đang kiểm tra cập nhật...");
         await Task.Delay(350);
 
-        StatusText = "Hệ thống đã cập nhật mới nhất (v0.18.0).";
-        ShowNotification("V.A.Z v0.18.0 đang là phiên bản mới nhất!");
+        StatusText = "Hệ thống đã cập nhật mới nhất (v0.19.0).";
+        ShowNotification("V.A.Z v0.19.0 đang là phiên bản mới nhất!");
     }
 
     /// <summary>Xuất JSON chẩn đoán; path do FileSavePicker ở code-behind truyền vào.</summary>
@@ -763,7 +763,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         {
             writer.WriteStartObject();
             writer.WriteString("app", "V.A.Z Launcher");
-            writer.WriteString("version", "0.18.0");
+            writer.WriteString("version", "0.19.0");
             writer.WriteString("timestamp", DateTimeOffset.UtcNow.ToString("O"));
             writer.WriteString("os", OsSpec);
             writer.WriteString("cpu", CpuSpec);
