@@ -372,6 +372,7 @@ public sealed partial class InstanceDetailPage : Page
             _savedModsScrollOffset = sv.VerticalOffset;
         }
 
+        ModBrowserHostGrid.IsHitTestVisible = true;
         ModBrowserHostGrid.Visibility = Visibility.Visible;
         ModBrowserHostGrid.Opacity = 0.0;
         ModBrowserTranslate.Y = 50;
@@ -389,13 +390,24 @@ public sealed partial class InstanceDetailPage : Page
         if (ModBrowserHostGrid.Visibility != Visibility.Visible || _isClosingModBrowser) return;
         _isClosingModBrowser = true;
 
+        ModBrowserHostGrid.IsHitTestVisible = false;
         DownloadModsButton?.Focus(FocusState.Programmatic);
         CloseModBrowserStoryboard.Begin();
+
+        DispatcherQueue.TryEnqueue(async () =>
+        {
+            await Task.Delay(300);
+            if (ModBrowserHostGrid.Visibility == Visibility.Visible)
+            {
+                CloseModBrowserStoryboard_Completed(null, EventArgs.Empty);
+            }
+        });
     }
 
     private void CloseModBrowserStoryboard_Completed(object? sender, object e)
     {
         ModBrowserHostGrid.Visibility = Visibility.Collapsed;
+        ModBrowserHostGrid.IsHitTestVisible = false;
         _isClosingModBrowser = false;
         DownloadModsButton?.Focus(FocusState.Programmatic);
 
@@ -434,6 +446,7 @@ public sealed partial class InstanceDetailPage : Page
     {
         if (ViewModel?.Current == null) return;
 
+        ModrinthBrowserHostGrid.IsHitTestVisible = true;
         ModrinthBrowserHostGrid.Visibility = Visibility.Visible;
         ModrinthBrowserHostGrid.Opacity = 0.0;
         ModrinthBrowserTranslate.X = 400;
@@ -451,6 +464,8 @@ public sealed partial class InstanceDetailPage : Page
         if (ModrinthBrowserHostGrid.Visibility != Visibility.Visible || _isClosingModrinthBrowser) return;
         _isClosingModrinthBrowser = true;
 
+        ModrinthBrowserHostGrid.IsHitTestVisible = false;
+
         var projType = EmbeddedModrinthBrowser.ViewModel?.ProjectType ?? "resourcepack";
         if (string.Equals(projType, "shader", StringComparison.OrdinalIgnoreCase))
         {
@@ -462,11 +477,21 @@ public sealed partial class InstanceDetailPage : Page
         }
 
         CloseModrinthBrowserStoryboard.Begin();
+
+        DispatcherQueue.TryEnqueue(async () =>
+        {
+            await Task.Delay(300);
+            if (ModrinthBrowserHostGrid.Visibility == Visibility.Visible)
+            {
+                CloseModrinthBrowserStoryboard_Completed(null, EventArgs.Empty);
+            }
+        });
     }
 
     private void CloseModrinthBrowserStoryboard_Completed(object? sender, object e)
     {
         ModrinthBrowserHostGrid.Visibility = Visibility.Collapsed;
+        ModrinthBrowserHostGrid.IsHitTestVisible = false;
         _isClosingModrinthBrowser = false;
 
         var projType = EmbeddedModrinthBrowser.ViewModel?.ProjectType ?? "resourcepack";

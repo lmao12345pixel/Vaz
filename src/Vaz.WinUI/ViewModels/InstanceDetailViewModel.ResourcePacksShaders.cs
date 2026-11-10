@@ -194,7 +194,7 @@ public partial class InstanceDetailViewModel
             }
 
             var sw = System.Diagnostics.Stopwatch.StartNew();
-            LoadResourcePacksCore();
+            await LoadResourcePacksCoreAsync();
 
             // Shimmer hiển thị tối thiểu 400ms để hiệu ứng không nhấp nháy khi load quá nhanh
             if (showShimmer && sw.ElapsedMilliseconds < 400)
@@ -211,7 +211,7 @@ public partial class InstanceDetailViewModel
         }
     }
 
-    private void LoadResourcePacksCore()
+    private async Task LoadResourcePacksCoreAsync()
     {
         ResourcePacks.Clear();
         var instancePath = Current?.Path;
@@ -227,7 +227,7 @@ public partial class InstanceDetailViewModel
         PacksManifest manifest;
         try
         {
-            manifest = _packManifestService.EnsureManifestWithMigrationAsync(instancePath, "resourcepack").GetAwaiter().GetResult();
+            manifest = await _packManifestService.EnsureManifestWithMigrationAsync(instancePath, "resourcepack");
         }
         catch
         {
@@ -492,7 +492,7 @@ public partial class InstanceDetailViewModel
             }
 
             var sw = System.Diagnostics.Stopwatch.StartNew();
-            LoadShadersCore();
+            await LoadShadersCoreAsync();
 
             if (showShimmer && sw.ElapsedMilliseconds < 400)
             {
@@ -508,7 +508,7 @@ public partial class InstanceDetailViewModel
         }
     }
 
-    private void LoadShadersCore()
+    private async Task LoadShadersCoreAsync()
     {
         Shaders.Clear();
         var instancePath = Current?.Path;
@@ -524,7 +524,7 @@ public partial class InstanceDetailViewModel
         PacksManifest manifest;
         try
         {
-            manifest = _packManifestService.EnsureManifestWithMigrationAsync(instancePath, "shader").GetAwaiter().GetResult();
+            manifest = await _packManifestService.EnsureManifestWithMigrationAsync(instancePath, "shader");
         }
         catch
         {

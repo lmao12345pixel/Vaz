@@ -207,7 +207,10 @@
                 </Grid>
 
                 <!-- Install Progress Bar Row (Mod & Resource Pack) -->
-                <Grid Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolToVis}}" Margin="0,4,0,0">
+                <Grid
+                    Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolToVis}}"
+                    IsHitTestVisible="{x:Bind ViewModel.IsBusy, Mode=OneWay}"
+                    Margin="0,4,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />

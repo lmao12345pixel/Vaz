@@ -105,7 +105,7 @@ public class PackManifestService : IPackManifestService
         try
         {
             await using var stream = File.OpenRead(path);
-            var manifest = await JsonSerializer.DeserializeAsync(stream, VazJsonContext.CamelCase.PacksManifest, ct);
+            var manifest = await JsonSerializer.DeserializeAsync(stream, VazJsonContext.CamelCase.PacksManifest, ct).ConfigureAwait(false);
             return manifest ?? new PacksManifest { PackType = NormalizePackType(packType) };
         }
         catch
@@ -127,7 +127,7 @@ public class PackManifestService : IPackManifestService
             try
             {
                 await using var stream = File.OpenRead(manifestPath);
-                existing = await JsonSerializer.DeserializeAsync(stream, VazJsonContext.CamelCase.PacksManifest, ct)
+                existing = await JsonSerializer.DeserializeAsync(stream, VazJsonContext.CamelCase.PacksManifest, ct).ConfigureAwait(false)
                            ?? new PacksManifest { PackType = normType };
             }
             catch
@@ -157,12 +157,12 @@ public class PackManifestService : IPackManifestService
                 }
                 if (changed)
                 {
-                    await SaveAsync(instancePath, packType, existing, ct);
+                    await SaveAsync(instancePath, packType, existing, ct).ConfigureAwait(false);
                 }
             }
             else if (isCorrupt)
             {
-                await SaveAsync(instancePath, packType, existing, ct);
+                await SaveAsync(instancePath, packType, existing, ct).ConfigureAwait(false);
             }
             return existing;
         }
@@ -195,7 +195,7 @@ public class PackManifestService : IPackManifestService
             }
         }
 
-        await SaveAsync(instancePath, packType, manifest, ct);
+        await SaveAsync(instancePath, packType, manifest, ct).ConfigureAwait(false);
         return manifest;
     }
 
@@ -216,7 +216,7 @@ public class PackManifestService : IPackManifestService
         {
             await using (var stream = File.Create(tempPath))
             {
-                await JsonSerializer.SerializeAsync(stream, updatedManifest, VazJsonContext.CamelCase.PacksManifest, ct);
+                await JsonSerializer.SerializeAsync(stream, updatedManifest, VazJsonContext.CamelCase.PacksManifest, ct).ConfigureAwait(false);
             }
 
             File.Move(tempPath, path, overwrite: true);
@@ -239,7 +239,7 @@ public class PackManifestService : IPackManifestService
             throw new ArgumentException("Entry FileName must not be empty.", nameof(entry));
         }
 
-        var manifest = await LoadAsync(instancePath, packType, ct);
+        var manifest = await LoadAsync(instancePath, packType, ct).ConfigureAwait(false);
         var existingIndex = manifest.Packs.FindIndex(p =>
             string.Equals(p.FileName, entry.FileName, StringComparison.OrdinalIgnoreCase) ||
             (!string.IsNullOrEmpty(entry.ProjectId) && string.Equals(p.ProjectId, entry.ProjectId, StringComparison.OrdinalIgnoreCase)));
@@ -253,18 +253,18 @@ public class PackManifestService : IPackManifestService
             manifest.Packs.Add(entry);
         }
 
-        await SaveAsync(instancePath, packType, manifest, ct);
+        await SaveAsync(instancePath, packType, manifest, ct).ConfigureAwait(false);
     }
 
     public async Task RemoveEntryAsync(string instancePath, string packType, string fileName, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(fileName)) return;
 
-        var manifest = await LoadAsync(instancePath, packType, ct);
+        var manifest = await LoadAsync(instancePath, packType, ct).ConfigureAwait(false);
         var removed = manifest.Packs.RemoveAll(p => string.Equals(p.FileName, fileName, StringComparison.OrdinalIgnoreCase));
         if (removed > 0)
         {
-            await SaveAsync(instancePath, packType, manifest, ct);
+            await SaveAsync(instancePath, packType, manifest, ct).ConfigureAwait(false);
         }
     }
 
@@ -290,15 +290,15 @@ public class PackManifestService : IPackManifestService
 
         try
         {
-            using var response = await _httpClient.GetAsync(remoteUrl, HttpCompletionOption.ResponseHeadersRead, ct);
+            using var response = await _httpClient.GetAsync(remoteUrl, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
                 return null;
             }
 
-            await using var srcStream = await response.Content.ReadAsStreamAsync(ct);
+            await using var srcStream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
             await using var destStream = File.Create(localFilePath);
-            await srcStream.CopyToAsync(destStream, ct);
+            await srcStream.CopyToAsync(destStream, ct).ConfigureAwait(false);
 
             return Path.Combine("thumbnails", fileName).Replace('\\', '/');
         }
