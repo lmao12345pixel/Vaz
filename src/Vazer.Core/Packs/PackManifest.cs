@@ -122,11 +122,24 @@ public class PackManifestService : IPackManifestService
 
         if (File.Exists(manifestPath))
         {
-            var existing = await LoadAsync(instancePath, packType, ct);
+            PacksManifest existing;
+            bool isCorrupt = false;
+            try
+            {
+                await using var stream = File.OpenRead(manifestPath);
+                existing = await JsonSerializer.DeserializeAsync(stream, VazJsonContext.CamelCase.PacksManifest, ct)
+                           ?? new PacksManifest { PackType = normType };
+            }
+            catch
+            {
+                existing = new PacksManifest { PackType = normType };
+                isCorrupt = true;
+            }
+
             if (Directory.Exists(targetFolder))
             {
                 var files = Directory.GetFiles(targetFolder, "*.zip");
-                var changed = false;
+                var changed = isCorrupt;
                 foreach (var file in files)
                 {
                     var fn = Path.GetFileName(file);
@@ -146,6 +159,10 @@ public class PackManifestService : IPackManifestService
                 {
                     await SaveAsync(instancePath, packType, existing, ct);
                 }
+            }
+            else if (isCorrupt)
+            {
+                await SaveAsync(instancePath, packType, existing, ct);
             }
             return existing;
         }
@@ -262,7 +279,12 @@ public class PackManifestService : IPackManifestService
         var thumbnailsDir = Path.Combine(instancePath, "thumbnails");
         Directory.CreateDirectory(thumbnailsDir);
 
-        var safeSlug = string.Join("_", (slugOrId ?? "pack").Split(Path.GetInvalidFileNameChars()));
+        var baseSlug = string.IsNullOrWhiteSpace(slugOrId) ? "pack" : slugOrId;
+        var safeSlug = string.Join("_", baseSlug.Split(Path.GetInvalidFileNameChars()));
+        if (string.IsNullOrWhiteSpace(safeSlug))
+        {
+            safeSlug = "pack";
+        }
         var fileName = $"{normType}-{safeSlug}.jpg";
         var localFilePath = Path.Combine(thumbnailsDir, fileName);
 
