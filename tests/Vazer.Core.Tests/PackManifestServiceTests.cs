@@ -379,4 +379,156 @@ public sealed class PackManifestServiceTests : IDisposable
         pathBadSlug.Should().NotContainAny(":", "*", "?", "\"", "<", ">", "|");
         File.Exists(Path.Combine(_tempDir, pathBadSlug!)).Should().BeTrue();
     }
+
+    // ===== P0.5b: chống mất metadata khi re-migration =====
+
+    [Fact]
+    public async Task ReMigration_PreservesSlugAndThumbnail_OfExistingEntries()
+    {
+        // Arrange: entry cài qua Modrinth (đủ metadata) + zip trên đĩa
+        var rpDir = Path.Combine(_tempDir, "resourcepacks");
+        Directory.CreateDirectory(rpDir);
+        var zipPath = Path.Combine(rpDir, "LowOnFire.zip");
+        await File.WriteAllTextAsync(zipPath, "dummy-zip");
+
+        await _service.AddOrUpdateEntryAsync(_tempDir, "resourcepack", new PackManifestEntry
+        {
+            FileName = "LowOnFire.zip",
+            Slug = "low-on-fire",
+            Title = "LowOnFire",
+            ProjectId = "abc123",
+            ThumbnailLocal = "thumbnails/resourcepack-low-on-fire.jpg",
+            ThumbnailRemote = "https://cdn.modrinth.com/x.jpg"
+        });
+
+        // Act: chạy lại migration nhiều lần (mô phỏng mở tab RP nhiều lần)
+        var m1 = await _service.EnsureManifestWithMigrationAsync(_tempDir, "resourcepack");
+        var m2 = await _service.EnsureManifestWithMigrationAsync(_tempDir, "resourcepack");
+
+        // Assert: metadata nguyên vẹn sau re-migrate
+        m1.Packs.Should().ContainSingle();
+        m2.Packs.Should().ContainSingle();
+        var e = m2.Packs[0];
+        e.Slug.Should().Be("low-on-fire");
+        e.ProjectId.Should().Be("abc123");
+        e.ThumbnailLocal.Should().Be("thumbnails/resourcepack-low-on-fire.jpg");
+        e.ThumbnailRemote.Should().Be("https://cdn.modrinth.com/x.jpg");
+    }
+
+    [Fact]
+    public async Task ReMigration_AfterManifestLoss_RecoversSlugFromOrphanThumbnail()
+    {
+        // Arrange: tái hiện đúng bug LowOnFire — thumbnail mồ côi trên đĩa
+        // (slug "low-on-fire" không thể suy ra từ tên file "LowOnFire v26.2.zip"),
+        // manifest bị mất/hỏng nên migration tạo lại entry từ zip.
+        var rpDir = Path.Combine(_tempDir, "resourcepacks");
+        Directory.CreateDirectory(rpDir);
+        var zipPath = Path.Combine(rpDir, "LowOnFire v26.2.zip");
+        await File.WriteAllTextAsync(zipPath, "dummy-zip");
+
+        var thumbDir = Path.Combine(_tempDir, "thumbnails");
+        Directory.CreateDirectory(thumbDir);
+        var thumbPath = Path.Combine(thumbDir, "resourcepack-low-on-fire.jpg");
+        await File.WriteAllBytesAsync(thumbPath, new byte[] { 0xFF, 0xD8, 0xFF });
+
+        // Thumbnail ghi ngay sau zip (đúng thứ tự luồng cài Modrinth)
+        File.SetLastWriteTimeUtc(thumbPath, File.GetLastWriteTimeUtc(zipPath).AddSeconds(2));
+
+        // Act
+        var manifest = await _service.EnsureManifestWithMigrationAsync(_tempDir, "resourcepack");
+
+        // Assert: slug + thumbnail được khôi phục từ thumbnail mồ côi
+        manifest.Packs.Should().ContainSingle();
+        var e = manifest.Packs[0];
+        e.FileName.Should().Be("LowOnFire v26.2.zip");
+        e.Slug.Should().Be("low-on-fire");
+        e.ThumbnailLocal.Should().Be("thumbnails/resourcepack-low-on-fire.jpg");
+    }
+
+    [Fact]
+    public async Task ReMigration_CorruptManifest_BackupsFile_AndRecoversFromThumbnail()
+    {
+        // Arrange: manifest hỏng hoàn toàn + thumbnail mồ côi
+        var rpDir = Path.Combine(_tempDir, "resourcepacks");
+        Directory.CreateDirectory(rpDir);
+        var zipPath = Path.Combine(rpDir, "Solas.zip");
+        await File.WriteAllTextAsync(zipPath, "dummy-zip");
+
+        var thumbDir = Path.Combine(_tempDir, "thumbnails");
+        Directory.CreateDirectory(thumbDir);
+        var thumbPath = Path.Combine(thumbDir, "resourcepack-solas-shader.jpg");
+        await File.WriteAllBytesAsync(thumbPath, new byte[] { 0xFF, 0xD8 });
+        File.SetLastWriteTimeUtc(thumbPath, File.GetLastWriteTimeUtc(zipPath).AddSeconds(1));
+
+        await File.WriteAllTextAsync(Path.Combine(_tempDir, "resourcepacks.json"), "{ not valid json [[");
+
+        // Act
+        var manifest = await _service.EnsureManifestWithMigrationAsync(_tempDir, "resourcepack");
+
+        // Assert: có file backup .corrupt-*.bak và entry khôi phục được slug
+        Directory.GetFiles(_tempDir, "resourcepacks.json.corrupt-*.bak").Should().HaveCount(1);
+        manifest.Packs.Should().ContainSingle();
+        manifest.Packs[0].Slug.Should().Be("solas-shader");
+        manifest.Packs[0].ThumbnailLocal.Should().Be("thumbnails/resourcepack-solas-shader.jpg");
+    }
+
+    [Fact]
+    public async Task ReMigration_DoesNotStealThumbnail_AlreadyUsedByAnotherEntry()
+    {
+        // Arrange: 2 zip, chỉ 1 entry có metadata trỏ tới thumbnail
+        var rpDir = Path.Combine(_tempDir, "resourcepacks");
+        Directory.CreateDirectory(rpDir);
+        await File.WriteAllTextAsync(Path.Combine(rpDir, "PackA.zip"), "a");
+        await File.WriteAllTextAsync(Path.Combine(rpDir, "PackB.zip"), "b");
+
+        var thumbDir = Path.Combine(_tempDir, "thumbnails");
+        Directory.CreateDirectory(thumbDir);
+        var thumbPath = Path.Combine(thumbDir, "resourcepack-pack-a.jpg");
+        await File.WriteAllBytesAsync(thumbPath, new byte[] { 0xFF });
+        File.SetLastWriteTimeUtc(thumbPath, File.GetLastWriteTimeUtc(Path.Combine(rpDir, "PackA.zip")).AddSeconds(1));
+
+        await _service.AddOrUpdateEntryAsync(_tempDir, "resourcepack", new PackManifestEntry
+        {
+            FileName = "PackA.zip",
+            Slug = "pack-a",
+            Title = "Pack A",
+            ThumbnailLocal = "thumbnails/resourcepack-pack-a.jpg"
+        });
+
+        // Act: migration thêm PackB (chưa có trong manifest)
+        var manifest = await _service.EnsureManifestWithMigrationAsync(_tempDir, "resourcepack");
+
+        // Assert: PackB không được "gán nhầm" thumbnail của PackA
+        manifest.Packs.Should().HaveCount(2);
+        var a = manifest.Packs.First(p => p.FileName == "PackA.zip");
+        var b = manifest.Packs.First(p => p.FileName == "PackB.zip");
+        a.Slug.Should().Be("pack-a");
+        a.ThumbnailLocal.Should().Be("thumbnails/resourcepack-pack-a.jpg");
+        b.Slug.Should().BeNull();
+        b.ThumbnailLocal.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ReMigration_OldThumbnail_BeyondTolerance_NotAttached()
+    {
+        // Arrange: thumbnail cũ (30 ngày trước zip) không được ghép cho entry mới
+        var rpDir = Path.Combine(_tempDir, "resourcepacks");
+        Directory.CreateDirectory(rpDir);
+        var zipPath = Path.Combine(rpDir, "NewPack.zip");
+        await File.WriteAllTextAsync(zipPath, "dummy-zip");
+
+        var thumbDir = Path.Combine(_tempDir, "thumbnails");
+        Directory.CreateDirectory(thumbDir);
+        var thumbPath = Path.Combine(thumbDir, "resourcepack-some-old-pack.jpg");
+        await File.WriteAllBytesAsync(thumbPath, new byte[] { 0xFF });
+        File.SetLastWriteTimeUtc(thumbPath, File.GetLastWriteTimeUtc(zipPath).AddDays(-30));
+
+        // Act
+        var manifest = await _service.EnsureManifestWithMigrationAsync(_tempDir, "resourcepack");
+
+        // Assert
+        manifest.Packs.Should().ContainSingle();
+        manifest.Packs[0].Slug.Should().BeNull();
+        manifest.Packs[0].ThumbnailLocal.Should().BeNull();
+    }
 }
