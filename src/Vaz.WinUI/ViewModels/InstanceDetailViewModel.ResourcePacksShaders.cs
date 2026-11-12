@@ -283,7 +283,10 @@ public partial class InstanceDetailViewModel
                 Version = "Unknown",
                 PackFormat = packFormat,
                 IsCompatible = packFormat == 34 || packFormat <= 0,
-                IconUri = entry.ThumbnailRemote ?? string.Empty
+                // P0.6: ưu tiên ThumbnailLocal (resolve relative → absolute với instance path),
+                // fallback sang ThumbnailRemote nếu local không có.
+                // Trước đây chỉ dùng ThumbnailRemote → LowOnFire (local-only) không hiện ảnh.
+                IconUri = ResolvePackThumbnailUri(entry, instancePath!)
             };
 
             var newRow = new ResourcePackRow(item);
@@ -763,6 +766,35 @@ public partial class InstanceDetailViewModel
     }
 
     // --- Thumbnail Background Loading ---
+
+    /// <summary>
+    /// P0.6: Resolve IconUri cho ResourcePackItem theo thứ tự ưu tiên:
+    /// 1. ThumbnailLocal (đường dẫn tương đối "thumbnails/xxx.jpg") → resolve thành đường tuyệt đối.
+    /// 2. ThumbnailRemote (URL) nếu local không có.
+    /// 3. String.Empty (→ LoadThumbnailInBackground sẽ cấp CustomIconSource từ pack.png trong zip).
+    ///
+    /// Trước đây (bug P0.6): chỉ dùng ThumbnailRemote → entry không có remote (ví dụ LowOnFire
+    /// chỉ có local) luôn nhận placeholder xám dù thumbnail đã tải về đĩa.
+    /// </summary>
+    private static string ResolvePackThumbnailUri(PackManifestEntry entry, string instancePath)
+    {
+        if (!string.IsNullOrEmpty(entry.ThumbnailLocal))
+        {
+            var localUri = entry.ThumbnailLocal;
+            if (!Path.IsPathRooted(localUri))
+            {
+                localUri = Path.Combine(instancePath, localUri);
+            }
+            if (File.Exists(localUri))
+            {
+                return localUri;
+            }
+            // Local ghi trong manifest nhưng file bị xóa → thử fallback remote
+        }
+
+        return entry.ThumbnailRemote ?? string.Empty;
+    }
+
     private void LoadThumbnailInBackground(ResourcePackRow row, string zipPath)
     {
         _ = Task.Run(async () =>

@@ -531,4 +531,97 @@ public sealed class PackManifestServiceTests : IDisposable
         manifest.Packs[0].Slug.Should().BeNull();
         manifest.Packs[0].ThumbnailLocal.Should().BeNull();
     }
+
+    // ===== P0.6: logic ResolvePackThumbnailUri (ported vào Core helper để test) =====
+    // Helper mirror của ViewModel.ResolvePackThumbnailUri (private static).
+    private static string ResolvePackThumbnailUri(PackManifestEntry entry, string instancePath)
+    {
+        if (!string.IsNullOrEmpty(entry.ThumbnailLocal))
+        {
+            var local = entry.ThumbnailLocal;
+            if (!Path.IsPathRooted(local)) local = Path.Combine(instancePath, local);
+            if (File.Exists(local)) return local;
+        }
+        return entry.ThumbnailRemote ?? string.Empty;
+    }
+
+    [Fact]
+    public async Task ResolvePackThumbnail_LocalExists_ReturnsAbsolutePath()
+    {
+        // Tái hiện bug P0.6: entry có thumbnailLocal nhưng IconUri bị set từ thumbnailRemote
+        var thumbDir = Path.Combine(_tempDir, "thumbnails");
+        Directory.CreateDirectory(thumbDir);
+        var thumbPath = Path.Combine(thumbDir, "resourcepack-low-on-fire.jpg");
+        await File.WriteAllBytesAsync(thumbPath, new byte[] { 0xFF, 0xD8 });
+
+        var entry = new PackManifestEntry
+        {
+            FileName = "LowOnFire v26.2§8.zip",
+            Slug = "low-on-fire",
+            Title = "LowOnFire",
+            ThumbnailLocal = "thumbnails/resourcepack-low-on-fire.jpg",
+            ThumbnailRemote = null
+        };
+
+        // Act
+        var resolved = ResolvePackThumbnailUri(entry, _tempDir);
+
+        // Assert: đường dẫn tuyệt đối (không phải empty → không còn placeholder xám)
+        resolved.Should().NotBeEmpty();
+        // Path.GetFullPath để chuẩn hoá dấu / và \ trước khi so sánh
+        Path.GetFullPath(resolved).Should().Be(Path.GetFullPath(Path.Combine(_tempDir, "thumbnails", "resourcepack-low-on-fire.jpg")));
+        File.Exists(resolved).Should().BeTrue();
+    }
+
+    [Fact]
+    public void ResolvePackThumbnail_LocalMissingRemoteAvailable_ReturnsRemote()
+    {
+        // Nếu thumbnail local bị xóa tay → fallback sang remote URL
+        var entry = new PackManifestEntry
+        {
+            FileName = "SomeShader.zip",
+            Slug = "some-shader",
+            ThumbnailLocal = "thumbnails/resourcepack-nonexistent.jpg",  // file không tồn tại
+            ThumbnailRemote = "https://cdn.modrinth.com/img.webp"
+        };
+
+        var resolved = ResolvePackThumbnailUri(entry, _tempDir);
+
+        resolved.Should().Be("https://cdn.modrinth.com/img.webp");
+    }
+
+    [Fact]
+    public void ResolvePackThumbnail_BothNull_ReturnsEmpty()
+    {
+        var entry = new PackManifestEntry
+        {
+            FileName = "Legacy.zip",
+            ThumbnailLocal = null,
+            ThumbnailRemote = null
+        };
+
+        var resolved = ResolvePackThumbnailUri(entry, _tempDir);
+
+        resolved.Should().BeEmpty();  // → LoadThumbnailInBackground sẽ cấp CustomIconSource từ pack.png
+    }
+
+    [Fact]
+    public async Task ResolvePackThumbnail_LocalAbsolutePathExists_ReturnsAsIs()
+    {
+        // ThumbnailLocal đôi khi có thể là đường tuyệt đối (edge case)
+        var thumbPath = Path.Combine(_tempDir, "some-abs-thumb.jpg");
+        await File.WriteAllBytesAsync(thumbPath, new byte[] { 0xFF, 0xD8 });
+
+        var entry = new PackManifestEntry
+        {
+            FileName = "Pack.zip",
+            ThumbnailLocal = thumbPath,  // already absolute
+            ThumbnailRemote = "https://cdn.modrinth.com/remote.webp"
+        };
+
+        var resolved = ResolvePackThumbnailUri(entry, _tempDir);
+
+        // Local (absolute) tồn tại → ưu tiên hơn remote
+        resolved.Should().Be(thumbPath);
+    }
 }
