@@ -540,7 +540,7 @@ public sealed class PackManifestServiceTests : IDisposable
         {
             var local = entry.ThumbnailLocal;
             if (!Path.IsPathRooted(local)) local = Path.Combine(instancePath, local);
-            if (File.Exists(local)) return local;
+            if (File.Exists(local)) return new Uri(local).AbsoluteUri;
         }
         return entry.ThumbnailRemote ?? string.Empty;
     }
@@ -566,11 +566,12 @@ public sealed class PackManifestServiceTests : IDisposable
         // Act
         var resolved = ResolvePackThumbnailUri(entry, _tempDir);
 
-        // Assert: đường dẫn tuyệt đối (không phải empty → không còn placeholder xám)
+        // Assert: file:// URI tuyệt đối (không phải empty → không còn placeholder xám)
         resolved.Should().NotBeEmpty();
-        // Path.GetFullPath để chuẩn hoá dấu / và \ trước khi so sánh
-        Path.GetFullPath(resolved).Should().Be(Path.GetFullPath(Path.Combine(_tempDir, "thumbnails", "resourcepack-low-on-fire.jpg")));
-        File.Exists(resolved).Should().BeTrue();
+        resolved.Should().StartWith("file:///");
+        Uri.TryCreate(resolved, UriKind.Absolute, out var uri).Should().BeTrue();
+        uri!.IsFile.Should().BeTrue();
+        uri.LocalPath.Should().Be(Path.GetFullPath(Path.Combine(_tempDir, "thumbnails", "resourcepack-low-on-fire.jpg")));
     }
 
     [Fact]
@@ -621,7 +622,9 @@ public sealed class PackManifestServiceTests : IDisposable
 
         var resolved = ResolvePackThumbnailUri(entry, _tempDir);
 
-        // Local (absolute) tồn tại → ưu tiên hơn remote
-        resolved.Should().Be(thumbPath);
+        // Local (absolute) tồn tại → ưu tiên hơn remote, trả file:// URI
+        resolved.Should().StartWith("file:///");
+        Uri.TryCreate(resolved, UriKind.Absolute, out var uri).Should().BeTrue();
+        uri!.LocalPath.Should().Be(Path.GetFullPath(thumbPath));
     }
 }

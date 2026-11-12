@@ -50,14 +50,25 @@ public sealed partial class ResourcePackRow : ObservableObject
     {
         get
         {
+            if (!string.IsNullOrWhiteSpace(IconUri) &&
+                Uri.TryCreate(IconUri, UriKind.Absolute, out var uri) &&
+                uri.IsFile)
+            {
+                // P0.6: thumbnail local (file://...) được ưu tiên. Cơ chế này đã chạy tốt
+                // cho mod icon (InstanceDetailViewModel.cs dòng 485). Không dùng path thô
+                // vì BitmapImageWinUI cần URI, và không dùng SetSourceAsync stream vì file
+                // thumbnail có thể là PNG/WEBP giấu dưới đuôi .jpg -> decoder từ chối.
+                return new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(uri);
+            }
+
             if (CustomIconSource != null)
             {
                 return CustomIconSource;
             }
 
-            if (!string.IsNullOrWhiteSpace(IconUri) && Uri.TryCreate(IconUri, UriKind.RelativeOrAbsolute, out var uri))
+            if (!string.IsNullOrWhiteSpace(IconUri) && Uri.TryCreate(IconUri, UriKind.RelativeOrAbsolute, out var fallbackUri))
             {
-                return new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(uri);
+                return new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(fallbackUri);
             }
 
             return Vaz.WinUI.Helpers.UiPlaceholders.Image;
@@ -270,6 +281,12 @@ public partial class InstanceDetailViewModel
             }
             catch { }
 
+            // P0.6: ưu tiên thumbnailLocal (file ảnh Modrinth đã cache trên đĩa) cho CustomIconSource,
+            // vì IconImageSource ưu tiên CustomIconSource TRƯỚC IconUri (dòng 53). Nếu chỉ set IconUri
+            // thì pack.png trong zip vẫn đè lên → với LowOnFire pack.png chỉ 16x16 (45% trong suốt)
+            // nên card trông như khung xám.
+            var localThumbnailPath = ResolveLocalThumbnailPath(entry, instancePath!);
+
             var item = new ResourcePackItem
             {
                 Id = entry.FileName,
@@ -291,7 +308,7 @@ public partial class InstanceDetailViewModel
 
             var newRow = new ResourcePackRow(item);
             ResourcePacks.Add(newRow);
-            LoadThumbnailInBackground(newRow, zipPath);
+            LoadThumbnailInBackground(newRow, zipPath, localThumbnailPath);
         }
 
         RefreshResourcePackLists();
@@ -778,49 +795,77 @@ public partial class InstanceDetailViewModel
     /// </summary>
     private static string ResolvePackThumbnailUri(PackManifestEntry entry, string instancePath)
     {
-        if (!string.IsNullOrEmpty(entry.ThumbnailLocal))
+        var local = ResolveLocalThumbnailPath(entry, instancePath);
+        if (local != null)
         {
-            var localUri = entry.ThumbnailLocal;
-            if (!Path.IsPathRooted(localUri))
-            {
-                localUri = Path.Combine(instancePath, localUri);
-            }
-            if (File.Exists(localUri))
-            {
-                return localUri;
-            }
-            // Local ghi trong manifest nhưng file bị xóa → thử fallback remote
+            // new Uri(path).AbsoluteUri → "file:///C:/..." — định dạng BitmapImage WinUI hiểu.
+            // Đây là cùng cơ chế với mod icon (InstanceDetailViewModel.cs dòng 485).
+            return new Uri(local).AbsoluteUri;
         }
-
         return entry.ThumbnailRemote ?? string.Empty;
     }
 
-    private void LoadThumbnailInBackground(ResourcePackRow row, string zipPath)
+    /// <summary>
+    /// Trả về đường dẫn TUYỆT ĐỐI của thumbnailLocal nếu file thật sự tồn tại, ngược lại null.
+    /// </summary>
+    private static string? ResolveLocalThumbnailPath(PackManifestEntry entry, string instancePath)
+    {
+        if (string.IsNullOrEmpty(entry.ThumbnailLocal)) return null;
+
+        var local = entry.ThumbnailLocal;
+        if (!Path.IsPathRooted(local))
+        {
+            local = Path.Combine(instancePath, local);
+        }
+        return File.Exists(local) ? local : null;
+    }
+
+    private void LoadThumbnailInBackground(ResourcePackRow row, string zipPath, string? localThumbnailPath = null)
     {
         _ = Task.Run(async () =>
         {
-            byte[]? pngBytes = null;
-            try
-            {
-                using var archive = ZipFile.OpenRead(zipPath);
-                var entry = archive.GetEntry("pack.png") ?? archive.Entries.FirstOrDefault(e =>
-                    string.Equals(e.FullName, "pack.png", StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(Path.GetFileName(e.FullName), "pack.png", StringComparison.OrdinalIgnoreCase));
+            byte[]? imageBytes = null;
 
-                if (entry != null)
+            // P0.6: ưu tiên file thumbnail đã cache (Modrinth, thường 96x96..400x400).
+            // Dùng SetSourceAsync từ byte[] (cơ chế đã chạy tốt), không dùng Uri file://
+            // vì BitmapImage trong WinUI không mở được đường dẫn tuyệt đối dạng path.
+            if (!string.IsNullOrEmpty(localThumbnailPath))
+            {
+                try
                 {
-                    using var stream = entry.Open();
-                    using var ms = new MemoryStream();
-                    await stream.CopyToAsync(ms);
-                    pngBytes = ms.ToArray();
+                    if (File.Exists(localThumbnailPath))
+                    {
+                        imageBytes = await File.ReadAllBytesAsync(localThumbnailPath);
+                    }
+                }
+                catch { /* fallback sang pack.png */ }
+            }
+
+            // Fallback: pack.png nằm trong zip (hành vi cũ).
+            if (imageBytes == null || imageBytes.Length == 0)
+            {
+                try
+                {
+                    using var archive = ZipFile.OpenRead(zipPath);
+                    var entry = archive.GetEntry("pack.png") ?? archive.Entries.FirstOrDefault(e =>
+                        string.Equals(e.FullName, "pack.png", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(Path.GetFileName(e.FullName), "pack.png", StringComparison.OrdinalIgnoreCase));
+
+                    if (entry != null)
+                    {
+                        using var stream = entry.Open();
+                        using var ms = new MemoryStream();
+                        await stream.CopyToAsync(ms);
+                        imageBytes = ms.ToArray();
+                    }
+                }
+                catch
+                {
+                    // File unreadable or invalid zip
                 }
             }
-            catch
-            {
-                // File unreadable or invalid zip
-            }
 
-            if (pngBytes != null && pngBytes.Length > 0)
+            if (imageBytes != null && imageBytes.Length > 0)
             {
                 App.Dispatcher?.TryEnqueue(async () =>
                 {
@@ -829,7 +874,7 @@ public partial class InstanceDetailViewModel
                         var ras = new Windows.Storage.Streams.InMemoryRandomAccessStream();
                         using (var writer = ras.AsStreamForWrite())
                         {
-                            await writer.WriteAsync(pngBytes, 0, pngBytes.Length);
+                            await writer.WriteAsync(imageBytes, 0, imageBytes.Length);
                             await writer.FlushAsync();
                         }
                         ras.Seek(0);
