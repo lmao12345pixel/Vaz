@@ -75,6 +75,16 @@ public sealed class NotificationService : INotificationService
 
                 notification.GroupKey = key;
                 ActiveNotifications.Add(notification);
+
+                var subs = NotificationAdded?.GetInvocationList().Length ?? 0;
+                try
+                {
+                    System.IO.File.AppendAllText(
+                        System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Vazer", "notif-debug.log"),
+                        DateTime.Now.ToString("HH:mm:ss.fff") + " [SVC] Show hash=" + GetHashCode() + " title=" + notification.Title + " subs=" + subs + "\n");
+                }
+                catch { }
+
                 NotificationAdded?.Invoke(this, notification);
 
                 // Add to history (at index 0 for newest first)
@@ -102,7 +112,7 @@ public sealed class NotificationService : INotificationService
             ImageSource = imageSource,
             ActionLabel1 = actionLabel,
             ActionCallback1 = actionCallback,
-            AutoDismissMs = 10000
+            AutoDismissMs = 5000
         });
     }
 
@@ -125,7 +135,7 @@ public sealed class NotificationService : INotificationService
             Message = message,
             ActionLabel1 = actionLabel,
             ActionCallback1 = actionCallback,
-            AutoDismissMs = 10000
+            AutoDismissMs = 5000
         });
     }
 
@@ -149,7 +159,7 @@ public sealed class NotificationService : INotificationService
             ActionLabel1 = actionLabel,
             ActionCallback1 = actionCallback,
             IsSticky = priority == NotificationPriority.Critical,
-            AutoDismissMs = priority == NotificationPriority.Critical ? 0 : 15000
+            AutoDismissMs = priority == NotificationPriority.Critical ? 0 : 8000
         });
     }
 
@@ -172,7 +182,7 @@ public sealed class NotificationService : INotificationService
             Message = message,
             ActionLabel1 = actionLabel,
             ActionCallback1 = actionCallback,
-            AutoDismissMs = priority == NotificationPriority.Low ? 5000 : 10000
+            AutoDismissMs = priority == NotificationPriority.Low ? 5000 : 5000
         });
     }
 
@@ -197,7 +207,7 @@ public sealed class NotificationService : INotificationService
             ActionCallback1 = cb1,
             ActionLabel2 = action2,
             ActionCallback2 = cb2,
-            AutoDismissMs = 15000
+            AutoDismissMs = 8000
         });
     }
 
@@ -464,3 +474,4 @@ public sealed class NotificationService : INotificationService
         }
     }
 }
+

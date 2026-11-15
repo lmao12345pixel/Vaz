@@ -17,7 +17,7 @@ public class NotificationItem : INotifyPropertyChanged
     private double _progressValue = -1.0;
     private int _groupCount = 1;
     private bool _isSticky;
-    private int _autoDismissMs = 10000;
+    private int _autoDismissMs = 5000;
     private NotificationType _type = NotificationType.Info;
     private NotificationPriority _priority = NotificationPriority.Normal;
 
@@ -250,3 +250,4 @@ public class NotificationItem : INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }
+
