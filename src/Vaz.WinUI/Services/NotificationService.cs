@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -7,6 +8,8 @@ using Microsoft.UI.Dispatching;
 using Windows.Media.Core;
 using Windows.Media.Playback;
 using Vaz.WinUI.Models;
+using Vazer.Core.Models;
+using Vazer.Core.Services;
 
 namespace Vaz.WinUI.Services;
 
@@ -16,6 +19,12 @@ public sealed class NotificationService : INotificationService
     private const int MaxHistoryCount = 50;
     private const int CoalesceWindowSeconds = 3;
     private readonly object _lock = new();
+    private readonly NotificationHistoryStore _store;
+
+    public NotificationService(NotificationHistoryStore? store = null)
+    {
+        _store = store ?? new NotificationHistoryStore();
+    }
 
     public ObservableCollection<NotificationItem> ActiveNotifications { get; } = new();
     public ObservableCollection<NotificationItem> History { get; } = new();
@@ -95,6 +104,7 @@ public sealed class NotificationService : INotificationService
                 }
 
                 UnreadCount++;
+                PersistHistoryLocked();
             }
 
             PlaySoundSafe(notification.Type);
@@ -376,7 +386,11 @@ public sealed class NotificationService : INotificationService
     {
         RunOnUIThread(() =>
         {
-            UnreadCount = 0;
+            lock (_lock)
+            {
+                UnreadCount = 0;
+                PersistHistoryLocked();
+            }
         });
     }
 
@@ -390,6 +404,7 @@ public sealed class NotificationService : INotificationService
                 if (item != null)
                 {
                     History.Remove(item);
+                    PersistHistoryLocked();
                 }
             }
         });
@@ -410,9 +425,98 @@ public sealed class NotificationService : INotificationService
             lock (_lock)
             {
                 History.Clear();
+                UnreadCount = 0;
+                PersistHistoryLocked();
             }
-            UnreadCount = 0;
         });
+    }
+
+    public async Task InitializeAsync()
+    {
+        var dto = await _store.LoadAsync().ConfigureAwait(false);
+        RunOnUIThread(() =>
+        {
+            lock (_lock)
+            {
+                History.Clear();
+                foreach (var item in dto.Items)
+                {
+                    History.Add(MapToNotificationItem(item));
+                }
+                UnreadCount = dto.UnreadCount;
+            }
+        });
+    }
+
+    private void PersistHistoryLocked()
+    {
+        var dto = BuildDtoFromHistory();
+        _store.RequestSave(dto);
+    }
+
+    private NotificationRecordDto BuildDtoFromHistory()
+    {
+        var dto = new NotificationRecordDto
+        {
+            Version = 1,
+            UnreadCount = _unreadCount,
+            Items = new List<NotificationRecordItem>(History.Count)
+        };
+
+        foreach (var item in History)
+        {
+            dto.Items.Add(new NotificationRecordItem
+            {
+                Id = item.Id,
+                Type = item.Type.ToString(),
+                Priority = item.Priority.ToString(),
+                Title = item.Title ?? string.Empty,
+                Message = item.Message ?? string.Empty,
+                ImageSource = item.ImageSource,
+                ActionLabel1 = item.ActionLabel1,
+                ActionLabel2 = item.ActionLabel2,
+                GroupCount = item.GroupCount,
+                GroupKey = item.GroupKey,
+                IsSoundEnabled = item.IsSoundEnabled,
+                CreatedAt = item.CreatedAt
+            });
+        }
+
+        return dto;
+    }
+
+    private static NotificationItem MapToNotificationItem(NotificationRecordItem record)
+    {
+        var type = Enum.TryParse<NotificationType>(record.Type, ignoreCase: true, out var parsedType)
+            ? parsedType
+            : NotificationType.Info;
+
+        var priority = Enum.TryParse<NotificationPriority>(record.Priority, ignoreCase: true, out var parsedPriority)
+            ? parsedPriority
+            : NotificationPriority.Normal;
+
+        return new NotificationItem
+        {
+            Id = record.Id,
+            Type = type,
+            Priority = priority,
+            Title = record.Title,
+            Message = record.Message,
+            ImageSource = record.ImageSource,
+            ActionLabel1 = record.ActionLabel1,
+            ActionLabel2 = record.ActionLabel2,
+            GroupCount = record.GroupCount > 0 ? record.GroupCount : 1,
+            GroupKey = record.GroupKey,
+            IsSoundEnabled = record.IsSoundEnabled,
+            CreatedAt = record.CreatedAt != default ? record.CreatedAt : DateTime.Now,
+            // Callbacks are null after restore from disk
+            ActionCallback1 = null,
+            ActionCallback2 = null,
+            // Transient fields reset to defaults
+            ProgressValue = -1,
+            IsSticky = false,
+            AutoDismissMs = 5000
+        };
     }
 
     [DllImport("user32.dll")]

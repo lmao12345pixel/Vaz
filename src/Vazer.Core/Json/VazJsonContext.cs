@@ -5,6 +5,7 @@ using Vazer.Core.Auth;
 using Vazer.Core.Modpacks;
 using Vazer.Core.Modrinth;
 using Vazer.Core.Mods;
+using Vazer.Core.Models;
 using Vazer.Core.Packs;
 using Vazer.Core.Settings;
 using Vazer.Core.Store;
@@ -44,6 +45,8 @@ namespace Vazer.Core.Json;
 [JsonSerializable(typeof(XstsAuthRequest))]
 [JsonSerializable(typeof(MinecraftLoginRequest))]
 [JsonSerializable(typeof(GlobalSettings))]
+[JsonSerializable(typeof(NotificationRecordDto))]
+[JsonSerializable(typeof(NotificationRecordItem))]
 internal sealed partial class VazJsonContext : JsonSerializerContext
 {
     private static readonly JsonSerializerOptions CamelCaseOptions = new()

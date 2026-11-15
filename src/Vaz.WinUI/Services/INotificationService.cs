@@ -50,4 +50,6 @@ public interface INotificationService
     void RemoveFromHistory(Guid id);
     void RemoveFromHistory(string id);
     void ClearHistory();
+
+    Task InitializeAsync();
 }

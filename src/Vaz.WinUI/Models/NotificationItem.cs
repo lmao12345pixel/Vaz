@@ -210,8 +210,8 @@ public class NotificationItem : INotifyPropertyChanged
     public DateTime CreatedAt { get; set; } = DateTime.Now;
 
     public bool HasImage => !string.IsNullOrWhiteSpace(ImageSource);
-    public bool HasAction1 => !string.IsNullOrWhiteSpace(ActionLabel1);
-    public bool HasAction2 => !string.IsNullOrWhiteSpace(ActionLabel2);
+    public bool HasAction1 => !string.IsNullOrWhiteSpace(ActionLabel1) && ActionCallback1 != null;
+    public bool HasAction2 => !string.IsNullOrWhiteSpace(ActionLabel2) && ActionCallback2 != null;
     public bool IsProgressMode => Type == NotificationType.Progress || ProgressValue >= 0;
     public string ProgressPercentText => ProgressValue >= 0 ? $"{(int)Math.Clamp(ProgressValue, 0, 100)}%" : string.Empty;
 

@@ -41,6 +41,7 @@ public partial class App : Application
         services.AddMinecraftLauncher(opt => config.GetSection("Minecraft").Bind(opt));
 
         // UI services (singletons)
+        services.AddSingleton<Vazer.Core.Services.NotificationHistoryStore>();
         services.AddSingleton<ActiveInstanceService>();
         services.AddSingleton<IModrinthSearchService, ModrinthSearchService>();
         services.AddSingleton<IModDownloadManager, ModDownloadManager>();
@@ -88,10 +89,29 @@ public partial class App : Application
                 RotateCrashLog(errPath, dir);
 
                 File.AppendAllText(errPath, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [FATAL] {e.Message}: {e.Exception}\n{e.Exception?.StackTrace}\n\n");
+                File.AppendAllText(Path.Combine(dir, "lifecycle.log"), $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [FATAL_EXCEPTION] {e.Message}: {e.Exception?.GetType().Name}\n");
             }
             catch { }
             e.Handled = true;
         };
+
+        AppDomain.CurrentDomain.ProcessExit += (s, e) =>
+        {
+            try
+            {
+                var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Vazer");
+                File.AppendAllText(Path.Combine(dir, "lifecycle.log"), $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [LIFECYCLE] ProcessExit (ExitCode={Environment.ExitCode})\n");
+            }
+            catch { }
+        };
+
+        try
+        {
+            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Vazer");
+            Directory.CreateDirectory(dir);
+            File.AppendAllText(Path.Combine(dir, "lifecycle.log"), $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [LIFECYCLE] App OnLaunched\n");
+        }
+        catch { }
 
         Dispatcher = DispatcherQueue.GetForCurrentThread();
 
@@ -105,7 +125,18 @@ public partial class App : Application
 
         var window = Services.GetRequiredService<MainWindow>();
         MainWindow = window;
+        window.Closed += (s, e) =>
+        {
+            try
+            {
+                var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Vazer");
+                File.AppendAllText(Path.Combine(dir, "lifecycle.log"), $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [LIFECYCLE] MainWindow Closed\n");
+            }
+            catch { }
+        };
         window.Activate();
+
+        _ = Services.GetRequiredService<INotificationService>().InitializeAsync();
     }
 
     /// <summary>Rotate crash.txt khi >1MB. Giữ tối đa 5 file backup.</summary>
