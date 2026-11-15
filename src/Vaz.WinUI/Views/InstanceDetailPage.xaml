@@ -1332,108 +1332,112 @@
                                                    ItemsSource="{x:Bind ViewModel.FilteredShaders, Mode=OneWay}"
                                                    ElementPrepared="Repeater_ElementPrepared">
                                         <ItemsRepeater.Layout>
-                                            <UniformGridLayout MinItemWidth="280" MinRowSpacing="12" MinColumnSpacing="12" ItemsStretch="Uniform" />
+                                            <UniformGridLayout MinItemWidth="340" MinRowSpacing="12" MinColumnSpacing="12" ItemsStretch="Uniform" />
                                         </ItemsRepeater.Layout>
                                         <ItemsRepeater.ItemTemplate>
                                             <DataTemplate x:DataType="vm:ShaderPackRow">
                                                 <Border x:Name="ShaderCardBorder"
-                                                        Height="220"
                                                         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                                         BorderThickness="1"
-                                                        CornerRadius="10"
+                                                        CornerRadius="8"
+                                                        Padding="12"
+                                                        Margin="4"
                                                         PointerEntered="Card_PointerEntered"
                                                         PointerExited="Card_PointerExited"
                                                         Tapped="ShaderCard_Tapped">
-                                                    <Grid RowDefinitions="120,*">
+                                                    <Grid ColumnDefinitions="128,*,Auto" ColumnSpacing="12">
                                                         <!-- Shine Sweep Overlay (Animation B6) -->
-                                                        <Border x:Name="ShaderCardShineSweepOverlay"
-                                                                Grid.RowSpan="2"
-                                                                CornerRadius="10"
-                                                                IsHitTestVisible="False"
-                                                                Opacity="0">
-                                                            <Border.Background>
+                                                        <Rectangle Grid.Column="0" Grid.ColumnSpan="3"
+                                                                   x:Name="ShaderCardShineSweepOverlay"
+                                                                   IsHitTestVisible="False"
+                                                                   Opacity="0"
+                                                                   HorizontalAlignment="Stretch"
+                                                                   VerticalAlignment="Stretch">
+                                                            <Rectangle.Fill>
                                                                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
                                                                     <GradientStop Color="#00FFFFFF" Offset="0.0" />
-                                                                    <GradientStop Color="#25FFFFFF" Offset="0.5" />
+                                                                    <GradientStop Color="#18FFFFFF" Offset="0.5" />
                                                                     <GradientStop Color="#00FFFFFF" Offset="1.0" />
                                                                 </LinearGradientBrush>
-                                                            </Border.Background>
-                                                        </Border>
+                                                            </Rectangle.Fill>
+                                                        </Rectangle>
 
-                                                        <!-- Banner Image -->
-                                                        <Grid Grid.Row="0">
-                                                            <Border CornerRadius="10,10,0,0">
-                                                                <Image x:Name="ShaderCardBanner" Stretch="UniformToFill" ImageOpened="Thumbnail_ImageOpened">
-                                                                    <Image.Source>
-                                                                        <BitmapImage UriSource="{x:Bind ImageUriSource}" DecodePixelWidth="320" />
-                                                                    </Image.Source>
-                                                                </Image>
-                                                            </Border>
-                                                            
-                                                            <!-- Style Badge -->
-                                                            <Border HorizontalAlignment="Right"
-                                                                    VerticalAlignment="Top"
-                                                                    Margin="10"
-                                                                    Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
-                                                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                                                    BorderThickness="1"
-                                                                    CornerRadius="4"
-                                                                    Padding="6,2">
-                                                                <TextBlock Text="{x:Bind StyleLabel}" FontSize="11" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
-                                                            </Border>
-
+                                                        <!-- Thumbnail 16:9 duy nhất (không icon vuông, không trùng ảnh) -->
+                                                        <Grid Grid.Column="0"
+                                                              Width="128" Height="72"
+                                                              VerticalAlignment="Center">
+                                                            <Image x:Name="ShaderCardBanner"
+                                                                   Source="{x:Bind ShaderImageSource, Mode=OneWay}"
+                                                                   Stretch="UniformToFill"
+                                                                   ImageOpened="Thumbnail_ImageOpened" />
                                                             <!-- Badge "Đã cài" -->
                                                             <Border x:Name="InstalledBadge"
                                                                     Visibility="{x:Bind IsInstalled, Mode=OneWay, Converter={StaticResource BoolToVis}}"
-                                                                    HorizontalAlignment="Left"
-                                                                    VerticalAlignment="Top"
-                                                                    Margin="10"
+                                                                    VerticalAlignment="Bottom"
                                                                     Background="{StaticResource VazAccentBrush}"
-                                                                    CornerRadius="4"
-                                                                    Padding="6,2"
+                                                                    CornerRadius="0,0,6,6"
+                                                                    Padding="0,1"
                                                                     IsHitTestVisible="False">
-                                                                <TextBlock Text="Đã cài" FontSize="11" Foreground="White" />
+                                                                <TextBlock Text="Đã cài" FontSize="9" Foreground="White" HorizontalAlignment="Center" />
                                                             </Border>
                                                         </Grid>
 
-                                                        <!-- Details & Action Buttons (Open File & Delete) -->
-                                                        <Grid Grid.Row="1" Padding="12,8,12,8" ColumnDefinitions="*,Auto">
-                                                            <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
-                                                                <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis" />
-                                                                <TextBlock Text="{x:Bind Author}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                        <!-- Metadata Info -->
+                                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="3">
+                                                            <TextBlock Text="{x:Bind Name}"
+                                                                       FontWeight="SemiBold"
+                                                                       FontSize="14"
+                                                                       Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       MaxLines="1" />
+                                                            <TextBlock Text="{x:Bind Author}"
+                                                                       FontSize="12"
+                                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       MaxLines="1" />
+                                                            <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2,0,0">
+                                                                <Border Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="4" Padding="5,1">
+                                                                    <TextBlock Text="{x:Bind Size}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                                </Border>
+                                                                <Border Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="4" Padding="5,1">
+                                                                    <TextBlock Text="{x:Bind StyleLabel}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                                </Border>
                                                             </StackPanel>
+                                                        </StackPanel>
 
-                                                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                                                <Button ToolTipService.ToolTip="Xem chi tiết"
-                                                                        AutomationProperties.Name="{x:Bind ViewDetailsAutomationName}"
-                                                                        Click="ShaderInspector_Click"
-                                                                        Tag="{x:Bind Id}"
-                                                                        Padding="6,4">
-                                                                    <FontIcon Glyph="&#xE946;" FontSize="12" />
-                                                                </Button>
+                                                        <!-- Actions: Xem chi tiết / Mở file / Xóa -->
+                                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                            <Button ToolTipService.ToolTip="Xem chi tiết"
+                                                                    AutomationProperties.Name="{x:Bind ViewDetailsAutomationName}"
+                                                                    Click="ShaderInspector_Click"
+                                                                    Tag="{x:Bind Id}"
+                                                                    Padding="8"
+                                                                    Background="Transparent"
+                                                                    BorderThickness="0">
+                                                                <FontIcon Glyph="&#xE946;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                            </Button>
 
-                                                                <Button ToolTipService.ToolTip="Mở vị trí file trong Explorer"
-                                                                        AutomationProperties.Name="Mở file"
-                                                                        Click="OpenShaderFile_Click"
-                                                                        Tag="{x:Bind Id}"
-                                                                        Padding="6,4"
-                                                                        Background="Transparent"
-                                                                        BorderThickness="0">
-                                                                    <FontIcon Glyph="&#xED25;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                                                </Button>
+                                                            <Button ToolTipService.ToolTip="Mở vị trí file trong Explorer"
+                                                                    AutomationProperties.Name="Mở file"
+                                                                    Click="OpenShaderFile_Click"
+                                                                    Tag="{x:Bind Id}"
+                                                                    Padding="8"
+                                                                    Background="Transparent"
+                                                                    BorderThickness="0">
+                                                                <FontIcon Glyph="&#xED25;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                            </Button>
 
-                                                                <Button ToolTipService.ToolTip="Xóa shader"
-                                                                        AutomationProperties.Name="Xóa shader"
-                                                                        Click="DeleteShader_Click"
-                                                                        Tag="{x:Bind Id}"
-                                                                        Padding="6,4"
-                                                                        Background="Transparent"
-                                                                        BorderThickness="0">
-                                                                    <FontIcon Glyph="&#xE74D;" FontSize="12" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
-                                                                </Button>
-                                                            </StackPanel>
-                                                        </Grid>
+                                                            <Button ToolTipService.ToolTip="Xóa shader"
+                                                                    AutomationProperties.Name="Xóa shader"
+                                                                    Click="DeleteShader_Click"
+                                                                    Tag="{x:Bind Id}"
+                                                                    Padding="8"
+                                                                    Background="Transparent"
+                                                                    BorderThickness="0">
+                                                                <FontIcon Glyph="&#xE74D;" FontSize="14" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                                                            </Button>
+                                                        </StackPanel>
                                                     </Grid>
                                                 </Border>
                                             </DataTemplate>
@@ -1447,9 +1451,9 @@
                                           Canvas.ZIndex="1"
                                           Visibility="{x:Bind ViewModel.IsLoadingShaders, Mode=OneWay, Converter={StaticResource BoolToVis}}">
                                         <Grid.RowDefinitions>
-                                            <RowDefinition Height="220" />
-                                            <RowDefinition Height="220" />
-                                            <RowDefinition Height="220" />
+                                            <RowDefinition Height="96" />
+                                            <RowDefinition Height="96" />
+                                            <RowDefinition Height="96" />
                                         </Grid.RowDefinitions>
                                         <Border Grid.Row="0" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="10" Opacity="0.7" />
                                         <Border Grid.Row="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="10" Opacity="0.7" />
