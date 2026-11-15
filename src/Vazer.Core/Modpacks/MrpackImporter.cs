@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -99,23 +100,15 @@ public sealed class MrpackImporter : IMrpackImporter
                               string.Equals(f.Env.Client, "unsupported", StringComparison.OrdinalIgnoreCase)))
                 .ToList();
 
-            var downloadedFiles = new List<MrpackFile>();
+            var downloadedFiles = new ConcurrentBag<MrpackFile>();
 
-            // ponytail: sequential file downloads using primary mirror; upgrade to concurrent downloads and mirror failover if large packs need acceleration
-            for (var i = 0; i < filesToDownload.Count; i++)
+            await Parallel.ForEachAsync(filesToDownload, ct, async (file, token) =>
             {
-                var file = filesToDownload[i];
                 var targetPath = SafeResolvePath(createdInstance.Path, file.Path);
 
                 if (file.Downloads.Count == 0)
                 {
-                    continue;
-                }
-
-                var downloadUrl = file.Downloads[0];
-                if (!Mods.ModInstallService.IsAllowedDownloadUrl(downloadUrl))
-                {
-                    throw new InvalidOperationException($"Blocked download from untrusted host in mrpack: '{downloadUrl}'. Only 'https://cdn.modrinth.com' is allowed.");
+                    return;
                 }
 
                 var partialPath = targetPath + ".partial";
@@ -125,50 +118,78 @@ public sealed class MrpackImporter : IMrpackImporter
                     Directory.CreateDirectory(targetDir);
                 }
 
-                try
+                Exception? lastException = null;
+                foreach (var downloadUrl in file.Downloads)
                 {
-                    await _fileDownloader.DownloadFileAsync(
-                        downloadUrl,
-                        partialPath,
-                        new FileDownloadOptions
-                        {
-                            HttpClientName = DownloadClientName,
-                            ValidateResponseUri = uri => uri != null && Mods.ModInstallService.IsAllowedDownloadUrl(uri.ToString())
-                        },
-                        progress: null,
-                        ct);
-
-                    if (!string.IsNullOrWhiteSpace(file.Hashes?.Sha512))
+                    if (!Mods.ModInstallService.IsAllowedDownloadUrl(downloadUrl))
                     {
-                        using var sha512 = SHA512.Create();
-                        byte[] hashBytes;
-                        await using (var fs = File.OpenRead(partialPath))
-                        {
-                            hashBytes = await sha512.ComputeHashAsync(fs, ct);
-                        }
-
-                        var hashHex = Convert.ToHexString(hashBytes);
-                        if (!string.Equals(hashHex, file.Hashes.Sha512.Trim(), StringComparison.OrdinalIgnoreCase))
-                        {
-                            throw new InvalidOperationException($"Checksum mismatch: SHA512 mismatch for {file.Path}");
-                        }
+                        throw new InvalidOperationException($"Blocked download from untrusted host in mrpack: '{downloadUrl}'. Only 'https://cdn.modrinth.com' is allowed.");
                     }
 
-                    File.Move(partialPath, targetPath, overwrite: true);
-                    downloadedFiles.Add(file);
-                }
-                finally
-                {
-                    if (File.Exists(partialPath))
+                    try
                     {
-                        try { File.Delete(partialPath); } catch { /* ignore */ }
+                        await _fileDownloader.DownloadFileAsync(
+                            downloadUrl,
+                            partialPath,
+                            new FileDownloadOptions
+                            {
+                                HttpClientName = DownloadClientName,
+                                ValidateResponseUri = uri => uri != null && Mods.ModInstallService.IsAllowedDownloadUrl(uri.ToString())
+                            },
+                            progress: null,
+                            token);
+
+                        if (!string.IsNullOrWhiteSpace(file.Hashes?.Sha512))
+                        {
+                            using var sha512 = SHA512.Create();
+                            byte[] hashBytes;
+                            await using (var fs = File.OpenRead(partialPath))
+                            {
+                                hashBytes = await sha512.ComputeHashAsync(fs, token);
+                            }
+
+                            var hashHex = Convert.ToHexString(hashBytes);
+                            if (!string.Equals(hashHex, file.Hashes.Sha512.Trim(), StringComparison.OrdinalIgnoreCase))
+                            {
+                                throw new InvalidOperationException($"Checksum mismatch: SHA512 mismatch for {file.Path}");
+                            }
+                        }
+
+                        File.Move(partialPath, targetPath, overwrite: true);
+                        downloadedFiles.Add(file);
+                        return;
+                    }
+                    catch (Exception ex)
+                    {
+                        lastException = ex;
+                    }
+                    finally
+                    {
+                        if (File.Exists(partialPath))
+                        {
+                            try { File.Delete(partialPath); } catch { /* ignore */ }
+                        }
                     }
                 }
 
+                if (lastException != null)
+                {
+                    throw new InvalidOperationException($"Failed to download {file.Path} from all mirrors.", lastException);
+                }
+            });
+
+            var completedList = filesToDownload
+                .Where(f => downloadedFiles.Contains(f))
+                .ToList();
+
+            var i = 0;
+            foreach (var file in completedList)
+            {
+                i++;
                 progress?.Report(new InstallProgress
                 {
                     TotalBytes = filesToDownload.Count,
-                    DownloadedBytes = i + 1,
+                    DownloadedBytes = i,
                     Status = $"Downloaded {Path.GetFileName(file.Path)}"
                 });
             }
@@ -180,7 +201,7 @@ public sealed class MrpackImporter : IMrpackImporter
             ExtractOverrides(archive, "client-overrides/", createdInstance.Path);
 
             // Write / update mods.json for downloaded mods
-            await SyncModsManifestAsync(createdInstance.Path, downloadedFiles, ct);
+            await SyncModsManifestAsync(createdInstance.Path, downloadedFiles.ToList(), ct);
         }
         catch
         {
