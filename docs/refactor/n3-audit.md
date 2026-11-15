@@ -218,9 +218,18 @@ Tạo một DTO riêng chuyên dụng cho persistence, loại bỏ hoàn toàn c
 ### 5.6. Phân định Cài đặt DND và Bộ lọc "Chỉ lỗi"
 - **DND (Do Not Disturb)**:
   - Là **Global Setting** được lưu trong `GlobalSettings.cs`.
-  - Hành vi khi DND bật: Vẫn thêm vào `History`, vẫn tăng `UnreadCount`, nhưng **không bao giờ** kích hoạt popup toast (`NotificationAdded` event không gửi ra toast host) và **không phát âm thanh**.
+  - Hành vi khi DND bật: Vẫn thêm vào `History`, vẫn tăng `UnreadCount`, nhưng **không** kích hoạt popup toast và **không** phát âm thanh.
+  - **Ngoại lệ Critical (đã chốt)**: `NotificationPriority.Critical` luôn hiện toast + phát âm thanh kể cả khi DND bật. Logic trong `NotificationService.cs`:
+    ```csharp
+    if (notification.Priority == NotificationPriority.Critical || !settings.NotificationDndEnabled)
+        ShowToast(notification);
+    ```
+    Critical áp dụng cho: game crash, mất session Microsoft, lỗi file system. `Priority.Error` (thường) vẫn ẩn khi DND ON.
+  - **Vị trí toggle DND (đã chốt)**: CẢ 2 chỗ:
+    1. **TitleBar quick toggle**: icon chuông → dropdown mini (toggle DND + "Mở Notification Center"). Thay đổi ngay lập tức không cần mở Settings.
+    2. **Settings page full toggle**: toggle DND đầy đủ + toggle per-category (Success/Error/Warning/Progress).
 - **Bộ lọc "Chỉ lỗi" trong Notification Center**:
-  - Đề xuất: Là **UI View Filter** (trạng thái hiển thị tức thời trong phiên), không cần lưu cứng vào disk. Người dùng bấm tab/chip "Tất cả" hoặc "Chỉ lỗi" để lọc nhanh danh sách hiển thị trên giao diện `NotificationCenterPanel`.
+  - **UI View Filter** (trạng thái hiển thị tức thời trong phiên), không persist vào disk. Người dùng bấm tab/chip "Tất cả" hoặc "Chỉ lỗi" để lọc nhanh danh sách hiển thị trên `NotificationCenterPanel`.
 
 ---
 
@@ -234,7 +243,8 @@ Nhằm đảm bảo an toàn tuyệt đối và duy trì 0 regression, phân k�
   - `src/Vaz.WinUI/Models/NotificationRecordDto.cs` (Tạo mới DTO tinh gọn).
   - `src/Vaz.WinUI/Services/NotificationHistoryStore.cs` (Tạo mới service chuyên trách đọc/ghi JSON bất đồng bộ).
   - `src/Vaz.WinUI/Services/NotificationService.cs`: Tích hợp gọi store khi add/remove/clear history; nạp lịch sử lúc khởi động.
-  - `src/Vaz.WinUI/Views/Controls/NotificationCenterPanel.xaml.cs`: Xử lý nút Action an toàn khi callback là null.
+  - `src/Vaz.WinUI/Views/Controls/NotificationCenterPanel.xaml.cs`: Nút Action ẨN HOÀN TOÀN (không disabled) — `ActionCallback1 == null` → `HasAction1 = false` → Visibility collapse. KHÔNG tooltip "Không khả dụng", KHÔNG nút xám.
+  - **TitleBar dropdown mini**: Tạo mới flyout "Mở Notification Center" + toggle DND nhanh (gọi vào `SettingsService` trực tiếp).
 - **Rủi ro**: Deadlock luồng UI nếu ghi file trong lock; lỗi callback null khi bấm nút action trên item cũ.
 - **Bộ kiểm thử cần thêm**: Unit tests cho `NotificationHistoryStoreTests` (kiểm tra serialization, eviction 50 items, xử lý file hỏng).
 
@@ -255,13 +265,15 @@ Nhằm đảm bảo an toàn tuyệt đối và duy trì 0 regression, phân k�
   - `src/Vazer.Core/Settings/GlobalSettings.cs`: Thêm `NotificationDndEnabled`.
   - `src/Vaz.WinUI/Services/NotificationService.cs`: Chặn hiện toast và âm thanh khi DND bật.
   - `src/Vaz.WinUI/Views/Controls/NotificationCenterPanel.xaml` & `.xaml.cs`: Bổ sung segmented buttons / filter chips ("Tất cả", "Chỉ lỗi") để lọc hiển thị trên `HistoryItemsControl`.
-- **Rủi ro**: Ảnh hưởng đến trải nghiệm người dùng nếu DND vô tình chặn các thông báo lỗi nghiêm trọng (Critical). Cân nhắc ngoại lệ cho `NotificationPriority.Critical`.
+- **Rủi ro**: DND vô tình chặn Critical — đã chốt ngoại lệ: `Priority.Critical` phá DND. `Priority.Error` thường vẫn ẩn.
 - **Bộ kiểm thử cần thêm**: Unit test mô phỏng gửi thông báo khi bật DND và verify danh sách active rỗng.
 
 ---
 
-## 7. Các câu hỏi mở gửi Master
+## 7. Quyết định đã chốt từ Master
 
-1. **Vị trí nút DND trên giao diện chính**: Master muốn đặt toggle bật/tắt nhanh chế độ DND ngay trên thanh tiêu đề cạnh chuông thông báo (TitleBar Notification Button), hay chỉ nằm bên trong Settings Page?
-2. **Ngoại lệ cho thông báo Critical khi DND bật**: Khi người dùng bật DND, các thông báo lỗi nghiêm trọng (ví dụ: Crash game, mất kết nối tài khoản) có nên phá vỡ DND để bật toast cảnh báo không, hay cũng ẩn hoàn toàn vào lịch sử?
-3. **Hiển thị nút Action của thông báo cũ sau khi restart**: Khi mở lại app, các thông báo cũ trong History có cần hiển thị nút Action (với trạng thái xám disabled và tooltip "Không khả dụng sau khi khởi động lại"), hay ẩn hoàn toàn nút Action đi?
+| Câu hỏi | Quyết định |
+|---|---|
+| Vị trí toggle DND | CẢ 2: TitleBar dropdown mini (icon chuông → toggle DND + "Mở Notification Center") + Settings page full toggle (DND + per-category). |
+| Critical phá DND? | CÓ. `Priority.Critical` luôn hiện toast + âm thanh dù DND ON. `Priority.Error` thường vẫn ẩn khi DND ON. |
+| Nút Action sau restart | ẨN HOÀN TOÀN. `ActionCallback1 == null` → `HasAction1 = false` → Visibility.Collapsed. Không disabled, không tooltip. Logic đã có sẵn tại `NotificationCenterPanel.cs:139-169`. |
