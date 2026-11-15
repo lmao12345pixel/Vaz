@@ -46,10 +46,14 @@ public sealed class SettingsService : ISettingsService
         _defaultDataPath = options.Value.RootPath;
         _defaultBackupPath = Path.Combine(_defaultDataPath, "backups");
         _filePath = Path.Combine(_defaultDataPath, "settings.json");
+        Current = CreateDefault();
     }
 
     /// <inheritdoc />
     public string SettingsFilePath => _filePath;
+
+    /// <inheritdoc />
+    public GlobalSettings Current { get; private set; }
 
     /// <inheritdoc />
     public GlobalSettings CreateDefault() => GlobalSettings.CreateDefault(_defaultDataPath, _defaultBackupPath);
@@ -113,6 +117,7 @@ public sealed class SettingsService : ISettingsService
                 }
             }
 
+            Current = normalized;
             return normalized;
         }
         finally
@@ -132,6 +137,7 @@ public sealed class SettingsService : ISettingsService
         try
         {
             await WriteAtomicNoLock(normalized, ct).ConfigureAwait(false);
+            Current = normalized;
             return normalized;
         }
         finally
@@ -202,6 +208,12 @@ public sealed class SettingsService : ISettingsService
             AccentColor = NormalizeChoice(s.AccentColor, "emerald", AccentColors),
             ReduceMotion = s.ReduceMotion,
             UiSoundEnabled = s.UiSoundEnabled,
+
+            NotificationSoundEnabled = s.NotificationSoundEnabled,
+            NotificationShowSuccess = s.NotificationShowSuccess,
+            NotificationShowError = s.NotificationShowError,
+            NotificationShowWarning = s.NotificationShowWarning,
+            NotificationShowProgress = s.NotificationShowProgress,
 
             DownloadThreads = DownloadThreadCounts.Contains(s.DownloadThreads) ? s.DownloadThreads : 8,
             DownloadMirror = NormalizeChoice(s.DownloadMirror, "cloudflare", DownloadMirrors),

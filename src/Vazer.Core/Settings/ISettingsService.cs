@@ -8,6 +8,9 @@ public interface ISettingsService
     /// <summary>Đường dẫn file settings.json đang dùng (hữu ích cho test/chẩn đoán).</summary>
     string SettingsFilePath { get; }
 
+    /// <summary>Bản settings hiện tại trong bộ nhớ (cập nhật sau mỗi lần LoadAsync/SaveAsync).</summary>
+    GlobalSettings Current { get; }
+
     /// <summary>Bộ giá trị mặc định theo executable spec, gắn với thư mục dữ liệu hiện tại.</summary>
     GlobalSettings CreateDefault();
 

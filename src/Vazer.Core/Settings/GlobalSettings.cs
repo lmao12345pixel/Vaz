@@ -48,6 +48,17 @@ public sealed class GlobalSettings
 
     public bool UiSoundEnabled { get; set; } = true;
 
+    // Thông báo / Notifications
+    public bool NotificationSoundEnabled { get; set; } = true;
+
+    public bool NotificationShowSuccess { get; set; } = true;
+
+    public bool NotificationShowError { get; set; } = true;
+
+    public bool NotificationShowWarning { get; set; } = true;
+
+    public bool NotificationShowProgress { get; set; } = true;
+
     // Mạng & Tải xuống / Network
     public int DownloadThreads { get; set; } = 8;
 

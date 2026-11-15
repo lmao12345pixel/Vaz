@@ -10,6 +10,7 @@ using Windows.Media.Playback;
 using Vaz.WinUI.Models;
 using Vazer.Core.Models;
 using Vazer.Core.Services;
+using Vazer.Core.Settings;
 
 namespace Vaz.WinUI.Services;
 
@@ -20,11 +21,15 @@ public sealed class NotificationService : INotificationService
     private const int CoalesceWindowSeconds = 3;
     private readonly object _lock = new();
     private readonly NotificationHistoryStore _store;
+    private readonly ISettingsService? _settingsService;
 
-    public NotificationService(NotificationHistoryStore? store = null)
+    public NotificationService(NotificationHistoryStore? store = null, ISettingsService? settingsService = null)
     {
         _store = store ?? new NotificationHistoryStore();
+        _settingsService = settingsService;
     }
+
+    private GlobalSettings Settings => _settingsService?.Current ?? new GlobalSettings();
 
     public ObservableCollection<NotificationItem> ActiveNotifications { get; } = new();
     public ObservableCollection<NotificationItem> History { get; } = new();
@@ -47,8 +52,30 @@ public sealed class NotificationService : INotificationService
     public event EventHandler<NotificationItem>? NotificationRemoved;
     public event EventHandler<int>? UnreadCountChanged;
 
+    private bool ShouldShowToast(NotificationType type, NotificationPriority priority)
+    {
+        // Critical LUÔN hiện toast bất kể cài đặt loại thông báo (N3.3 sẽ handle DND exception)
+        if (priority == NotificationPriority.Critical)
+        {
+            return true;
+        }
+
+        var s = Settings;
+        return type switch
+        {
+            NotificationType.Success => s.NotificationShowSuccess,
+            NotificationType.Error => s.NotificationShowError,
+            NotificationType.Warning => s.NotificationShowWarning,
+            NotificationType.Progress => s.NotificationShowProgress,
+            _ => true
+        };
+    }
+
     public void Show(NotificationItem notification)
     {
+        // Đồng bộ IsSoundEnabled theo master toggle nếu notification chưa bị tắt riêng
+        notification.IsSoundEnabled = notification.IsSoundEnabled && Settings.NotificationSoundEnabled;
+
         RunOnUIThread(() =>
         {
             lock (_lock)
@@ -70,33 +97,40 @@ public sealed class NotificationService : INotificationService
                     {
                         existing.Message = notification.Message;
                     }
-                    PlaySoundSafe(notification.Type);
+                    PlaySoundSafe(notification);
                     return;
                 }
 
-                // Max 5 toast in active stack: remove oldest from stack
-                while (ActiveNotifications.Count >= MaxActiveStack)
+                // QUYẾT ĐỊNH (N3.2): Kiểm tra per-category toggle.
+                // Nếu bị tắt, skip toast trên màn hình nhưng VẪN LƯU VÀO HISTORY để an toàn, không mất data.
+                bool showToast = ShouldShowToast(notification.Type, notification.Priority);
+
+                if (showToast)
                 {
-                    var oldest = ActiveNotifications[0];
-                    ActiveNotifications.RemoveAt(0);
-                    NotificationRemoved?.Invoke(this, oldest);
+                    // Max 5 toast in active stack: remove oldest from stack
+                    while (ActiveNotifications.Count >= MaxActiveStack)
+                    {
+                        var oldest = ActiveNotifications[0];
+                        ActiveNotifications.RemoveAt(0);
+                        NotificationRemoved?.Invoke(this, oldest);
+                    }
+
+                    notification.GroupKey = key;
+                    ActiveNotifications.Add(notification);
+
+                    var subs = NotificationAdded?.GetInvocationList().Length ?? 0;
+                    try
+                    {
+                        System.IO.File.AppendAllText(
+                            System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Vazer", "notif-debug.log"),
+                            DateTime.Now.ToString("HH:mm:ss.fff") + " [SVC] Show hash=" + GetHashCode() + " title=" + notification.Title + " subs=" + subs + "\n");
+                    }
+                    catch { }
+
+                    NotificationAdded?.Invoke(this, notification);
                 }
 
-                notification.GroupKey = key;
-                ActiveNotifications.Add(notification);
-
-                var subs = NotificationAdded?.GetInvocationList().Length ?? 0;
-                try
-                {
-                    System.IO.File.AppendAllText(
-                        System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Vazer", "notif-debug.log"),
-                        DateTime.Now.ToString("HH:mm:ss.fff") + " [SVC] Show hash=" + GetHashCode() + " title=" + notification.Title + " subs=" + subs + "\n");
-                }
-                catch { }
-
-                NotificationAdded?.Invoke(this, notification);
-
-                // Add to history (at index 0 for newest first)
+                // Add to history (at index 0 for newest first) - luôn lưu để user xem lại sau
                 History.Insert(0, notification);
                 while (History.Count > MaxHistoryCount)
                 {
@@ -107,7 +141,7 @@ public sealed class NotificationService : INotificationService
                 PersistHistoryLocked();
             }
 
-            PlaySoundSafe(notification.Type);
+            PlaySoundSafe(notification);
         });
     }
 
@@ -310,7 +344,7 @@ public sealed class NotificationService : INotificationService
                     {
                         existing.Message = message;
                     }
-                    PlaySoundSafe(existing.Type);
+                    PlaySoundSafe(existing);
                 }
             }
         });
@@ -522,15 +556,23 @@ public sealed class NotificationService : INotificationService
     [DllImport("user32.dll")]
     private static extern bool MessageBeep(uint uType);
 
-    private static void PlaySoundSafe(NotificationType type)
+    private void PlaySoundSafe(NotificationItem notification)
     {
-        if (type == NotificationType.Progress) return;
+        if (notification.Type == NotificationType.Progress) return;
+
+        // Critical LUÔN phát âm thanh bất kể cài đặt (N3.3 sẽ handle DND exception chi tiết)
+        if (notification.Priority != NotificationPriority.Critical)
+        {
+            if (!Settings.NotificationSoundEnabled) return;
+            if (!notification.IsSoundEnabled) return;
+            if (!ShouldShowToast(notification.Type, notification.Priority)) return;
+        }
 
         Task.Run(() =>
         {
             try
             {
-                string soundEvent = (type == NotificationType.Error || type == NotificationType.Warning)
+                string soundEvent = (notification.Type == NotificationType.Error || notification.Type == NotificationType.Warning)
                     ? "ms-winsoundevent:Notification.Reminder"
                     : "ms-winsoundevent:Notification.Default";
 
@@ -548,7 +590,7 @@ public sealed class NotificationService : INotificationService
                 // Fallback to Win32 MessageBeep if MediaPlayer is unavailable
                 try
                 {
-                    switch (type)
+                    switch (notification.Type)
                     {
                         case NotificationType.Error:
                             MessageBeep(0x00000010); // MB_ICONHAND

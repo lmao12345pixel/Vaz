@@ -447,6 +447,34 @@
                         <ToggleSwitch
                             Header="Phát âm thanh click xúc giác Minecraft khi tương tác"
                             IsOn="{x:Bind ViewModel.UiSoundEnabled, Mode=TwoWay}" />
+
+                        <!-- Thông báo / Notifications -->
+                        <Border Height="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,4,0,4" />
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Thông báo" Style="{StaticResource SettingsSectionTitleStyle}" />
+                            <TextBlock Text="Tùy chỉnh âm thanh và loại thông báo hiển thị trên màn hình." Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource MkVibeMutedTextBrush}" TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <ToggleSwitch
+                            Header="Âm thanh thông báo"
+                            IsOn="{x:Bind ViewModel.NotificationSoundEnabled, Mode=TwoWay}" />
+
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="Loại thông báo hiển thị:" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource MkVibeMutedTextBrush}" />
+                            <ToggleSwitch
+                                Header="Thành công"
+                                IsOn="{x:Bind ViewModel.NotificationShowSuccess, Mode=TwoWay}" />
+                            <ToggleSwitch
+                                Header="Lỗi"
+                                IsOn="{x:Bind ViewModel.NotificationShowError, Mode=TwoWay}" />
+                            <ToggleSwitch
+                                Header="Cảnh báo"
+                                IsOn="{x:Bind ViewModel.NotificationShowWarning, Mode=TwoWay}" />
+                            <ToggleSwitch
+                                Header="Tiến trình"
+                                IsOn="{x:Bind ViewModel.NotificationShowProgress, Mode=TwoWay}" />
+                        </StackPanel>
                     </StackPanel>
                 </Border>
 

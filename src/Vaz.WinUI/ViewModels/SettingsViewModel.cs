@@ -156,6 +156,13 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool reduceMotion;
     [ObservableProperty] private bool uiSoundEnabled = true;
 
+    // Thông báo / Notifications
+    [ObservableProperty] private bool notificationSoundEnabled = true;
+    [ObservableProperty] private bool notificationShowSuccess = true;
+    [ObservableProperty] private bool notificationShowError = true;
+    [ObservableProperty] private bool notificationShowWarning = true;
+    [ObservableProperty] private bool notificationShowProgress = true;
+
     /// <summary>Đợt 21: override cấp hiệu ứng GPU (Auto / Full / Lite).</summary>
     [ObservableProperty] private GpuTier gpuTier = GpuTier.Auto;
 
@@ -620,6 +627,11 @@ public sealed partial class SettingsViewModel : ObservableObject
             AccentColor = settings.AccentColor;
             ReduceMotion = settings.ReduceMotion;
             UiSoundEnabled = settings.UiSoundEnabled;
+            NotificationSoundEnabled = settings.NotificationSoundEnabled;
+            NotificationShowSuccess = settings.NotificationShowSuccess;
+            NotificationShowError = settings.NotificationShowError;
+            NotificationShowWarning = settings.NotificationShowWarning;
+            NotificationShowProgress = settings.NotificationShowProgress;
 
             DownloadThreads = settings.DownloadThreads;
             DownloadMirror = settings.DownloadMirror;
@@ -680,6 +692,11 @@ public sealed partial class SettingsViewModel : ObservableObject
         AccentColor = AccentColor,
         ReduceMotion = ReduceMotion,
         UiSoundEnabled = UiSoundEnabled,
+        NotificationSoundEnabled = NotificationSoundEnabled,
+        NotificationShowSuccess = NotificationShowSuccess,
+        NotificationShowError = NotificationShowError,
+        NotificationShowWarning = NotificationShowWarning,
+        NotificationShowProgress = NotificationShowProgress,
         DownloadThreads = DownloadThreads,
         DownloadMirror = DownloadMirror,
         BandwidthLimit = BandwidthLimit,
@@ -788,6 +805,11 @@ public sealed partial class SettingsViewModel : ObservableObject
             writer.WriteString("accentColor", AccentColor);
             writer.WriteBoolean("reduceMotion", ReduceMotion);
             writer.WriteBoolean("uiSoundEnabled", UiSoundEnabled);
+            writer.WriteBoolean("notificationSoundEnabled", NotificationSoundEnabled);
+            writer.WriteBoolean("notificationShowSuccess", NotificationShowSuccess);
+            writer.WriteBoolean("notificationShowError", NotificationShowError);
+            writer.WriteBoolean("notificationShowWarning", NotificationShowWarning);
+            writer.WriteBoolean("notificationShowProgress", NotificationShowProgress);
             writer.WriteNumber("downloadThreads", DownloadThreads);
             writer.WriteString("downloadMirror", DownloadMirror);
             writer.WriteString("bandwidthLimit", BandwidthLimit);

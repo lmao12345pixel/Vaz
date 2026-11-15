@@ -59,6 +59,11 @@ public sealed class SettingsServiceTests : IDisposable
         settings.AccentColor.Should().Be("emerald");
         settings.ReduceMotion.Should().BeFalse();
         settings.UiSoundEnabled.Should().BeTrue();
+        settings.NotificationSoundEnabled.Should().BeTrue();
+        settings.NotificationShowSuccess.Should().BeTrue();
+        settings.NotificationShowError.Should().BeTrue();
+        settings.NotificationShowWarning.Should().BeTrue();
+        settings.NotificationShowProgress.Should().BeTrue();
         settings.DownloadThreads.Should().Be(8);
         settings.DownloadMirror.Should().Be("cloudflare");
         settings.BandwidthLimit.Should().Be("unlimited");
@@ -341,5 +346,64 @@ public sealed class SettingsServiceTests : IDisposable
         var act = async () => await _service.SaveAsync(null!);
 
         await act.Should().ThrowAsync<ArgumentNullException>();
+    }
+
+    [Fact]
+    public async Task Load_MissingNotificationFields_DefaultsAllToTrue()
+    {
+        // Giả lập file settings cũ không có các trường notification
+        WriteRawJson("""{ "ramMb": 4096, "theme": "dark" }""");
+
+        var loaded = await _service.LoadAsync();
+
+        loaded.NotificationSoundEnabled.Should().BeTrue();
+        loaded.NotificationShowSuccess.Should().BeTrue();
+        loaded.NotificationShowError.Should().BeTrue();
+        loaded.NotificationShowWarning.Should().BeTrue();
+        loaded.NotificationShowProgress.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Save_CustomNotificationSettings_PersistsAndRoundTrips()
+    {
+        var custom = new GlobalSettings
+        {
+            NotificationSoundEnabled = false,
+            NotificationShowSuccess = false,
+            NotificationShowError = true,
+            NotificationShowWarning = false,
+            NotificationShowProgress = false
+        };
+
+        var saved = await _service.SaveAsync(custom);
+        var loaded = await _service.LoadAsync();
+
+        loaded.NotificationSoundEnabled.Should().BeFalse();
+        loaded.NotificationShowSuccess.Should().BeFalse();
+        loaded.NotificationShowError.Should().BeTrue();
+        loaded.NotificationShowWarning.Should().BeFalse();
+        loaded.NotificationShowProgress.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task SettingsService_Current_TracksLoadAndSave()
+    {
+        _service.Current.Should().NotBeNull();
+        _service.Current.RamMb.Should().Be(4096);
+
+        var custom = new GlobalSettings
+        {
+            RamMb = 8192,
+            NotificationSoundEnabled = false
+        };
+
+        await _service.SaveAsync(custom);
+        _service.Current.RamMb.Should().Be(8192);
+        _service.Current.NotificationSoundEnabled.Should().BeFalse();
+
+        WriteRawJson("""{ "ramMb": 6144, "notificationSoundEnabled": true }""");
+        await _service.LoadAsync();
+        _service.Current.RamMb.Should().Be(6144);
+        _service.Current.NotificationSoundEnabled.Should().BeTrue();
     }
 }
