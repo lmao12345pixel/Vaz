@@ -15,7 +15,6 @@
     <Grid x:Name="ShellRoot" RowDefinitions="Auto,*,Auto" Background="{StaticResource VazShellBackgroundBrush}" MinWidth="960" MinHeight="530">
         <!-- Custom WinUI Titlebar with Drag Area -->
         <Grid
-            x:Name="AppTitleBar"
             Grid.Row="0"
             Height="44"
             Background="Transparent"
@@ -24,10 +23,23 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <!-- App Logo & Branding -->
-            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <!-- Draggable TitleBar Area (Pass to SetTitleBar: covers Branding + Center spacer, ends BEFORE Action Buttons) -->
+            <Grid
+                x:Name="AppTitleBar"
+                Grid.Column="0"
+                Grid.ColumnSpan="2"
+                Background="Transparent" />
+
+            <!-- App Logo & Branding (Visual overlay inside draggable region) -->
+            <StackPanel
+                Grid.Column="0"
+                Orientation="Horizontal"
+                Spacing="8"
+                VerticalAlignment="Center"
+                IsHitTestVisible="False">
                 <Border
                     Width="24" Height="24"
                     CornerRadius="6"
@@ -54,8 +66,8 @@
                 </Border>
             </StackPanel>
 
-            <!-- Top Right Titlebar Actions (Notification Bell) -->
-            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+            <!-- Top Right Titlebar Actions (Notification Bell + DND - Pure Client Area, Outside AppTitleBar) -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                 <Button
                     x:Name="DndToggleButton"
                     Click="DndToggleButton_Click"

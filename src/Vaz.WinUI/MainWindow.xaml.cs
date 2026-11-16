@@ -90,6 +90,13 @@ public sealed partial class MainWindow : Window
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
+
+        AppTitleBar.Loaded += (_, _) => UpdateTitleBarPassthroughRegions();
+        AppTitleBar.SizeChanged += (_, _) => UpdateTitleBarPassthroughRegions();
+        DndToggleButton.Loaded += (_, _) => UpdateTitleBarPassthroughRegions();
+        DndToggleButton.SizeChanged += (_, _) => UpdateTitleBarPassthroughRegions();
+        NotificationBellButton.Loaded += (_, _) => UpdateTitleBarPassthroughRegions();
+        NotificationBellButton.SizeChanged += (_, _) => UpdateTitleBarPassthroughRegions();
         try
         {
             AppWindow.Resize(new Windows.Graphics.SizeInt32(1100, 700));
@@ -312,6 +319,43 @@ public sealed partial class MainWindow : Window
         _settingsService.Current.NotificationDndEnabled = newValue;
         UpdateDndVisual(newValue);
         await _settingsService.SaveAsync(_settingsService.Current);
+    }
+
+    private void UpdateTitleBarPassthroughRegions()
+    {
+        try
+        {
+            if (Microsoft.UI.Windowing.AppWindowTitleBar.IsCustomizationSupported() && AppTitleBar.XamlRoot != null)
+            {
+                double scale = AppTitleBar.XamlRoot.RasterizationScale;
+                var nonClientInputSrc = Microsoft.UI.Input.InputNonClientPointerSource.GetForWindowId(this.AppWindow.Id);
+
+                var rects = new System.Collections.Generic.List<Windows.Graphics.RectInt32>();
+                foreach (var element in new FrameworkElement[] { DndToggleButton, NotificationBellButton })
+                {
+                    if (element.ActualWidth > 0 && element.ActualHeight > 0)
+                    {
+                        var transform = element.TransformToVisual(null);
+                        var bounds = transform.TransformBounds(new Windows.Foundation.Rect(0, 0, element.ActualWidth, element.ActualHeight));
+                        rects.Add(new Windows.Graphics.RectInt32(
+                            (int)Math.Round(bounds.X * scale),
+                            (int)Math.Round(bounds.Y * scale),
+                            (int)Math.Round(bounds.Width * scale),
+                            (int)Math.Round(bounds.Height * scale)
+                        ));
+                    }
+                }
+
+                if (rects.Count > 0)
+                {
+                    nonClientInputSrc.SetRegionRects(Microsoft.UI.Input.NonClientRegionKind.Passthrough, rects.ToArray());
+                }
+            }
+        }
+        catch
+        {
+            // Defensive: ignore platform limitations
+        }
     }
 
     private void NavView_ItemInvoked(NavigationView sender, NavigationViewItemInvokedEventArgs args)
