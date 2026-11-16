@@ -113,10 +113,9 @@ public partial class App : Application
         }
         catch { }
 
-        Dispatcher = DispatcherQueue.GetForCurrentThread();
-
         // SET-AC-04: nạp settings trước khi tạo MainWindow để theme/accent đã lưu được áp
         // TRƯỚC ContentFrame.Navigate — tránh nháy theme mặc định ở frame đầu tiên.
+        // Dùng sync-over-async (GetResult) để đảm bảo window hiển thị đúng cách.
         var settings = Services.GetRequiredService<ISettingsService>()
             .LoadAsync()
             .GetAwaiter()
