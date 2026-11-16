@@ -157,6 +157,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool uiSoundEnabled = true;
 
     // Thông báo / Notifications
+    [ObservableProperty] private bool notificationDndEnabled;
     [ObservableProperty] private bool notificationSoundEnabled = true;
     [ObservableProperty] private bool notificationShowSuccess = true;
     [ObservableProperty] private bool notificationShowError = true;
@@ -627,6 +628,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             AccentColor = settings.AccentColor;
             ReduceMotion = settings.ReduceMotion;
             UiSoundEnabled = settings.UiSoundEnabled;
+            NotificationDndEnabled = settings.NotificationDndEnabled;
             NotificationSoundEnabled = settings.NotificationSoundEnabled;
             NotificationShowSuccess = settings.NotificationShowSuccess;
             NotificationShowError = settings.NotificationShowError;
@@ -692,6 +694,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         AccentColor = AccentColor,
         ReduceMotion = ReduceMotion,
         UiSoundEnabled = UiSoundEnabled,
+        NotificationDndEnabled = NotificationDndEnabled,
         NotificationSoundEnabled = NotificationSoundEnabled,
         NotificationShowSuccess = NotificationShowSuccess,
         NotificationShowError = NotificationShowError,
@@ -805,6 +808,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             writer.WriteString("accentColor", AccentColor);
             writer.WriteBoolean("reduceMotion", ReduceMotion);
             writer.WriteBoolean("uiSoundEnabled", UiSoundEnabled);
+            writer.WriteBoolean("notificationDndEnabled", NotificationDndEnabled);
             writer.WriteBoolean("notificationSoundEnabled", NotificationSoundEnabled);
             writer.WriteBoolean("notificationShowSuccess", NotificationShowSuccess);
             writer.WriteBoolean("notificationShowError", NotificationShowError);
@@ -925,6 +929,12 @@ public sealed partial class SettingsViewModel : ObservableObject
     }
 
     partial void OnUiSoundEnabledChanged(bool value)
+    {
+        if (_isApplying) return;
+        _ = AutoSaveAsync();
+    }
+
+    partial void OnNotificationDndEnabledChanged(bool value)
     {
         if (_isApplying) return;
         _ = AutoSaveAsync();

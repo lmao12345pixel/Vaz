@@ -56,6 +56,9 @@ public sealed class SettingsService : ISettingsService
     public GlobalSettings Current { get; private set; }
 
     /// <inheritdoc />
+    public event Action<GlobalSettings>? SettingsChanged;
+
+    /// <inheritdoc />
     public GlobalSettings CreateDefault() => GlobalSettings.CreateDefault(_defaultDataPath, _defaultBackupPath);
 
     /// <inheritdoc />
@@ -118,6 +121,7 @@ public sealed class SettingsService : ISettingsService
             }
 
             Current = normalized;
+            SettingsChanged?.Invoke(normalized);
             return normalized;
         }
         finally
@@ -138,6 +142,7 @@ public sealed class SettingsService : ISettingsService
         {
             await WriteAtomicNoLock(normalized, ct).ConfigureAwait(false);
             Current = normalized;
+            SettingsChanged?.Invoke(normalized);
             return normalized;
         }
         finally
@@ -209,6 +214,7 @@ public sealed class SettingsService : ISettingsService
             ReduceMotion = s.ReduceMotion,
             UiSoundEnabled = s.UiSoundEnabled,
 
+            NotificationDndEnabled = s.NotificationDndEnabled,
             NotificationSoundEnabled = s.NotificationSoundEnabled,
             NotificationShowSuccess = s.NotificationShowSuccess,
             NotificationShowError = s.NotificationShowError,

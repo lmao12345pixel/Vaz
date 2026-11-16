@@ -456,6 +456,13 @@
                             <TextBlock Text="Tùy chỉnh âm thanh và loại thông báo hiển thị trên màn hình." Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource MkVibeMutedTextBrush}" TextWrapping="Wrap" />
                         </StackPanel>
 
+                        <StackPanel Spacing="2">
+                            <ToggleSwitch
+                                Header="Không làm phiền (DND)"
+                                IsOn="{x:Bind ViewModel.NotificationDndEnabled, Mode=TwoWay}" />
+                            <TextBlock Text="Ẩn toast thông báo thường. Lỗi nghiêm trọng vẫn hiển thị." Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource MkVibeMutedTextBrush}" TextWrapping="Wrap" Margin="0,-4,0,0" />
+                        </StackPanel>
+
                         <ToggleSwitch
                             Header="Âm thanh thông báo"
                             IsOn="{x:Bind ViewModel.NotificationSoundEnabled, Mode=TwoWay}" />

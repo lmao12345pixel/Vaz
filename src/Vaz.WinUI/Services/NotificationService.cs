@@ -54,13 +54,18 @@ public sealed class NotificationService : INotificationService
 
     private bool ShouldShowToast(NotificationType type, NotificationPriority priority)
     {
-        // Critical LUÔN hiện toast bất kể cài đặt loại thông báo (N3.3 sẽ handle DND exception)
+        // Critical LUÔN hiện toast bất kể cài đặt DND hay loại thông báo
         if (priority == NotificationPriority.Critical)
         {
             return true;
         }
 
         var s = Settings;
+        if (s.NotificationDndEnabled)
+        {
+            return false;
+        }
+
         return type switch
         {
             NotificationType.Success => s.NotificationShowSuccess,

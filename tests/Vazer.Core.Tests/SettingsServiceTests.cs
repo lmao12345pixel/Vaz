@@ -59,6 +59,7 @@ public sealed class SettingsServiceTests : IDisposable
         settings.AccentColor.Should().Be("emerald");
         settings.ReduceMotion.Should().BeFalse();
         settings.UiSoundEnabled.Should().BeTrue();
+        settings.NotificationDndEnabled.Should().BeFalse();
         settings.NotificationSoundEnabled.Should().BeTrue();
         settings.NotificationShowSuccess.Should().BeTrue();
         settings.NotificationShowError.Should().BeTrue();
@@ -446,5 +447,40 @@ public sealed class SettingsServiceTests : IDisposable
         var reloaded = await _service.LoadAsync();
         reloaded.NotificationShowSuccess.Should().BeFalse();
         reloaded.NotificationSoundEnabled.Should().BeTrue(); // Các trường khác giữ nguyên
+    }
+
+    [Fact]
+    public async Task Test_SaveLoadDnd_RoundTrip()
+    {
+        // 1. Mặc định DND = false
+        var initial = await _service.LoadAsync();
+        initial.NotificationDndEnabled.Should().BeFalse();
+
+        // 2. Bật DND = true -> Save -> Load -> assert true
+        initial.NotificationDndEnabled = true;
+        await _service.SaveAsync(initial);
+
+        var loaded = await _service.LoadAsync();
+        loaded.NotificationDndEnabled.Should().BeTrue();
+
+        // 3. Tắt lại DND = false -> Save -> Load -> assert false
+        loaded.NotificationDndEnabled = false;
+        await _service.SaveAsync(loaded);
+
+        var reloaded = await _service.LoadAsync();
+        reloaded.NotificationDndEnabled.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Test_SettingsChanged_EventFiresOnSave()
+    {
+        GlobalSettings? received = null;
+        _service.SettingsChanged += s => received = s;
+
+        var settings = new GlobalSettings { NotificationDndEnabled = true };
+        await _service.SaveAsync(settings);
+
+        received.Should().NotBeNull();
+        received!.NotificationDndEnabled.Should().BeTrue();
     }
 }

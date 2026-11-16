@@ -57,6 +57,18 @@
             <!-- Top Right Titlebar Actions (Notification Bell) -->
             <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                 <Button
+                    x:Name="DndToggleButton"
+                    Click="DndToggleButton_Click"
+                    Padding="6"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    CornerRadius="6"
+                    Margin="0,0,4,0"
+                    AutomationProperties.Name="Không làm phiền"
+                    ToolTipService.ToolTip="Không làm phiền (DND)">
+                    <FontIcon x:Name="DndIcon" Glyph="&#xE708;" FontSize="15" />
+                </Button>
+                <Button
                     x:Name="NotificationBellButton"
                     Click="NotificationBellButton_Click"
                     Padding="6"

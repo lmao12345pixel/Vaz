@@ -6,11 +6,13 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Vaz.WinUI.Helpers;
 using Vaz.WinUI.Services;
 using Vaz.WinUI.ViewModels;
 using Vaz.WinUI.Views;
+using Vazer.Core.Settings;
 
 namespace Vaz.WinUI;
 
@@ -77,6 +79,9 @@ public sealed partial class MainWindow : Window
     private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
 
     private readonly SUBCLASSPROC? _subclassProc;
+    private readonly ISettingsService? _settingsService;
+    private static readonly SolidColorBrush DndActiveBrush = new(Windows.UI.Color.FromArgb(255, 245, 158, 11)); // Amber
+    private static readonly SolidColorBrush DndInactiveBrush = new(Windows.UI.Color.FromArgb(255, 156, 163, 175)); // Muted Gray
 
     public MainWindow(MainViewModel viewModel)
     {
@@ -138,7 +143,21 @@ public sealed partial class MainWindow : Window
             UpdateUnreadBadge(notifService.UnreadCount);
         }
 
+        _settingsService = (Application.Current as App)?.Services.GetService(typeof(ISettingsService)) as ISettingsService;
+        if (_settingsService != null)
+        {
+            UpdateDndVisual(_settingsService.Current.NotificationDndEnabled);
+            _settingsService.SettingsChanged += OnSettingsChanged;
+        }
+        else
+        {
+            UpdateDndVisual(false);
+        }
+
         _ = ViewModel.InitializeAsync();
+
+        // A4: Icon Micro-bounce cho sidebar nav icons (reduce-motion gated inside helper)
+        AttachNavIconBounce();
         var startupPage = Environment.GetEnvironmentVariable("VAZER_STARTUP_PAGE");
         if (startupPage == "InstanceDetailPage")
         {
@@ -271,6 +290,30 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private void OnSettingsChanged(GlobalSettings settings)
+    {
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            UpdateDndVisual(settings.NotificationDndEnabled);
+        });
+    }
+
+    private void UpdateDndVisual(bool isDnd)
+    {
+        DndIcon.Foreground = isDnd ? DndActiveBrush : DndInactiveBrush;
+        ToolTipService.SetToolTip(DndToggleButton, isDnd ? "Không làm phiền (Đang bật)" : "Không làm phiền (DND)");
+    }
+
+    private async void DndToggleButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_settingsService == null) return;
+
+        bool newValue = !_settingsService.Current.NotificationDndEnabled;
+        _settingsService.Current.NotificationDndEnabled = newValue;
+        UpdateDndVisual(newValue);
+        await _settingsService.SaveAsync(_settingsService.Current);
+    }
+
     private void NavView_ItemInvoked(NavigationView sender, NavigationViewItemInvokedEventArgs args)
     {
         if (args.InvokedItemContainer is NavigationViewItem item && item.Tag is string tag)
@@ -305,6 +348,28 @@ public sealed partial class MainWindow : Window
     private void OnReduceMotionChanged(bool reduceMotion)
     {
         ApplyReduceMotion(reduceMotion);
+    }
+
+    /// <summary>
+    /// A4: Gắn Icon Micro-bounce cho tất cả NavigationViewItem icons trong sidebar.
+    /// Hover → icon nhảy lên 2px rồi về (150ms). Reduce-motion gate bên trong helper.
+    /// </summary>
+    private void AttachNavIconBounce()
+    {
+        foreach (var item in NavView.MenuItems.OfType<NavigationViewItem>())
+        {
+            if (item.Icon is FontIcon icon)
+            {
+                item.PointerEntered += (_, _) => UiAnimationHelper.AnimateIconMicroBounce(icon, -2.0, 150);
+            }
+        }
+        foreach (var item in NavView.FooterMenuItems.OfType<NavigationViewItem>())
+        {
+            if (item.Icon is FontIcon icon)
+            {
+                item.PointerEntered += (_, _) => UiAnimationHelper.AnimateIconMicroBounce(icon, -2.0, 150);
+            }
+        }
     }
 
     private void Navigate(Type pageType, object? parameter = null)

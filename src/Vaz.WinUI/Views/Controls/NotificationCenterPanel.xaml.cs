@@ -1,5 +1,7 @@
 using System;
+using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -14,6 +16,7 @@ namespace Vaz.WinUI.Views.Controls;
 public sealed partial class NotificationCenterPanel : UserControl
 {
     private INotificationService? _service;
+    private readonly ObservableCollection<NotificationItem> _filteredItems = new();
     private bool _isOpen;
 
     public bool IsOpen => _isOpen;
@@ -28,21 +31,54 @@ public sealed partial class NotificationCenterPanel : UserControl
     public void Initialize(INotificationService service)
     {
         _service = service;
-        HistoryItemsControl.ItemsSource = _service.History;
+        HistoryItemsControl.ItemsSource = _filteredItems;
         _service.History.CollectionChanged += OnHistoryCollectionChanged;
-        UpdateEmptyState();
+        ApplyFilter();
     }
 
     private void OnHistoryCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
+        ApplyFilter();
+    }
+
+    private void FilterAll_Click(object sender, RoutedEventArgs e)
+    {
+        FilterAll.IsChecked = true;
+        FilterErrorsOnly.IsChecked = false;
+        ApplyFilter();
+    }
+
+    private void FilterErrorsOnly_Click(object sender, RoutedEventArgs e)
+    {
+        FilterErrorsOnly.IsChecked = true;
+        FilterAll.IsChecked = false;
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        if (_service == null) return;
+
+        bool onlyErrors = FilterErrorsOnly.IsChecked == true;
+        var items = onlyErrors
+            ? _service.History.Where(n => n.Type == NotificationType.Error || n.Type == NotificationType.Warning).ToList()
+            : _service.History.ToList();
+
+        _filteredItems.Clear();
+        foreach (var item in items)
+        {
+            _filteredItems.Add(item);
+        }
+
         UpdateEmptyState();
     }
 
     private void UpdateEmptyState()
     {
-        int count = _service?.History?.Count ?? 0;
-        EmptyStatePanel.Visibility = count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        ClearAllButton.Visibility = count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        int filteredCount = _filteredItems.Count;
+        int totalHistoryCount = _service?.History?.Count ?? 0;
+        EmptyStatePanel.Visibility = filteredCount == 0 ? Visibility.Visible : Visibility.Collapsed;
+        ClearAllButton.Visibility = totalHistoryCount > 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
     public async Task OpenAsync()
@@ -50,7 +86,7 @@ public sealed partial class NotificationCenterPanel : UserControl
         if (_isOpen) return;
         _isOpen = true;
         _service?.MarkAllRead();
-        UpdateEmptyState();
+        ApplyFilter();
 
         this.Visibility = Visibility.Visible;
 

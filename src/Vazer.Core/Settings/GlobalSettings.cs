@@ -49,6 +49,8 @@ public sealed class GlobalSettings
     public bool UiSoundEnabled { get; set; } = true;
 
     // Thông báo / Notifications
+    public bool NotificationDndEnabled { get; set; } = false;
+
     public bool NotificationSoundEnabled { get; set; } = true;
 
     public bool NotificationShowSuccess { get; set; } = true;

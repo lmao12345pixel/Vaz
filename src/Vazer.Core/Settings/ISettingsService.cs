@@ -15,6 +15,11 @@ public interface ISettingsService
     GlobalSettings CreateDefault();
 
     /// <summary>
+    /// Phát khi cài đặt thay đổi (sau khi nạp hoặc lưu thành công).
+    /// </summary>
+    event Action<GlobalSettings>? SettingsChanged;
+
+    /// <summary>
     /// Nạp cài đặt. File không tồn tại / JSON hỏng → trả defaults thay vì throw.
     /// Giá trị luôn được chuẩn hóa (clamp RAM, validate enum).
     /// </summary>
