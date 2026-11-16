@@ -406,4 +406,45 @@ public sealed class SettingsServiceTests : IDisposable
         _service.Current.RamMb.Should().Be(6144);
         _service.Current.NotificationSoundEnabled.Should().BeTrue();
     }
+
+    [Fact]
+    public async Task Test_SaveLoadNotificationToggles_RoundTrip()
+    {
+        // Tạo settings với 5 toggle = false
+        var allFalse = new GlobalSettings
+        {
+            NotificationSoundEnabled = false,
+            NotificationShowSuccess = false,
+            NotificationShowError = false,
+            NotificationShowWarning = false,
+            NotificationShowProgress = false
+        };
+
+        var saved = await _service.SaveAsync(allFalse);
+        var loaded = await _service.LoadAsync();
+
+        loaded.NotificationSoundEnabled.Should().BeFalse();
+        loaded.NotificationShowSuccess.Should().BeFalse();
+        loaded.NotificationShowError.Should().BeFalse();
+        loaded.NotificationShowWarning.Should().BeFalse();
+        loaded.NotificationShowProgress.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Migration_OldSettingsFile_ToggleOffAndSave_PersistsFalse()
+    {
+        // 1. File cũ không có 5 field notification -> LoadAsync trả về default = true
+        WriteRawJson("""{ "ramMb": 4096, "theme": "dark", "uiSoundEnabled": true }""");
+        var initial = await _service.LoadAsync();
+        initial.NotificationShowSuccess.Should().BeTrue();
+
+        // 2. User toggle OFF "Thành công" và lưu
+        initial.NotificationShowSuccess = false;
+        await _service.SaveAsync(initial);
+
+        // 3. Load lại từ disk -> kiểm tra đã persist false
+        var reloaded = await _service.LoadAsync();
+        reloaded.NotificationShowSuccess.Should().BeFalse();
+        reloaded.NotificationSoundEnabled.Should().BeTrue(); // Các trường khác giữ nguyên
+    }
 }

@@ -924,6 +924,59 @@ public sealed partial class SettingsViewModel : ObservableObject
         AppThemeManager.SetReduceMotion(value);
     }
 
+    partial void OnUiSoundEnabledChanged(bool value)
+    {
+        if (_isApplying) return;
+        _ = AutoSaveAsync();
+    }
+
+    partial void OnNotificationSoundEnabledChanged(bool value)
+    {
+        if (_isApplying) return;
+        _ = AutoSaveAsync();
+    }
+
+    partial void OnNotificationShowSuccessChanged(bool value)
+    {
+        if (_isApplying) return;
+        _ = AutoSaveAsync();
+    }
+
+    partial void OnNotificationShowErrorChanged(bool value)
+    {
+        if (_isApplying) return;
+        _ = AutoSaveAsync();
+    }
+
+    partial void OnNotificationShowWarningChanged(bool value)
+    {
+        if (_isApplying) return;
+        _ = AutoSaveAsync();
+    }
+
+    partial void OnNotificationShowProgressChanged(bool value)
+    {
+        if (_isApplying) return;
+        _ = AutoSaveAsync();
+    }
+
+    /// <summary>
+    /// N3.2b: Tự động lưu ngầm khi toggle cài đặt thay đổi, đảm bảo persist ra settings.json ngay lập tức.
+    /// </summary>
+    private async Task AutoSaveAsync()
+    {
+        try
+        {
+            var model = ToModel();
+            await _settings.SaveAsync(model);
+        }
+        catch (Exception ex)
+        {
+            HasError = true;
+            ErrorMessage = ex.Message;
+        }
+    }
+
     partial void OnGpuTierChanged(GpuTier value)
     {
         GpuTierDetector.Current.ApplyOverride(value);
