@@ -47,11 +47,14 @@ public sealed partial class WizardVersionCover : UserControl
         self.FallbackText.Text = id;
         self.ApplyFallback(id);
 
-        if (ResolvedCache.TryGetValue(id, out var cached))
+        if (        ResolvedCache.TryGetValue(id, out var cached))
         {
             if (cached != null) self.ApplyCover(cached);
             return;
         }
+
+        // Cap cache để tránh leak RAM khi mở wizard nhiều lần (max 200 entry)
+        if (ResolvedCache.Count >= 200) ResolvedCache.Clear();
 
         try
         {
