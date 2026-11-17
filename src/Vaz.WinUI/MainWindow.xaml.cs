@@ -79,7 +79,6 @@ public sealed partial class MainWindow : Window
     private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
 
     private readonly SUBCLASSPROC? _subclassProc;
-    private readonly ISettingsService? _settingsService;
     private static readonly SolidColorBrush DndActiveBrush = new(Windows.UI.Color.FromArgb(255, 245, 158, 11)); // Amber
     private static readonly SolidColorBrush DndInactiveBrush = new(Windows.UI.Color.FromArgb(255, 156, 163, 175)); // Muted Gray
 
@@ -150,16 +149,7 @@ public sealed partial class MainWindow : Window
             UpdateUnreadBadge(notifService.UnreadCount);
         }
 
-        _settingsService = (Application.Current as App)?.Services.GetService(typeof(ISettingsService)) as ISettingsService;
-        if (_settingsService != null)
-        {
-            UpdateDndVisual(_settingsService.Current.NotificationDndEnabled);
-            _settingsService.SettingsChanged += OnSettingsChanged;
-        }
-        else
-        {
-            UpdateDndVisual(false);
-        }
+        // Settings UI: áp ở App.LoadAndApplySettingsAsync (not here), để tránh double init flush luôn.
 
         _ = ViewModel.InitializeAsync();
 
@@ -297,14 +287,6 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void OnSettingsChanged(GlobalSettings settings)
-    {
-        DispatcherQueue.TryEnqueue(() =>
-        {
-            UpdateDndVisual(settings.NotificationDndEnabled);
-        });
-    }
-
     private void UpdateDndVisual(bool isDnd)
     {
         DndIcon.Foreground = isDnd ? DndActiveBrush : DndInactiveBrush;
@@ -313,12 +295,43 @@ public sealed partial class MainWindow : Window
 
     private async void DndToggleButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_settingsService == null) return;
+        var settingsService = (Application.Current as App)?.Services.GetService(typeof(ISettingsService)) as ISettingsService;
+        if (settingsService == null) return;
 
-        bool newValue = !_settingsService.Current.NotificationDndEnabled;
-        _settingsService.Current.NotificationDndEnabled = newValue;
+        bool newValue = !settingsService.Current.NotificationDndEnabled;
+        settingsService.Current.NotificationDndEnabled = newValue;
         UpdateDndVisual(newValue);
-        await _settingsService.SaveAsync(_settingsService.Current);
+        await settingsService.SaveAsync(settingsService.Current);
+    }
+
+    /// <summary>
+    /// Áp cài đặt mới từ GlobalSettings sang UI của window (theme/accent/DND/badge).
+    /// Gọi từ App.LoadAndApplySettingsAsync sau khi nạp settings xong.
+    /// </summary>
+    public void ApplySettings(GlobalSettings settings)
+    {
+        // Theme (surface brushes) — AppThemeManager thao tác trực tiếp vào ResourceDictionary
+        // nên UI cập nhật ngay mà không cần reload trang.
+        AppThemeManager.SetTheme(settings.Theme);
+        AppThemeManager.SetAccent(settings.AccentColor);
+
+        // DND icon
+        UpdateDndVisual(settings.NotificationDndEnabled);
+
+        // Bell badge (tạm thời 0 vì InitializeAsync/lịch sử notification chưa load)
+        RefreshNotificationBadge();
+    }
+
+    /// <summary>
+    /// Cập nhật số badge notification từ INotificationService.
+    /// Gọi từ App.LoadAndApplySettingsAsync và mỗi lần unread count thay đổi.
+    /// </summary>
+    public void RefreshNotificationBadge()
+    {
+        var notifService = (Application.Current as App)?.Services.GetService(typeof(INotificationService)) as INotificationService;
+        if (notifService == null) return;
+
+        UpdateUnreadBadge(notifService.UnreadCount);
     }
 
     private void UpdateTitleBarPassthroughRegions()

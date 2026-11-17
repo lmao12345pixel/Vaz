@@ -1,3 +1,9 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Dispatching;
@@ -17,14 +23,14 @@ namespace Vaz.WinUI;
 /// </summary>
 public partial class App : Application
 {
+    /// <summary>Root service provider.</summary>
+    public IServiceProvider Services { get; }
+
     /// <summary>Dispatcher of the UI thread (set in OnLaunched).</summary>
     public static DispatcherQueue Dispatcher { get; private set; } = null!; // Assigned in OnLaunched (WinUI lifecycle)
 
     /// <summary>Main window instance (set in OnLaunched). Needed for pickers.</summary>
-    public static Window MainWindow { get; private set; } = null!; // Assigned in OnLaunched (WinUI lifecycle)
-
-    /// <summary>Root service provider.</summary>
-    public IServiceProvider Services { get; }
+    public static MainWindow MainWindow { get; private set; } = null!; // Assigned in OnLaunched (WinUI lifecycle)
 
     public App()
     {
@@ -113,15 +119,8 @@ public partial class App : Application
         }
         catch { }
 
-        // SET-AC-04: nạp settings trước khi tạo MainWindow để theme/accent đã lưu được áp
-        // TRƯỚC ContentFrame.Navigate — tránh nháy theme mặc định ở frame đầu tiên.
-        // Dùng sync-over-async (GetResult) để đảm bảo window hiển thị đúng cách.
-        var settings = Services.GetRequiredService<ISettingsService>()
-            .LoadAsync()
-            .GetAwaiter()
-            .GetResult();
-        AppThemeManager.Initialize(settings);
-
+        // P2.1b Approach 2: window hiện NGAY với default state, RỜI sau đó load settings async.
+        // Không block UI thread; không chờ settings load để Activate.
         var window = Services.GetRequiredService<MainWindow>();
         MainWindow = window;
         window.Closed += (s, e) =>
@@ -134,8 +133,47 @@ public partial class App : Application
             catch { }
         };
         window.Activate();
+        Dispatcher = DispatcherQueue.GetForCurrentThread();
 
-        _ = Services.GetRequiredService<INotificationService>().InitializeAsync();
+        // Fire-and-forget: load settings + áp vào UI sau khi window đã hiện.
+        // Safe because LoadAndApplySettingsAsync has try/catch fail-safe (app không crash).
+        _ = LoadAndApplySettingsAsync();
+    }
+
+    /// <summary>
+    /// P2.1b Approach 2: async load settings và áp UI sau khi window đã Activate.
+    /// Load vào UI thread (không ConfigureAwait(false)) để gọi thực thi UI trực tiếp.
+    /// </summary>
+    private async Task LoadAndApplySettingsAsync()
+    {
+        try
+        {
+            var settingsService = Services.GetRequiredService<ISettingsService>();
+            var globalSettings = await settingsService.LoadAsync();
+
+            // Chuyển theme/accent/reduce-motion từ file settings sang hiện tại.
+            AppThemeManager.Initialize(globalSettings);
+
+            // Lấy window hiện tại (có thể chưa Activate nếu chưa khỏi hằng) và áp settings.
+            var window = MainWindow;
+            if (window != null)
+            {
+                // Gắn shell theme nếu chưa gắn (có thể đã ở OnLaunched từ AttachShell)
+                AppThemeManager.AttachShell((FrameworkElement)window.Content);
+                window.ApplySettings(globalSettings);
+
+                // Lắng nghe SettingsChanged để update UI luôn khi user toggle settings sau này.
+                settingsService.SettingsChanged += (s) => window.ApplySettings(s);
+            }
+
+            // Initialize notifications (fire-and-forget)
+            _ = Services.GetRequiredService<INotificationService>().InitializeAsync();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"LoadAndApplySettingsAsync failed: {ex}");
+            // Fail-safe: app dùng default settings, không crash.
+        }
     }
 
     /// <summary>Rotate crash.txt khi >1MB. Giữ tối đa 5 file backup.</summary>
