@@ -1,0 +1,43 @@
+
+> check:static
+> powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check.ps1 -Scope static
+
+Check scope: static
+==> static: build
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Vazer.Core -> C:\OptizimeProject\Vaz\src\Vazer.Core\bin\Debug\net8.0-windows10.0.26100.0\Vazer.Core.dll
+  Vazer.Core.Tests -> C:\OptizimeProject\Vaz\tests\Vazer.Core.Tests\bin\Debug\net8.0-windows10.0.26100.0\Vazer.Core.Tests.dll
+  Vaz.WinUI -> C:\OptizimeProject\Vaz\src\Vaz.WinUI\bin\x64\Debug\net8.0-windows10.0.26100.0\win-x64\Vaz.WinUI.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:05.33
+==> static: test
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Vazer.Core -> C:\OptizimeProject\Vaz\src\Vazer.Core\bin\Debug\net8.0-windows10.0.26100.0\Vazer.Core.dll
+  Vazer.Core.Tests -> C:\OptizimeProject\Vaz\tests\Vazer.Core.Tests\bin\Debug\net8.0-windows10.0.26100.0\Vazer.Core.Tests.dll
+Test run for C:\OptizimeProject\Vaz\tests\Vazer.Core.Tests\bin\Debug\net8.0-windows10.0.26100.0\Vazer.Core.Tests.dll (.NETCoreApp,Version=v8.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   342, Skipped:     0, Total:   342, Duration: 5 s - Vazer.Core.Tests.dll (net8.0)
+==> static: agent config
+  OK  product-owner
+  OK  planner
+  OK  developer
+  OK  tester
+  OK  reviewer
+  OK  qa-lead
+  OK  verifier
+  OK  web-developer
+  OK  web-verifier
+  OK  app-developer
+  OK  app-verifier
+  OK  orchestrator
+Agent validation PASSED: 12/12 file(s).
+STATIC CHECK PASSED: build + test + agent config
+NOTE: static checks do NOT prove UI/flow behavior.
+CHECK PASSED: static

@@ -1,21 +1,22 @@
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using CmlLib.Core;
 using CmlLib.Core.ModLoaders.FabricMC;
+using CmlLib.Core.ModLoaders.QuiltMC;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Vazer.Core.Abstractions;
+using Vazer.Core.Json;
 
 namespace Vazer.Core.Instances;
 
 /// <summary>
 /// Instance manager using CmlLib.Core for vanilla/Fabric installation and
-/// <see cref="Loaders.INeoForgeInstallerService"/> for NeoForge
+/// <see cref="Loaders.INeoForgeInstaller"/> for NeoForge
 /// (CmlLib.Core 4.0.6 is the latest release and lacks NeoForge support).
 /// </summary>
 public sealed class InstanceManager : IInstanceManager
@@ -25,19 +26,22 @@ public sealed class InstanceManager : IInstanceManager
     private readonly IOptions<MinecraftOptions> _optionsAccessor;
     private readonly MinecraftLauncher _launcher;
     private readonly IHttpClientFactory _httpClientFactory;
-    private readonly Loaders.INeoForgeInstallerService? _neoForgeInstaller;
+    private readonly Loaders.INeoForgeInstaller? _neoForgeInstaller;
+    private readonly Loaders.ForgeInstaller? _forgeInstaller;
 
     public InstanceManager(
         ILogger<InstanceManager> logger,
         IOptions<MinecraftOptions> options,
         IHttpClientFactory httpClientFactory,
-        Loaders.INeoForgeInstallerService? neoForgeInstaller = null)
+        Loaders.INeoForgeInstaller? neoForgeInstaller = null,
+        Loaders.ForgeInstaller? forgeInstaller = null)
     {
         _logger = logger;
         _options = options.Value;
         _optionsAccessor = options;
         _httpClientFactory = httpClientFactory;
         _neoForgeInstaller = neoForgeInstaller;
+        _forgeInstaller = forgeInstaller;
         _launcher = new MinecraftLauncher(new MinecraftPath(Path.Combine(_options.RootPath, "instances")));
     }
 
@@ -59,7 +63,7 @@ public sealed class InstanceManager : IInstanceManager
                 try
                 {
                     var json = await File.ReadAllTextAsync(metaPath, ct);
-                    var instance = JsonSerializer.Deserialize<MinecraftInstance>(json, JsonOptions);
+                    var instance = JsonSerializer.Deserialize(json, VazJsonContext.CamelCase.MinecraftInstance);
                     if (instance != null)
                     {
                         results.Add(instance);
@@ -84,7 +88,7 @@ public sealed class InstanceManager : IInstanceManager
         try
         {
             var json = await File.ReadAllTextAsync(metaPath, ct);
-            return JsonSerializer.Deserialize<MinecraftInstance>(json, JsonOptions);
+            return JsonSerializer.Deserialize(json, VazJsonContext.CamelCase.MinecraftInstance);
         }
         catch (Exception ex)
         {
@@ -112,6 +116,7 @@ public sealed class InstanceManager : IInstanceManager
             MinecraftVersion = minecraftVersion,
             LoaderType = "vanilla",
             LoaderVersion = null,
+            LaunchVersionName = minecraftVersion,
             Path = instancePath,
             IconPath = null,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -147,7 +152,8 @@ public sealed class InstanceManager : IInstanceManager
         }
 
         // Install Fabric
-        var versionName = await fabricInstaller.Install(minecraftVersion, targetLoader.Version, new MinecraftPath(instancePath));
+        var loaderVersion = RequireLoaderVersion(targetLoader.Version, minecraftVersion);
+        var versionName = await fabricInstaller.Install(minecraftVersion, loaderVersion, new MinecraftPath(instancePath));
 
         var instance = new MinecraftInstance
         {
@@ -155,7 +161,8 @@ public sealed class InstanceManager : IInstanceManager
             Name = name,
             MinecraftVersion = minecraftVersion,
             LoaderType = "fabric",
-            LoaderVersion = targetLoader.Version,
+            LoaderVersion = loaderVersion,
+            LaunchVersionName = versionName,
             Path = instancePath,
             IconPath = null,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -168,11 +175,55 @@ public sealed class InstanceManager : IInstanceManager
     }
 
     /// <inheritdoc />
+    public async Task<MinecraftInstance> CreateQuiltAsync(string name, string minecraftVersion, string? quiltVersion = null, CancellationToken ct = default)
+    {
+        var id = SanitizeId(name);
+        var instancePath = Path.Combine(_options.RootPath, "instances", id);
+        Directory.CreateDirectory(instancePath);
+
+        _logger.LogInformation("Installing Quilt {QuiltVersion} for MC {MCVersion} on instance {Id}", quiltVersion ?? "latest", minecraftVersion, id);
+
+        var httpClient = _httpClientFactory.CreateClient();
+        var quiltInstaller = new QuiltInstaller(httpClient);
+        var loaders = await quiltInstaller.GetLoaders(minecraftVersion);
+
+        var targetLoader = quiltVersion != null
+            ? loaders.FirstOrDefault(l => l.Version == quiltVersion)
+            : loaders.FirstOrDefault(l => l.Stable) ?? loaders.FirstOrDefault();
+
+        if (targetLoader == null)
+        {
+            throw new InvalidOperationException($"No Quilt loader found for Minecraft {minecraftVersion}");
+        }
+
+        var loaderVersion = RequireLoaderVersion(targetLoader.Version, minecraftVersion);
+        var versionName = await quiltInstaller.Install(minecraftVersion, loaderVersion, new MinecraftPath(instancePath));
+
+        var instance = new MinecraftInstance
+        {
+            Id = id,
+            Name = name,
+            MinecraftVersion = minecraftVersion,
+            LoaderType = "quilt",
+            LoaderVersion = loaderVersion,
+            LaunchVersionName = versionName,
+            Path = instancePath,
+            IconPath = null,
+            CreatedAt = DateTimeOffset.UtcNow,
+            LastPlayedAt = null
+        };
+
+        await SaveMetaAsync(instance, ct);
+        _logger.LogInformation("Created Quilt instance {Id} with version {VersionName}", id, versionName);
+        return instance;
+    }
+
+    /// <inheritdoc />
     public async Task<MinecraftInstance> CreateNeoForgeAsync(string name, string minecraftVersion, string? neoforgeVersion = null, CancellationToken ct = default)
     {
-        var svc = _neoForgeInstaller ?? new Loaders.NeoForgeInstallerService(
+        var svc = _neoForgeInstaller ?? new Loaders.NeoForgeInstaller(
             _httpClientFactory,
-            NullLogger<Loaders.NeoForgeInstallerService>.Instance,
+            NullLogger<Loaders.NeoForgeInstaller>.Instance,
             _optionsAccessor);
 
         var id = SanitizeId(name);
@@ -198,7 +249,61 @@ public sealed class InstanceManager : IInstanceManager
         await SaveMetaAsync(instance, ct);
         await svc.InstallAsync(instance, null, ct);
 
+        // NeoForge installer tự đặt tên version (folder versions/neoforge-*),
+        // không trả tên về — quét đĩa sau cài để chốt tên version cho launch.
+        var launchVersionName = DiscoverVersionName(instancePath);
+        if (launchVersionName != null)
+        {
+            instance = instance with { LaunchVersionName = launchVersionName };
+            await SaveMetaAsync(instance, ct);
+        }
+
         _logger.LogInformation("Created NeoForge instance {Id} ({Version})", id, version);
+        return instance;
+    }
+
+    /// <inheritdoc />
+    public async Task<MinecraftInstance> CreateForgeAsync(string name, string minecraftVersion, string? forgeVersion = null, CancellationToken ct = default)
+    {
+        var svc = _forgeInstaller ?? new Loaders.ForgeInstaller(
+            _httpClientFactory,
+            NullLogger<Loaders.ForgeInstaller>.Instance,
+            _optionsAccessor);
+
+        var id = SanitizeId(name);
+        var instancePath = Path.Combine(_options.RootPath, "instances", id);
+        Directory.CreateDirectory(instancePath);
+
+        var version = forgeVersion ?? await svc.ResolveLatestVersionAsync(minecraftVersion, ct);
+        var fullVersion = version.StartsWith(minecraftVersion + "-", StringComparison.OrdinalIgnoreCase)
+            ? version
+            : $"{minecraftVersion}-{version}";
+        _logger.LogInformation("Installing Forge {Version} for MC {MC} on instance {Id}", fullVersion, minecraftVersion, id);
+
+        var instance = new MinecraftInstance
+        {
+            Id = id,
+            Name = name,
+            MinecraftVersion = minecraftVersion,
+            LoaderType = "forge",
+            LoaderVersion = fullVersion,
+            Path = instancePath,
+            IconPath = null,
+            CreatedAt = DateTimeOffset.UtcNow,
+            LastPlayedAt = null
+        };
+
+        await SaveMetaAsync(instance, ct);
+        await svc.InstallAsync(instancePath, minecraftVersion, fullVersion, null, ct);
+
+        var launchVersionName = DiscoverVersionName(instancePath);
+        if (launchVersionName != null)
+        {
+            instance = instance with { LaunchVersionName = launchVersionName };
+            await SaveMetaAsync(instance, ct);
+        }
+
+        _logger.LogInformation("Created Forge instance {Id} ({Version})", id, fullVersion);
         return instance;
     }
 
@@ -232,18 +337,10 @@ public sealed class InstanceManager : IInstanceManager
         await SaveMetaAsync(updated, ct);
     }
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true
-    };
-
-    [RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Serialize<TValue>(TValue, JsonSerializerOptions)")]
     private async Task SaveMetaAsync(MinecraftInstance instance, CancellationToken ct)
     {
         var metaPath = Path.Combine(_options.RootPath, "instances", instance.Id, "instance.json");
-        var json = JsonSerializer.Serialize(instance, JsonOptions);
+        var json = JsonSerializer.Serialize(instance, VazJsonContext.CamelCase.MinecraftInstance);
         await File.WriteAllTextAsync(metaPath, json, ct);
     }
 
@@ -252,6 +349,37 @@ public sealed class InstanceManager : IInstanceManager
         var invalid = Path.GetInvalidFileNameChars();
         var id = string.Join("", name.Select(c => invalid.Contains(c) ? '_' : c));
         return id.ToLowerInvariant();
+    }
+
+    /// <summary>
+    /// Quét {instancePath}/versions/*/ và trả về tên folder version đầu tiên
+    /// có file json cùng tên (tên version CmlLib mà installer tự tạo). Trả về
+    /// null nếu không tìm thấy.
+    /// </summary>
+    internal static string? DiscoverVersionName(string instancePath)
+    {
+        var versionsDir = Path.Combine(instancePath, "versions");
+        if (!Directory.Exists(versionsDir)) return null;
+
+        foreach (var dir in System.IO.Directory.EnumerateDirectories(versionsDir))
+        {
+            var name = System.IO.Path.GetFileName(dir);
+            if (!string.IsNullOrEmpty(name) && File.Exists(System.IO.Path.Combine(dir, name + ".json")))
+            {
+                return name;
+            }
+        }
+        return null;
+    }
+
+    internal static string RequireLoaderVersion(string? loaderVersion, string minecraftVersion)
+    {
+        if (string.IsNullOrWhiteSpace(loaderVersion))
+        {
+            throw new InvalidOperationException($"Fabric loader for Minecraft {minecraftVersion} has no version");
+        }
+
+        return loaderVersion;
     }
 }
 

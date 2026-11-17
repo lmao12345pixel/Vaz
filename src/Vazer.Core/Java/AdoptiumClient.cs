@@ -61,7 +61,12 @@ public sealed class AdoptiumClient : IAdoptiumClient
                 }
 
                 var asset = array[0];
-                var binary = asset["binary"]?["package"];
+                if (asset is not JsonObject assetObject)
+                {
+                    throw new InvalidOperationException("Invalid Adoptium response format");
+                }
+
+                var binary = assetObject["binary"]?["package"];
                 if (binary == null)
                 {
                     throw new InvalidOperationException("Invalid Adoptium response format");

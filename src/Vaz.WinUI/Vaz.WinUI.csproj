@@ -4,6 +4,10 @@
     <TargetFramework>net8.0-windows10.0.26100.0</TargetFramework>
     <RootNamespace>Vaz.WinUI</RootNamespace>
     <AssemblyName>Vaz.WinUI</AssemblyName>
+    <!-- Release v0.19.0. Unpackaged app: app.manifest carries the identity version. -->
+    <Version>0.19.0</Version>
+    <AssemblyVersion>0.19.0.0</AssemblyVersion>
+    <FileVersion>0.19.0.0</FileVersion>
     <UseWinUI>true</UseWinUI>
     <WindowsPackageType>None</WindowsPackageType>
     <!-- Unpackaged self-contained vẫn cần MSIX tooling cho logic nạp resource (tránh crash 0xC000027B khi khởi động). -->
@@ -41,5 +45,12 @@
 
   <ItemGroup>
     <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Assets for Discord Preview, Mod icons, etc.
+         Unpackaged WinUI load qua ms-appx:///Assets/... → file phải nằm cạnh exe. -->
+    <Content Include="Assets\**\*.png;Assets\**\*.webp;Assets\**\*.jpg" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\Fonts\**\*.ttf" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Vazer.Core.Abstractions;
 using Vazer.Core.Http;
+using Vazer.Core.Json;
 using Vazer.Core.Modrinth;
 using Vazer.Core.Mods;
 
@@ -22,13 +23,12 @@ public class OptifineInstallerService : IOptifineInstallerService
     private readonly ConcurrentDictionary<string, (DateTimeOffset CachedAt, OptifineCatalog Catalog)> _cache =
         new(StringComparer.OrdinalIgnoreCase);
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true
-    };
-
+    /// <summary>Khởi tạo OptifineInstallerService.</summary>
+    /// <param name="httpClientFactory">Factory tạo HTTP client cho tải OptiFine và scrape catalog.</param>
+    /// <param name="options">Cấu hình Minecraft options.</param>
+    /// <param name="logger">Logger cho OptiFine service.</param>
+    /// <param name="modrinthClient">Nullable: khi null (ví dụ unit test không mock Modrinth), bỏ qua tìm kiếm Modrinth optifabric adapter, chỉ hỗ trợ cài đặt trực tiếp file OptiFine.</param>
+    /// <param name="fileDownloader">Nullable: downloader tùy chỉnh hoặc mock cho unit test.</param>
     public OptifineInstallerService(
         IHttpClientFactory httpClientFactory,
         IOptions<MinecraftOptions> options,
@@ -37,8 +37,8 @@ public class OptifineInstallerService : IOptifineInstallerService
         IFileDownloader? fileDownloader = null)
     {
         _httpClientFactory = httpClientFactory;
-        _options = options;
         _logger = logger;
+        _options = options;
         _modrinthClient = modrinthClient;
         _fileDownloader = fileDownloader ?? new FileDownloader(httpClientFactory);
     }
@@ -476,7 +476,7 @@ public class OptifineInstallerService : IOptifineInstallerService
             try
             {
                 var json = await File.ReadAllTextAsync(manifestPath, ct);
-                manifest = JsonSerializer.Deserialize<ModsManifest>(json, JsonOptions) ?? new ModsManifest();
+                manifest = JsonSerializer.Deserialize(json, VazJsonContext.CamelCase.ModsManifest) ?? new ModsManifest();
             }
             catch (Exception ex)
             {
@@ -506,7 +506,7 @@ public class OptifineInstallerService : IOptifineInstallerService
 
         Directory.CreateDirectory(instancePath);
         var tmpPath = Path.Combine(instancePath, "mods.json.tmp");
-        var serialized = JsonSerializer.Serialize(manifest, JsonOptions);
+        var serialized = JsonSerializer.Serialize(manifest, VazJsonContext.CamelCase.ModsManifest);
         await File.WriteAllTextAsync(tmpPath, serialized, ct);
         File.Move(tmpPath, manifestPath, overwrite: true);
     }

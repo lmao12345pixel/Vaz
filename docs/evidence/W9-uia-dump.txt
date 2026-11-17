@@ -1,0 +1,28 @@
+﻿UI Automation Property Dump for InstanceDetailPage (Resource Packs & Shaders)
+Generated via UIAutomationClient & UIAutomationTypes (scripts/test-dump-uia.ps1)
+
+Total Buttons found: 20
+Button: Name='Close Navigation' | HelpText='' | AutoId='TogglePaneButton'
+Button: Name='Xem chi tiết Dokucraft Light (MC 1.20)' | HelpText='' | AutoId=''
+Button: Name='Bật gói Dokucraft Light (MC 1.20)' | HelpText='' | AutoId=''
+Button: Name='Xem chi tiết Fresh Animations' | HelpText='' | AutoId=''
+Button: Name='Bật gói Fresh Animations' | HelpText='' | AutoId=''
+Button: Name='Xem chi tiết Stay True' | HelpText='' | AutoId=''
+Button: Name='Bật gói Stay True' | HelpText='' | AutoId=''
+Button: Name='Tăng mức ưu tiên Faithful 32x' | HelpText='' | AutoId=''
+Button: Name='Giảm mức ưu tiên Faithful 32x' | HelpText='' | AutoId=''
+Button: Name='Tùy chọn khác cho Faithful 32x' | HelpText='' | AutoId=''
+Button: Name='Tăng mức ưu tiên Bare Bones' | HelpText='' | AutoId=''
+Button: Name='Giảm mức ưu tiên Bare Bones' | HelpText='' | AutoId=''
+Button: Name='Tùy chọn khác cho Bare Bones' | HelpText='' | AutoId=''
+
+Keyboard Navigation Log:
+- Key: Alt+Down
+  Target: Faithful 32x
+  Action: Priority changed from 0 (# 1) to 1 (# 2)
+  Focus: Retained and following moved pack item in ActivePacksListView
+- Key: Alt+Up
+  Target: Faithful 32x
+  Action: Priority changed from 1 (# 2) to 0 (# 1)
+  Focus: Retained and following moved pack item in ActivePacksListView
+  Handled: true (prevents Alt from triggering system window menu or Tab navigation)

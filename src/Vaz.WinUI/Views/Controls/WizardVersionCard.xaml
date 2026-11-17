@@ -1,0 +1,81 @@
+<UserControl
+    x:Class="Vaz.WinUI.Views.Controls.WizardVersionCard"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Vaz.WinUI.Views.Controls">
+
+    <Button
+        x:Name="CardButton"
+        Click="CardButton_Click"
+        HorizontalContentAlignment="Stretch"
+        VerticalContentAlignment="Stretch"
+        Padding="0"
+        Background="Transparent"
+        BorderThickness="0"
+        CornerRadius="{StaticResource VazRadiusMd}">
+        <Border
+            x:Name="CardBorder"
+            Style="{StaticResource MkVibeCardStyle}"
+            IsHitTestVisible="False"
+            Background="{ThemeResource MkVibeBlockBrush}"
+            BorderBrush="{ThemeResource MkVibeStoneBrush}"
+            BorderThickness="3"
+            CornerRadius="0"
+            Padding="8"
+            Width="216"
+            MinHeight="154">
+            <Grid RowDefinitions="84,Auto,Auto" RowSpacing="4">
+                <Grid Grid.Row="0">
+                    <Border BorderBrush="#1AFFFFFF" BorderThickness="1" CornerRadius="0">
+                        <local:WizardVersionCover x:Name="Cover" Height="84" VerticalAlignment="Stretch" IsHitTestVisible="False" />
+                    </Border>
+
+                    <Border
+                        x:Name="CheckBadge"
+                        Visibility="Collapsed"
+                        Background="{ThemeResource MkVibeEmeraldBrush}"
+                        Width="24"
+                        Height="24"
+                        CornerRadius="{ThemeResource MkVibeBlockCorner}"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Margin="8">
+                        <FontIcon Glyph="&#xE73E;" FontSize="12" Foreground="White" />
+                    </Border>
+
+                    <Border
+                        x:Name="InstalledBadge"
+                        Visibility="Collapsed"
+                        Background="{ThemeResource MkVibeEmeraldBrush}"
+                        BorderBrush="{ThemeResource MkVibeDirtBrush}"
+                        BorderThickness="1"
+                        CornerRadius="{ThemeResource MkVibeBlockCorner}"
+                        Padding="6,2"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Top"
+                        Margin="8">
+                        <TextBlock Text="Đã cài" FontSize="10" FontWeight="SemiBold" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" />
+                    </Border>
+
+                    <!-- Enchantment glint: chỉ bật khi GPU đủ mạnh và card được chọn -->
+                    <Border
+                        x:Name="GlintOverlay"
+                        Style="{StaticResource MkVibeGlintStyle}"
+                        Visibility="Collapsed" />
+                </Grid>
+
+                <TextBlock Grid.Row="1" x:Name="VersionText" Text="1.21.1" FontSize="17"
+                           FontFamily="{ThemeResource MkVibePixelFont}"
+                           FontWeight="SemiBold"
+                           Foreground="{ThemeResource MkVibeTextBrush}" />
+
+                <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <Border Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="4" Padding="6,2">
+                        <TextBlock x:Name="TypeText" Text="Release" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </Border>
+                    <TextBlock x:Name="DateText" Text="13/06/2024" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Button>
+</UserControl>

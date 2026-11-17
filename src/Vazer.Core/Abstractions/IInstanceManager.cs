@@ -34,6 +34,13 @@ public sealed record MinecraftInstance
     public string? LoaderVersion { get; init; }
 
     /// <summary>
+    /// Tên version CmlLib đã cài cho instance (ví dụ: "1.21.1" cho vanilla,
+    /// "fabric-loader-0.19.5-1.21.1" cho Fabric; null cho instance cũ → launcher
+    /// sẽ tự suy ra từ LoaderType/LoaderVersion/MinecraftVersion).
+    /// </summary>
+    public string? LaunchVersionName { get; init; }
+
+    /// <summary>
     /// Đường dẫn thư mục instance.
     /// </summary>
     public required string Path { get; init; }
@@ -102,6 +109,26 @@ public interface IInstanceManager
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Instance vừa tạo.</returns>
     Task<MinecraftInstance> CreateNeoForgeAsync(string name, string minecraftVersion, string? neoforgeVersion = null, CancellationToken ct = default);
+
+    /// <summary>
+    /// Tạo instance với Quilt loader.
+    /// </summary>
+    /// <param name="name">Tên instance.</param>
+    /// <param name="minecraftVersion">Minecraft version.</param>
+    /// <param name="quiltVersion">Quilt loader version (optional, lấy latest nếu null).</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Instance vừa tạo.</returns>
+    Task<MinecraftInstance> CreateQuiltAsync(string name, string minecraftVersion, string? quiltVersion = null, CancellationToken ct = default);
+
+    /// <summary>
+    /// Tạo instance với Forge loader.
+    /// </summary>
+    /// <param name="name">Tên instance.</param>
+    /// <param name="minecraftVersion">Minecraft version.</param>
+    /// <param name="forgeVersion">Forge loader version (optional, lấy latest nếu null).</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Instance vừa tạo.</returns>
+    Task<MinecraftInstance> CreateForgeAsync(string name, string minecraftVersion, string? forgeVersion = null, CancellationToken ct = default);
 
     /// <summary>
     /// Xóa instance.

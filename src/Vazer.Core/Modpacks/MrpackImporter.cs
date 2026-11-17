@@ -1,9 +1,11 @@
+using System.Collections.Concurrent;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Vazer.Core.Abstractions;
 using Vazer.Core.Http;
+using Vazer.Core.Json;
 using Vazer.Core.Mods;
 
 namespace Vazer.Core.Modpacks;
@@ -11,12 +13,6 @@ namespace Vazer.Core.Modpacks;
 public sealed class MrpackImporter : IMrpackImporter
 {
     private const string DownloadClientName = "modrinth-download";
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        WriteIndented = true
-    };
 
     private readonly IInstanceManager _instanceManager;
     private readonly IHttpClientFactory _httpClientFactory;
@@ -72,23 +68,7 @@ public sealed class MrpackImporter : IMrpackImporter
             throw new InvalidDataException("Minecraft version dependency missing.");
         }
 
-        if (index.Dependencies.ContainsKey("forge"))
-        {
-            throw new NotSupportedException("Forge modpacks are not supported. Use Fabric or NeoForge.");
-        }
-
-        string loaderType = "vanilla";
-        string? loaderVer = null;
-        if (index.Dependencies.TryGetValue("fabric-loader", out var fabricVer))
-        {
-            loaderType = "fabric";
-            loaderVer = fabricVer;
-        }
-        else if (index.Dependencies.TryGetValue("neoforge", out var neoforgeVer))
-        {
-            loaderType = "neoforge";
-            loaderVer = neoforgeVer;
-        }
+        var (loaderType, loaderVer) = ResolveLoader(index.Dependencies);
 
         MinecraftInstance? createdInstance = null;
         try
@@ -101,6 +81,14 @@ public sealed class MrpackImporter : IMrpackImporter
             {
                 createdInstance = await _instanceManager.CreateNeoForgeAsync(instanceName, mcVer, loaderVer, ct);
             }
+            else if (loaderType == "quilt")
+            {
+                createdInstance = await _instanceManager.CreateQuiltAsync(instanceName, mcVer, loaderVer, ct);
+            }
+            else if (loaderType == "forge")
+            {
+                createdInstance = await _instanceManager.CreateForgeAsync(instanceName, mcVer, loaderVer, ct);
+            }
             else
             {
                 createdInstance = await _instanceManager.CreateVanillaAsync(instanceName, mcVer, ct);
@@ -112,20 +100,17 @@ public sealed class MrpackImporter : IMrpackImporter
                               string.Equals(f.Env.Client, "unsupported", StringComparison.OrdinalIgnoreCase)))
                 .ToList();
 
-            var downloadedFiles = new List<MrpackFile>();
+            var downloadedFiles = new ConcurrentBag<MrpackFile>();
 
-            // ponytail: sequential file downloads using primary mirror; upgrade to concurrent downloads and mirror failover if large packs need acceleration
-            for (var i = 0; i < filesToDownload.Count; i++)
+            await Parallel.ForEachAsync(filesToDownload, ct, async (file, token) =>
             {
-                var file = filesToDownload[i];
                 var targetPath = SafeResolvePath(createdInstance.Path, file.Path);
 
                 if (file.Downloads.Count == 0)
                 {
-                    continue;
+                    return;
                 }
 
-                var downloadUrl = file.Downloads[0];
                 var partialPath = targetPath + ".partial";
                 var targetDir = Path.GetDirectoryName(targetPath);
                 if (!string.IsNullOrEmpty(targetDir))
@@ -133,40 +118,78 @@ public sealed class MrpackImporter : IMrpackImporter
                     Directory.CreateDirectory(targetDir);
                 }
 
-                await _fileDownloader.DownloadFileAsync(
-                    downloadUrl,
-                    partialPath,
-                    new FileDownloadOptions { HttpClientName = DownloadClientName },
-                    progress: null,
-                    ct);
-
-                if (!string.IsNullOrWhiteSpace(file.Hashes?.Sha512))
+                Exception? lastException = null;
+                foreach (var downloadUrl in file.Downloads)
                 {
-                    using var sha512 = SHA512.Create();
-                    byte[] hashBytes;
-                    await using (var fs = File.OpenRead(partialPath))
+                    if (!Mods.ModInstallService.IsAllowedDownloadUrl(downloadUrl))
                     {
-                        hashBytes = await sha512.ComputeHashAsync(fs, ct);
+                        throw new InvalidOperationException($"Blocked download from untrusted host in mrpack: '{downloadUrl}'. Only 'https://cdn.modrinth.com' is allowed.");
                     }
 
-                    var hashHex = Convert.ToHexString(hashBytes);
-                    if (!string.Equals(hashHex, file.Hashes.Sha512.Trim(), StringComparison.OrdinalIgnoreCase))
+                    try
+                    {
+                        await _fileDownloader.DownloadFileAsync(
+                            downloadUrl,
+                            partialPath,
+                            new FileDownloadOptions
+                            {
+                                HttpClientName = DownloadClientName,
+                                ValidateResponseUri = uri => uri != null && Mods.ModInstallService.IsAllowedDownloadUrl(uri.ToString())
+                            },
+                            progress: null,
+                            token);
+
+                        if (!string.IsNullOrWhiteSpace(file.Hashes?.Sha512))
+                        {
+                            using var sha512 = SHA512.Create();
+                            byte[] hashBytes;
+                            await using (var fs = File.OpenRead(partialPath))
+                            {
+                                hashBytes = await sha512.ComputeHashAsync(fs, token);
+                            }
+
+                            var hashHex = Convert.ToHexString(hashBytes);
+                            if (!string.Equals(hashHex, file.Hashes.Sha512.Trim(), StringComparison.OrdinalIgnoreCase))
+                            {
+                                throw new InvalidOperationException($"Checksum mismatch: SHA512 mismatch for {file.Path}");
+                            }
+                        }
+
+                        File.Move(partialPath, targetPath, overwrite: true);
+                        downloadedFiles.Add(file);
+                        return;
+                    }
+                    catch (Exception ex)
+                    {
+                        lastException = ex;
+                    }
+                    finally
                     {
                         if (File.Exists(partialPath))
                         {
-                            File.Delete(partialPath);
+                            try { File.Delete(partialPath); } catch { /* ignore */ }
                         }
-                        throw new InvalidOperationException($"Checksum mismatch: SHA512 mismatch for {file.Path}");
                     }
                 }
 
-                File.Move(partialPath, targetPath, overwrite: true);
-                downloadedFiles.Add(file);
+                if (lastException != null)
+                {
+                    throw new InvalidOperationException($"Failed to download {file.Path} from all mirrors.", lastException);
+                }
+            });
 
+            var completedList = filesToDownload
+                .Where(f => downloadedFiles.Contains(f))
+                .ToList();
+
+            var i = 0;
+            foreach (var file in completedList)
+            {
+                i++;
                 progress?.Report(new InstallProgress
                 {
                     TotalBytes = filesToDownload.Count,
-                    DownloadedBytes = i + 1,
+                    DownloadedBytes = i,
                     Status = $"Downloaded {Path.GetFileName(file.Path)}"
                 });
             }
@@ -178,7 +201,7 @@ public sealed class MrpackImporter : IMrpackImporter
             ExtractOverrides(archive, "client-overrides/", createdInstance.Path);
 
             // Write / update mods.json for downloaded mods
-            await SyncModsManifestAsync(createdInstance.Path, downloadedFiles, ct);
+            await SyncModsManifestAsync(createdInstance.Path, downloadedFiles.ToList(), ct);
         }
         catch
         {
@@ -201,7 +224,7 @@ public sealed class MrpackImporter : IMrpackImporter
         }
 
         await using var stream = indexEntry.Open();
-        var index = await JsonSerializer.DeserializeAsync<MrpackIndex>(stream, JsonOptions, ct)
+        var index = await JsonSerializer.DeserializeAsync(stream, VazJsonContext.Plain.MrpackIndex, ct)
             ?? throw new InvalidDataException("modrinth.index.json could not be deserialized.");
 
         if (index.FormatVersion != 1)
@@ -292,7 +315,7 @@ public sealed class MrpackImporter : IMrpackImporter
             try
             {
                 var existingJson = await File.ReadAllTextAsync(manifestPath, ct);
-                manifest = JsonSerializer.Deserialize<ModsManifest>(existingJson, JsonOptions) ?? new ModsManifest();
+                manifest = JsonSerializer.Deserialize(existingJson, VazJsonContext.Plain.ModsManifest) ?? new ModsManifest();
             }
             catch
             {
@@ -341,7 +364,7 @@ public sealed class MrpackImporter : IMrpackImporter
         if (manifest.Mods.Count > 0 || Directory.Exists(modsDir) || File.Exists(manifestPath))
         {
             Directory.CreateDirectory(instancePath);
-            var json = JsonSerializer.Serialize(manifest, JsonOptions);
+            var json = JsonSerializer.Serialize(manifest, VazJsonContext.Plain.ModsManifest);
             await File.WriteAllTextAsync(manifestPath, json, ct);
         }
     }

@@ -116,11 +116,30 @@ public sealed class JavaResolver : IJavaResolver
             }
         }
 
+        // Microsoft OpenJDK: %ProgramFiles%\Microsoft\jdk-*. Chỉ quét top-level
+        // để không đi vào các thư mục Microsoft khác (Edge, Office, ...).
+        var microsoftRoot = Environment.ExpandEnvironmentVariables(@"%ProgramFiles%\Microsoft");
+        if (Directory.Exists(microsoftRoot))
+        {
+            foreach (var dir in Directory.GetDirectories(microsoftRoot, "jdk-*", SearchOption.TopDirectoryOnly))
+            {
+                var javaExe = Path.Combine(dir, "bin", "java.exe");
+                if (File.Exists(javaExe))
+                {
+                    var probed = await TryProbeAsync(javaExe, ct);
+                    if (probed != null)
+                    {
+                        results.Add(probed with { Source = "system" });
+                    }
+                }
+            }
+        }
+
         // Deduplicate by path
         return results
             .GroupBy(j => j.Path, StringComparer.OrdinalIgnoreCase)
             .Select(g => g.First())
-            .Where(j => j.MajorVersion >= _options.MinJavaVersion && j.MajorVersion <= _options.MaxJavaVersion)
+            .Where(j => IsSupportedJavaMajor(j.MajorVersion, _options.MinJavaVersion, _options.MaxJavaVersion))
             .ToList()
             .AsReadOnly();
     }
@@ -256,23 +275,10 @@ public sealed class JavaResolver : IJavaResolver
     /// <inheritdoc />
     public int RequiredJava(string minecraftVersion)
     {
-        // Parse version
-        var parts = minecraftVersion.Split('.', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length < 2) return 17; // default
-
-        var major = int.TryParse(parts[0], out var m) ? m : 1;
-        var minor = int.TryParse(parts[1], out var n) ? n : 0;
-
-        // Version -> Java mapping
-        return (major, minor) switch
-        {
-            (1, <= 16) => 8,    // 1.8 - 1.16
-            (1, 17) => 16,      // 1.17
-            (1, 18) => 17,      // 1.18
-            (1, >= 19 and <= 20) => 17, // 1.19 - 1.20
-            (1, >= 21) => 21,   // 1.21+
-            _ => 17
-        };
+        // Một nguồn logic duy nhất: JavaVersionMapper (Phase E). Snapshot/custom
+        // không map được → giữ default 17 cho các luồng chọn Java hiện có.
+        var mapped = JavaVersionMapper.Default.GetRequiredJavaVersion(minecraftVersion);
+        return mapped == JavaRequirements.Unknown ? 17 : mapped;
     }
 
     /// <inheritdoc />
@@ -332,6 +338,13 @@ public sealed class JavaResolver : IJavaResolver
             return null;
         }
     }
+
+    /// <summary>
+    /// Java major có nằm trong khoảng hỗ trợ (inclusive) hay không. Tách khỏi
+    /// <see cref="DiscoverAsync"/> để test ranh giới 21/22/25/26 mà không cần file hệ thống.
+    /// </summary>
+    internal static bool IsSupportedJavaMajor(int majorVersion, int minMajorVersion, int maxMajorVersion) =>
+        majorVersion >= minMajorVersion && majorVersion <= maxMajorVersion;
 
     private bool VerifyChecksum(string filePath, string expectedChecksum)
     {

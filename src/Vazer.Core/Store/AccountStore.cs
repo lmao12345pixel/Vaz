@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -7,6 +6,7 @@ using System.Threading;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Vazer.Core.Abstractions;
+using Vazer.Core.Json;
 
 namespace Vazer.Core.Store;
 
@@ -18,7 +18,6 @@ public sealed class AccountStore : IAccountStore
     private readonly string _filePath;
     private readonly ILogger<AccountStore> _logger;
     private readonly MinecraftOptions _options;
-    private readonly JsonSerializerOptions _jsonOptions;
     private readonly SemaphoreSlim _lock = new(1, 1);
 
     public AccountStore(
@@ -29,13 +28,6 @@ public sealed class AccountStore : IAccountStore
         _options = options.Value;
         _filePath = Path.Combine(_options.RootPath, "accounts", "accounts.json");
         Directory.CreateDirectory(Path.GetDirectoryName(_filePath)!);
-
-        _jsonOptions = new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
-        };
     }
 
     /// <inheritdoc />
@@ -172,7 +164,6 @@ public sealed class AccountStore : IAccountStore
         }
     }
 
-    [RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Deserialize<TValue>(String, JsonSerializerOptions)")]
     private async Task<AccountsFile> LoadAsync(CancellationToken ct)
     {
         if (!File.Exists(_filePath))
@@ -183,7 +174,7 @@ public sealed class AccountStore : IAccountStore
         try
         {
             var json = await File.ReadAllTextAsync(_filePath, ct);
-            return JsonSerializer.Deserialize<AccountsFile>(json, _jsonOptions) ?? new AccountsFile();
+            return JsonSerializer.Deserialize(json, VazJsonContext.Accounts.AccountsFile) ?? new AccountsFile();
         }
         catch (JsonException ex)
         {
@@ -192,11 +183,10 @@ public sealed class AccountStore : IAccountStore
         }
     }
 
-    [RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Serialize<TValue>(TValue, JsonSerializerOptions)")]
     private async Task SaveAsync(AccountsFile data, CancellationToken ct)
     {
         var tmpPath = _filePath + ".tmp";
-        var json = JsonSerializer.Serialize(data, _jsonOptions);
+        var json = JsonSerializer.Serialize(data, VazJsonContext.Accounts.AccountsFile);
         await File.WriteAllTextAsync(tmpPath, json, ct);
         File.Move(tmpPath, _filePath, true);
     }
@@ -254,11 +244,11 @@ public sealed class AccountStore : IAccountStore
             return null;
         }
     }
+}
 
-    private sealed class AccountsFile
-    {
-        public string? ActiveId { get; set; }
-        public List<MinecraftAccount> Accounts { get; set; } = new();
-    }
+internal sealed class AccountsFile
+{
+    public string? ActiveId { get; set; }
+    public List<MinecraftAccount> Accounts { get; set; } = new();
 }
 

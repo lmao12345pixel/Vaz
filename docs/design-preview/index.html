@@ -3,20 +3,22 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Vazer Launcher — UI Prototype (Wave 3)</title>
+  <title>Vazer Launcher — UI Prototype (Wave 8)</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2360cdff'/%3E%3Ctext x='16' y='23' font-size='18' font-family='Segoe UI' font-weight='700' text-anchor='middle' fill='%23000'%3EV%3C/text%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 <div class="window">
   <header class="titlebar">
-    <span class="titlebar-icon glyph">&#xE7F8;</span>
-    <span class="titlebar-text">Vazer Launcher</span>
-    <span class="titlebar-tag">PROTOTYPE</span>
-  <button class="titlebar-btn" id="tasksBtn" aria-expanded="false" title="Hoạt động (Ctrl+Shift+T)">
-    <span class="glyph">&#xE823;</span>
-    <span class="tasks-badge" id="tasksBadge" hidden>0</span>
-  </button>
+    <img class="titlebar-mc-icon" src="assets/blocks/grass_block.png" width="18" height="18" alt="Minecraft" />
+    <span class="titlebar-text">Minecraft Launcher <span class="titlebar-subtext">· Vazer Edition</span></span>
+    <button class="titlebar-btn" id="tasksBtn" aria-expanded="false" title="Hoạt động (Ctrl+Shift+T)">
+      <span class="glyph">&#xE823;</span>
+      <span class="tasks-badge" id="tasksBadge" hidden>0</span>
+    </button>
   </header>
 
   <div class="shell">
@@ -25,11 +27,42 @@
       <button class="nav-hamburger" aria-label="Open Navigation"><span class="glyph">&#xE700;</span></button>
       <nav class="nav-menu">
         <span class="nav-glider" id="navGlider" aria-hidden="true"></span>
+        <div class="nav-section-label">Thư viện</div>
         <button class="nav-item is-selected" data-screen="instances">
           <span class="nav-icon glyph">&#xE7F8;</span><span>Instances</span>
         </button>
+
+        <div class="nav-section-label">Khám phá</div>
+        <button class="nav-item" data-screen="mods">
+          <span class="nav-icon glyph">&#xE74C;</span><span>Mods</span>
+        </button>
+        <button class="nav-item" data-screen="resourcepacks">
+          <span class="nav-icon glyph">&#xEB9F;</span><span>Resource Packs</span>
+        </button>
+        <button class="nav-item" data-screen="shaders">
+          <span class="nav-icon glyph">&#xE706;</span><span>Shaders</span>
+        </button>
+        <button class="nav-item" data-screen="datapacks">
+          <span class="nav-icon glyph">&#xEA69;</span><span>Data Packs</span>
+        </button>
+        <button class="nav-item" data-screen="modpacks">
+          <span class="nav-icon glyph">&#xE8B5;</span><span>Modpacks</span>
+        </button>
+
+        <div class="nav-section-label">Cộng đồng</div>
+        <button class="nav-item" data-screen="skins">
+          <span class="nav-icon glyph">&#xE790;</span><span>Skins</span>
+        </button>
+        <button class="nav-item" data-screen="shop">
+          <span class="nav-icon glyph">&#xE719;</span><span>Shop</span>
+        </button>
+
+        <div class="nav-section-label">Hệ thống</div>
         <button class="nav-item" data-screen="accounts">
           <span class="nav-icon glyph">&#xE77B;</span><span>Accounts</span>
+        </button>
+        <button class="nav-item" data-screen="settings">
+          <span class="nav-icon glyph">&#xE713;</span><span>Settings</span>
         </button>
       </nav>
     </aside>
@@ -47,22 +80,46 @@
             <p class="caption text-2">Chọn một instance để chơi, hoặc tạo instance mới.</p>
           </div>
           <div class="header-actions">
-            <div class="searchbox compact">
+            <label class="searchbox compact">
               <span class="glyph">&#xE721;</span>
-              <input id="instanceSearch" placeholder="Tìm instance..." autocomplete="off" />
-            </div>
+              <input id="instanceSearch" type="search" placeholder="Tìm instance... (Ctrl+F)" autocomplete="off" />
+            </label>
             <select class="select" id="instanceSort" title="Sắp xếp">
               <option value="lastPlayed">Chơi gần nhất</option>
               <option value="name">Tên A-Z</option>
               <option value="created">Mới tạo</option>
             </select>
+            <button class="btn" id="importInstanceBtn" title="Import">
+              <span class="glyph">&#xE8B5;</span><span>Import</span>
+            </button>
             <button class="btn" id="newInstanceBtn">
               <span class="glyph">&#xE710;</span><span>New</span>
             </button>
           </div>
         </div>
 
-        <div class="card-grid" id="instanceGrid"></div>
+        <!-- Minecraft News & Community Carousel -->
+        <section class="news-carousel-shell" id="newsCarousel" aria-label="Tin tức Minecraft và Vazer Launcher">
+          <div class="news-carousel-viewport">
+            <div class="news-carousel-track" id="newsCarouselTrack"></div>
+          </div>
+          <button type="button" class="news-nav-btn prev" id="newsNavPrev" title="Tin trước" aria-label="Tin trước">
+            <span class="glyph">&#xE76B;</span>
+          </button>
+          <button type="button" class="news-nav-btn next" id="newsNavNext" title="Tin tiếp theo" aria-label="Tin tiếp theo">
+            <span class="glyph">&#xE76C;</span>
+          </button>
+          <div class="news-dots" id="newsDots" role="tablist" aria-label="Chuyển slide tin tức"></div>
+        </section>
+
+        <div class="grid-drop-zone" id="instanceGridDropZone">
+          <div class="card-grid" id="instanceGrid"></div>
+          <div class="instance-drop-overlay" id="instanceDropOverlay" hidden>
+            <span class="glyph drop-icon">&#xE8B5;</span>
+            <div class="drop-title">Thả modpack (.mrpack, .zip) vào đây để nhập</div>
+            <div class="drop-hint">Hỗ trợ Modrinth, CurseForge và Prism Launcher</div>
+          </div>
+        </div>
 
         <div class="empty-state" id="instancesEmpty" hidden>
           <span class="glyph empty-icon">&#xE7F8;</span>
@@ -76,9 +133,10 @@
         <div class="page-header">
           <div class="header-stack">
             <div class="detail-title-row">
-              <button class="btn icon-only detail-back" id="detailBackBtn" title="Quay lại Instances" aria-label="Quay lại Instances">
+              <button class="btn icon-only detail-back" id="btnBackToInstances" title="Quay lại Instances" aria-label="Quay lại Instances">
                 <span class="glyph">&#xE72B;</span>
               </button>
+              <span id="detailBlockIcon" class="detail-block-icon"></span>
               <h1 class="page-title" id="detailName">—</h1>
             </div>
             <div class="meta-row">
@@ -87,9 +145,14 @@
             </div>
             <div class="caption accent" id="detailLaunchStatus"></div>
           </div>
-          <button class="btn accent" id="detailLaunchBtn">
-            <span class="glyph">&#xE768;</span><span id="detailLaunchLabel">Launch</span>
-          </button>
+          <div class="header-actions">
+            <button class="btn" id="detailExportBtn" title="Xuất instance (.mrpack / .zip)">
+              <span class="glyph">&#xEDE1;</span><span>Export</span>
+            </button>
+            <button class="btn accent" id="detailLaunchBtn">
+              <span class="glyph">&#xE768;</span><span id="detailLaunchLabel">Launch</span>
+            </button>
+          </div>
         </div>
 
         <div class="infobar error" id="detailError" hidden>
@@ -109,10 +172,13 @@
         <div class="tabview">
           <div class="tabstrip" role="tablist">
             <span class="tab-glider" id="tabGlider" aria-hidden="true"></span>
-            <button class="tab is-selected" data-tab="mods" role="tab">Mods</button>
-            <button class="tab" data-tab="worlds" role="tab">Worlds</button>
-            <button class="tab" data-tab="logs" role="tab">Logs</button>
-            <button class="tab" data-tab="settings" role="tab">Settings</button>
+            <button class="tab is-selected" data-tab="mods" role="tab" aria-selected="true">Mods <span class="tab-update-badge" id="tabModsUpdateBadge" hidden>0</span></button>
+            <button class="tab" data-tab="resourcepacks" role="tab" aria-selected="false">Resource Packs</button>
+            <button class="tab" data-tab="shaders" role="tab" aria-selected="false">Shaders</button>
+            <button class="tab" data-tab="worlds" role="tab" aria-selected="false">Worlds</button>
+            <button class="tab" data-tab="screenshots" role="tab" aria-selected="false">Screenshots</button>
+            <button class="tab" data-tab="logs" role="tab" aria-selected="false">Logs</button>
+            <button class="tab" data-tab="settings" role="tab" aria-selected="false">Settings</button>
           </div>
 
           <!-- Mods -->
@@ -121,6 +187,7 @@
               <div class="toolbar-group">
                 <button class="btn" id="checkUpdatesBtn"><span class="glyph">&#xE895;</span><span>Check updates</span></button>
                 <button class="btn" id="updateAllBtn"><span class="glyph">&#xE896;</span><span>Update all</span></button>
+                <button class="btn" id="viewChangelogBtn" hidden><span class="glyph">&#xE8A5;</span><span>Xem thay đổi</span></button>
                 <button class="btn" id="openModBrowserBtn"><span class="glyph">&#xE710;</span><span>Download Mods</span></button>
               </div>
               <div class="divider"></div>
@@ -130,9 +197,47 @@
               </div>
               <div class="divider"></div>
               <button class="btn" id="openModsFolderBtn"><span class="glyph">&#xE838;</span><span>Open mods folder</span></button>
+              <button class="btn" id="modAddJarBtn"><span class="glyph">&#xE8E5;</span><span>Import .jar</span></button>
+              <input type="file" id="modFileInput" accept=".jar" hidden />
               <button class="btn" id="selectModsBtn" aria-pressed="false"><span class="glyph">&#xE762;</span><span>Select</span></button>
               <div class="infobar info inline" id="updatesBar" hidden>
                 <span class="glyph">&#xE946;</span><span id="updatesBarText"></span>
+                <button class="btn small ghost inline-btn" id="updatesBarChangelogBtn"><span class="glyph">&#xE8A5;</span><span>Xem thay đổi</span></button>
+                <button class="btn accent small inline-btn" id="updatesBarUpdateBtn"><span class="glyph">&#xE896;</span><span>Cập nhật tất cả</span></button>
+              </div>
+            </div>
+
+            <div class="mod-filterbar" id="modFilterBar" role="search" aria-label="Lọc mod">
+              <div class="mod-filterbar-main">
+                <label class="searchbox compact mod-filter-search">
+                  <span class="glyph" aria-hidden="true">&#xE721;</span>
+                  <input id="modSearch" type="search" placeholder="Tìm theo tên hoặc file... (Ctrl+F)" autocomplete="off" aria-label="Tìm mod theo tên hoặc tên file" />
+                </label>
+                <div class="mod-status-chips" id="modStatusChips" role="group" aria-label="Lọc mod theo trạng thái">
+                  <button type="button" class="chip mod-chip is-selected" data-mod-status="all" aria-pressed="true">Tất cả <span class="mod-chip-count" data-mod-count="all">0</span></button>
+                  <button type="button" class="chip mod-chip" data-mod-status="on" aria-pressed="false">Đang bật <span class="mod-chip-count" data-mod-count="on">0</span></button>
+                  <button type="button" class="chip mod-chip" data-mod-status="off" aria-pressed="false">Đang tắt <span class="mod-chip-count" data-mod-count="off">0</span></button>
+                  <button type="button" class="chip mod-chip" data-mod-status="update" aria-pressed="false">Có cập nhật <span class="mod-chip-count" data-mod-count="update">0</span></button>
+                </div>
+                <select class="select mod-sort" id="modSort" aria-label="Sắp xếp mod">
+                  <option value="name-asc">Tên A–Z</option>
+                  <option value="name-desc">Tên Z–A</option>
+                </select>
+                <button type="button" class="btn ghost small mod-clear" id="modClearFiltersBtn" disabled>
+                  <span class="glyph" aria-hidden="true">&#xE711;</span><span>Xóa bộ lọc</span>
+                </button>
+              </div>
+              <div class="mod-category-chips" id="modCategoryChips" role="group" aria-label="Lọc mod theo thể loại">
+                <span class="mod-category-label">Thể loại:</span>
+                <button type="button" class="chip mod-category-chip is-selected" data-mod-category="all" aria-pressed="true">Tất cả <span class="mod-cat-count" data-mod-cat-count="all">0</span></button>
+                <button type="button" class="chip mod-category-chip" data-mod-category="performance" aria-pressed="false">Hiệu năng <span class="mod-cat-count" data-mod-cat-count="performance">0</span></button>
+                <button type="button" class="chip mod-category-chip" data-mod-category="graphics" aria-pressed="false">Đồ họa <span class="mod-cat-count" data-mod-cat-count="graphics">0</span></button>
+                <button type="button" class="chip mod-category-chip" data-mod-category="technology" aria-pressed="false">Công nghệ <span class="mod-cat-count" data-mod-cat-count="technology">0</span></button>
+                <button type="button" class="chip mod-category-chip" data-mod-category="survival" aria-pressed="false">Sinh tồn/QoL <span class="mod-cat-count" data-mod-cat-count="survival">0</span></button>
+                <button type="button" class="chip mod-category-chip" data-mod-category="magic" aria-pressed="false">Phép thuật <span class="mod-cat-count" data-mod-cat-count="magic">0</span></button>
+              </div>
+              <div class="mod-filterbar-meta">
+                <span class="caption text-2" id="modSummary" aria-live="polite">Hiển thị 0 / 0 mod</span>
               </div>
             </div>
 
@@ -159,32 +264,184 @@
               <span class="glyph empty-icon">&#xE7B8;</span>
               <p class="text-2">Chưa có mod nào.</p>
             </div>
+            <div class="empty-state small" id="modsNoResults" hidden>
+              <span class="glyph empty-icon">&#xE721;</span>
+              <p class="text-2">Không có mod nào khớp bộ lọc.</p>
+              <p class="text-3" id="modsNoResultsHint">Thử từ khoá khác hoặc xoá bộ lọc.</p>
+              <button type="button" class="btn" id="modsClearFiltersBtn">
+                <span class="glyph">&#xE711;</span><span>Xóa bộ lọc</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Resource Packs -->
+          <div class="tab-panel" id="tab-resourcepacks" hidden>
+            <div class="toolbar rp-toolbar">
+              <div class="toolbar-group">
+                <div class="searchbox compact rp-search">
+                  <span class="glyph" aria-hidden="true">&#xE721;</span>
+                  <input id="rpSearch" type="search" placeholder="Tìm kiếm resource pack..." autocomplete="off" aria-label="Tìm kiếm resource pack" />
+                </div>
+              </div>
+              <div class="toolbar-actions">
+                <button class="btn" id="rpAddZipBtn"><span class="glyph">&#xE8E5;</span><span>Thêm .zip</span></button>
+                <input type="file" id="rpFileInput" accept=".zip" hidden />
+                <button class="btn" id="rpDiscoverBtn"><span class="glyph">&#xE710;</span><span>Khám phá pack</span></button>
+                <button class="btn" id="openResourcePacksFolderBtn"><span class="glyph">&#xE838;</span><span>Mở thư mục</span></button>
+              </div>
+            </div>
+
+            <div class="rp-dropzone" id="rpDropZone">
+              <div class="rp-dropzone-prompt">
+                <span class="glyph">&#xE898;</span>
+                <span>Kéo thả file .zip vào đây để cài đặt gói tài nguyên</span>
+              </div>
+              <div class="rp-list" id="rpList" role="list"></div>
+              <div class="empty-state small" id="rpEmpty" hidden>
+                <span class="glyph empty-icon">&#xEB9F;</span>
+                <p class="text-2">Chưa có resource pack nào trong instance này.</p>
+                <p class="text-3">Bấm "Thêm .zip" hoặc "Khám phá pack" để bắt đầu tùy biến giao diện.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Shaders -->
+          <div class="tab-panel" id="tab-shaders" hidden>
+            <!-- Banner kiểm tra Iris Shaders -->
+            <div class="shader-loader-banner" id="shaderLoaderBanner"></div>
+
+            <div class="toolbar shader-toolbar">
+              <div class="toolbar-group">
+                <span class="caption text-2" id="shaderActiveSummary">Shader hiện tại: <strong>Không</strong></span>
+              </div>
+              <div class="toolbar-actions">
+                <button class="btn" id="shaderAddZipBtn"><span class="glyph">&#xE8E5;</span><span>Thêm .zip</span></button>
+                <input type="file" id="shaderFileInput" accept=".zip" hidden />
+                <button class="btn" id="shaderDiscoverBtn"><span class="glyph">&#xE710;</span><span>Khám phá shaders</span></button>
+                <button class="btn" id="openShadersFolderBtn"><span class="glyph">&#xE838;</span><span>Mở thư mục</span></button>
+              </div>
+            </div>
+
+            <div class="shader-manager-layout" id="shaderDropZone">
+              <!-- Preview & Controls -->
+              <div class="shader-preview-section">
+                <div class="shader-preview-card">
+                  <div class="shader-preview-img-wrap">
+                    <img id="shaderPreviewImg" src="assets/shaders/bsl-shaders.jpg" alt="Shader preview" class="shader-preview-img" />
+                    <div class="shader-preview-badge" id="shaderPreviewBadge">BSL Shaders</div>
+                  </div>
+                  <div class="shader-preview-controls">
+                    <div class="shader-profile-block">
+                      <div class="shader-profile-head">
+                        <span class="field-label">Cấu hình Profile:</span>
+                        <span class="caption text-2" id="shaderProfileLabel">Medium</span>
+                      </div>
+                      <div class="chips shader-profile-chips" id="shaderProfileChips" role="group" aria-label="Shader Profile">
+                        <button type="button" class="chip profile-chip" data-profile="low" aria-pressed="false">Low</button>
+                        <button type="button" class="chip profile-chip is-selected" data-profile="medium" aria-pressed="true">Medium</button>
+                        <button type="button" class="chip profile-chip" data-profile="high" aria-pressed="false">High</button>
+                        <button type="button" class="chip profile-chip" data-profile="ultra" aria-pressed="false">Ultra</button>
+                      </div>
+                    </div>
+                    <div class="shader-preview-desc caption text-2" id="shaderPreviewDesc"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Shader selection cards -->
+              <div class="shader-selection-section">
+                <div class="shader-selection-header">
+                  <h3 class="shader-section-title">Danh sách Shaderpack</h3>
+                  <span class="caption text-3" id="shaderCountLabel"></span>
+                </div>
+                <div class="shader-card-grid" id="shaderCardGrid" role="radiogroup" aria-label="Chọn shader"></div>
+              </div>
+            </div>
           </div>
 
           <!-- Worlds -->
           <div class="tab-panel" id="tab-worlds" hidden>
-            <div class="toolbar">
-              <button class="btn" id="openWorldsFolderBtn"><span class="glyph">&#xE838;</span><span>Open worlds folder</span></button>
-              <button class="btn" id="backupAllWorldsBtn"><span class="glyph">&#xE896;</span><span>Backup all</span></button>
+            <div class="toolbar worlds-toolbar">
+              <div class="toolbar-group">
+                <button class="btn primary-action" id="importWorldBtn"><span class="glyph">&#xE8B5;</span><span>Import World</span></button>
+                <input type="file" id="worldFileInput" accept=".zip" hidden />
+                <button class="btn" id="backupAllWorldsBtn"><span class="glyph">&#xE896;</span><span>Sao lưu tất cả</span></button>
+                <button class="btn" id="openWorldsFolderBtn"><span class="glyph">&#xE838;</span><span>Open folder</span></button>
+              </div>
               <span class="caption text-2" id="worldsSummary"></span>
             </div>
+
+            <div class="toolbar filter-toolbar world-filters">
+              <div class="searchbox compact world-search-box">
+                <span class="glyph">&#xE721;</span>
+                <input id="worldSearch" placeholder="Tìm kiếm thế giới hoặc seed..." autocomplete="off" />
+              </div>
+              <div class="chips" id="worldFilterChips" role="group" aria-label="Lọc chế độ chơi">
+                <button class="chip is-active" data-world-filter="all">Tất cả</button>
+                <button class="chip" data-world-filter="survival">Sinh tồn</button>
+                <button class="chip" data-world-filter="creative">Sáng tạo</button>
+                <button class="chip" data-world-filter="hardcore">Siêu khó</button>
+              </div>
+            </div>
+
             <div class="progress thin" id="worldsProgress" hidden><div></div></div>
             <div class="caption text-2" id="worldsStatus"></div>
 
-            <div class="list" id="worldList"></div>
-            <div class="empty-state small" id="worldsEmpty" hidden>
-              <span class="glyph empty-icon">&#xE81E;</span>
-              <p class="text-2">Instance này chưa có world nào.</p>
-              <p class="text-3">Vào game tạo world mới rồi quay lại đây để backup.</p>
+            <div class="world-drop-zone" id="worldDropZone">
+              <div class="world-drop-prompt">
+                <span class="glyph">&#xE898;</span>
+                <span>Kéo thả file .zip thế giới vào đây để nhập</span>
+              </div>
+              <div class="world-list" id="worldList" role="list"></div>
+              <div class="empty-state small" id="worldsEmpty" hidden>
+                <span class="glyph empty-icon">&#xE81E;</span>
+                <p class="text-2">Instance này chưa có world nào.</p>
+                <p class="text-3">Bấm "Import World" hoặc kéo thả file .zip vào đây.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Screenshots -->
+          <div class="tab-panel" id="tab-screenshots" hidden>
+            <div class="toolbar screenshot-toolbar">
+              <button class="btn accent" id="takeDemoScreenshotBtn" title="Chụp ảnh màn hình mới (F2)"><span class="glyph">&#xE722;</span><span>Chụp ảnh (F2)</span></button>
+              <button class="btn" id="importScreenshotBtn" title="Nhập ảnh từ máy tính"><span class="glyph">&#xE898;</span><span>Thêm ảnh...</span></button>
+              <input type="file" id="screenshotFileInput" accept="image/*" multiple hidden />
+              <button class="btn" id="openScreenshotsFolderBtn" title="Mở thư mục screenshots"><span class="glyph">&#xE838;</span><span>Mở thư mục</span></button>
+              <div class="divider"></div>
+              <div class="searchbox compact screenshot-search-box">
+                <span class="glyph">&#xE721;</span>
+                <input id="screenshotSearch" placeholder="Tìm ảnh theo tên, thế giới..." autocomplete="off" />
+              </div>
+              <select class="select" id="screenshotSort" aria-label="Sắp xếp ảnh">
+                <option value="newest">Mới nhất</option>
+                <option value="oldest">Cũ nhất</option>
+              </select>
+              <span class="caption text-2" id="screenshotsSummary"></span>
+            </div>
+            <div class="screenshot-dropzone" id="screenshotDropZone" hidden>
+              <span class="glyph">&#xE898;</span>
+              <span>Thả file ảnh (.png, .jpg) vào đây để thêm vào gallery</span>
+            </div>
+            <div class="screenshot-gallery" id="screenshotGallery"></div>
+            <div class="empty-state small" id="screenshotsEmpty" hidden>
+              <span class="glyph empty-icon">&#xEB9F;</span>
+              <p class="text-2">Chưa có ảnh chụp màn hình nào.</p>
+              <p class="text-3">Nhấn F2 trong game để chụp ảnh và xem tại đây.</p>
             </div>
           </div>
 
           <!-- Logs -->
           <div class="tab-panel" id="tab-logs" hidden>
+            <div class="crash-analyzer-banner" id="crashAnalyzerBanner" hidden></div>
             <div class="toolbar log-toolbar">
               <button class="btn" id="clearLogBtn"><span class="glyph">&#xE894;</span><span>Clear Log</span></button>
+              <button class="btn" id="generateLogBtn"><span class="glyph">&#xE768;</span><span>Tạo log mẫu</span></button>
               <button class="btn" id="copyLogBtn"><span class="glyph">&#xE8C8;</span><span>Copy to Clipboard</span></button>
+              <button class="btn" id="exportLogBtn"><span class="glyph">&#xE896;</span><span>Tải về .log</span></button>
+              <button class="btn" id="openLogsFolderBtn"><span class="glyph">&#xE838;</span><span>Mở thư mục</span></button>
               <label class="checkbox"><input type="checkbox" id="autoScrollChk" checked /><span class="box"></span>Auto-scroll</label>
+              <label class="checkbox"><input type="checkbox" id="showLineNumbersChk" checked /><span class="box"></span>Hiện số dòng</label>
               <div class="divider"></div>
               <div class="searchbox compact log-search">
                 <span class="glyph">&#xE721;</span>
@@ -200,7 +457,7 @@
               <span class="caption text-3" id="logCount"></span>
             </div>
 
-            <div class="log-shell">
+            <div class="log-shell" id="logShell">
               <div class="empty-state small" id="logsEmpty">
                 <span class="glyph empty-icon">&#xE9F9;</span>
                 <p class="text-2">Chưa có log nào. Bấm Launch để bắt đầu.</p>
@@ -215,38 +472,458 @@
           <!-- Settings -->
           <div class="tab-panel" id="tab-settings" hidden>
             <div class="settings-stack">
-              <div class="setting-group">
-                <label class="field-label" for="setRam">RAM cấp cho instance</label>
-                <div class="slider-row">
-                  <input type="range" id="setRam" min="1024" max="16384" step="512" />
-                  <input class="textbox narrow" type="number" id="setRamValue" min="1024" max="16384" step="512" />
-                  <span class="text-2">MB</span>
-                </div>
-                <p class="caption text-3">Khuyến nghị 4096 MB; 8192 MB nếu chơi modpack nặng. Tối đa 16384 MB.</p>
-              </div>
 
-              <label class="field"><span>JVM arguments</span>
-                <textarea class="textbox area" id="setJvm" rows="3" placeholder="-XX:+UseG1GC -XX:+UnlockExperimentalVMOptions"></textarea>
-              </label>
-
-              <div class="settings-grid">
-                <label class="field"><span>Java path (trống = tự dò)</span>
-                  <input class="textbox" id="setJava" placeholder="C:\Program Files\Java\jdk-21\bin\javaw.exe" />
-                </label>
-                <label class="field"><span>Độ phân giải</span>
-                  <div class="size-row">
-                    <input class="textbox narrow" type="number" id="setWidth" min="320" max="7680" step="1" />
-                    <span class="text-2">×</span>
-                    <input class="textbox narrow" type="number" id="setHeight" min="240" max="4320" step="1" />
+              <!-- ============ Java Runtime Resolver Card ============ -->
+              <section class="settings-card java-resolver-card" id="javaResolverCard">
+                <div class="java-resolver-header">
+                  <div class="settings-card-head">
+                    <span class="settings-icon glyph">&#xE74C;</span>
+                    <div>
+                      <h2>Java Runtime Resolver</h2>
+                      <p>Tự động phát hiện phiên bản Java trên hệ thống và gợi ý bản phù hợp theo phiên bản Minecraft.</p>
+                    </div>
                   </div>
-                </label>
-              </div>
+                  <div class="java-resolver-actions">
+                    <button type="button" class="btn small" id="btnDownloadJava" title="Tải tự động bản Java 21 Adoptium Temurin">
+                      <span class="glyph">&#xE896;</span><span>Tải Java 21 (Temurin)</span>
+                    </button>
+                  </div>
+                </div>
 
-              <div class="toolbar">
-                <button class="btn accent" id="saveSettingsBtn"><span class="glyph">&#xE74E;</span><span>Lưu</span></button>
-                <button class="btn" id="resetSettingsBtn"><span class="glyph">&#xE777;</span><span>Mặc định</span></button>
-                <span class="caption text-2" id="settingsStatus"></span>
-              </div>
+                <!-- Download Progress bar (giả lập) -->
+                <div class="java-download-progress-wrap" id="javaDownloadProgressWrap" hidden>
+                  <div class="java-download-info">
+                    <span class="caption" id="javaDownloadStatus">Đang tải Eclipse Temurin 21.0.4 (Adoptium)...</span>
+                    <span class="caption" id="javaDownloadPercent">0%</span>
+                  </div>
+                  <div class="progress-bar-track">
+                    <div class="progress-bar-fill" id="javaDownloadProgress" style="width: 0%;"></div>
+                  </div>
+                </div>
+
+                <!-- Incompatible Warning Banner -->
+                <div class="infobar warning java-incompatible-banner" id="javaIncompatibleBanner" hidden>
+                  <span class="glyph">&#xE7BA;</span>
+                  <div class="java-incompatible-content">
+                    <strong>Phiên bản Java không tương thích!</strong>
+                    <p id="javaIncompatibleText">Minecraft 1.21.1 yêu cầu Java 21 trở lên, nhưng runtime đang chọn là Java 17.</p>
+                  </div>
+                  <button type="button" class="btn small accent" id="btnUseRecommendedJava">
+                    <span class="glyph">&#xE73E;</span><span>Dùng Java khuyến nghị</span>
+                  </button>
+                </div>
+
+                <!-- Java Runtime Selector -->
+                <div class="java-selector-wrap">
+                  <label class="field-label" for="javaRuntimeSelect">Bản Java Runtime phát hiện trên hệ thống</label>
+                  <select class="textbox" id="javaRuntimeSelect" aria-label="Chọn Java Runtime">
+                    <option value="java-21">Java 21 (Eclipse Temurin 21.0.4, x64, JDK)</option>
+                    <option value="java-17">Java 17 (Microsoft Build of OpenJDK 17.0.12, x64, JDK)</option>
+                    <option value="java-8">Java 8 (Oracle JRE 8u421, x64, JRE)</option>
+                    <option value="custom">Đường dẫn tùy biến (Custom Java Path)</option>
+                  </select>
+                </div>
+
+                <!-- Visual Runtime Cards List -->
+                <div class="java-runtime-cards" id="javaRuntimeCards" role="radiogroup" aria-label="Danh sách Java Runtime">
+                  <!-- Rendered dynamically by JS -->
+                </div>
+
+                <!-- Custom Java Path with Probe / Test button -->
+                <div class="java-custom-path-group" id="javaCustomPathGroup">
+                  <label class="field-label" for="setJavaCustomPath">Đường dẫn Java tùy biến (Custom Java Path)</label>
+                  <div class="java-custom-row">
+                    <input class="textbox" id="setJavaCustomPath" placeholder="C:\Program Files\Java\jdk-21\bin\javaw.exe" />
+                    <input type="hidden" id="setJava" />
+                    <button type="button" class="btn" id="btnTestJava"><span class="glyph">&#xE768;</span><span>Kiểm tra</span></button>
+                  </div>
+                  <div class="java-probe-result caption" id="javaProbeResult" hidden></div>
+                </div>
+              </section>
+
+              <!-- ============ Memory Allocation Card ============ -->
+              <section class="settings-card ram-allocation-card" id="ramAllocationCard">
+                <div class="settings-card-head">
+                  <span class="settings-icon glyph">&#xE950;</span>
+                  <div>
+                    <h2>Quản lý bộ nhớ RAM (JVM Memory)</h2>
+                    <p>Cấp phát RAM tối thiểu (Initial Heap - Xms) và RAM tối đa (Maximum Heap - Xmx).</p>
+                  </div>
+                </div>
+
+                <!-- Safety Warning Banner -->
+                <div class="infobar warning ram-warning-banner" id="ramWarningBanner" hidden>
+                  <span class="glyph">&#xE7BA;</span>
+                  <div id="ramWarningText">Cảnh báo: Cấp phát quá 85% RAM hệ thống (> 13,926 MB) có thể gây treo máy hoặc sập launcher!</div>
+                </div>
+
+                <!-- RAM Sliders Grid -->
+                <div class="ram-controls-grid">
+                  <div class="ram-control-item">
+                    <div class="ram-control-label-row">
+                      <label class="field-label" for="setMinRam">RAM tối thiểu (Initial Heap - Xms)</label>
+                      <div class="ram-input-wrap">
+                        <input class="textbox narrow" type="number" id="setMinRamValue" min="512" max="16384" step="512" value="1024" />
+                        <span class="text-2">MB</span>
+                      </div>
+                    </div>
+                    <input type="range" id="setMinRam" min="512" max="16384" step="512" value="1024" />
+                  </div>
+
+                  <div class="ram-control-item">
+                    <div class="ram-control-label-row">
+                      <label class="field-label" for="setMaxRam">RAM tối đa (Maximum Heap - Xmx)</label>
+                      <div class="ram-input-wrap">
+                        <input class="textbox narrow" type="number" id="setMaxRamValue" min="512" max="16384" step="512" value="4096" />
+                        <input type="hidden" id="setRamValue" value="4096" />
+                        <span class="text-2">MB</span>
+                      </div>
+                    </div>
+                    <input type="range" id="setMaxRam" min="512" max="16384" step="512" value="4096" />
+                    <input type="hidden" id="setRam" value="4096" />
+                  </div>
+                </div>
+
+                <!-- Quick Presets -->
+                <div class="ram-presets-row">
+                  <span class="caption text-3">Preset nhanh:</span>
+                  <div class="ram-presets-group" role="group" aria-label="Presets RAM nhanh">
+                    <button type="button" class="btn small ram-preset-chip" data-ram="2048">2 GB (Vanilla)</button>
+                    <button type="button" class="btn small ram-preset-chip" data-ram="4096">4 GB (Chuẩn)</button>
+                    <button type="button" class="btn small ram-preset-chip" data-ram="8192">8 GB (Modpack)</button>
+                    <button type="button" class="btn small ram-preset-chip" data-ram="12288">12 GB (Nặng)</button>
+                  </div>
+                </div>
+
+                <!-- System Memory Gauge -->
+                <div class="sys-ram-section">
+                  <div class="sys-ram-head">
+                    <span class="caption text-2">Biểu đồ phân bổ RAM hệ thống (Tổng: 16 GB / 16,384 MB)</span>
+                    <span class="caption text-3" id="sysRamSummary">Minecraft: 4,096 MB (25%)</span>
+                  </div>
+                  <div class="sys-ram-bar" id="sysRamGauge" role="meter" aria-label="Biểu đồ phân bổ RAM" aria-valuemin="0" aria-valuemax="16384" aria-valuenow="4096">
+                    <div class="sys-ram-seg seg-os" id="ramSegOs" style="width: 25%;" title="Hệ điều hành & Ứng dụng khác: 4,096 MB (25%)"></div>
+                    <div class="sys-ram-seg seg-mc" id="ramSegMc" style="width: 25%;" title="Minecraft: 4,096 MB (25%)"></div>
+                    <div class="sys-ram-seg seg-free" id="ramSegFree" style="width: 50%;" title="Còn trống: 8,192 MB (50%)"></div>
+                  </div>
+                  <div class="sys-ram-legend">
+                    <span class="legend-item"><span class="legend-dot dot-os"></span>Hệ thống khác: 4,096 MB (25%)</span>
+                    <span class="legend-item"><span class="legend-dot dot-mc"></span>Minecraft: <strong id="legendMcRam">4,096 MB</strong> (<span id="legendMcPercent">25%</span>)</span>
+                    <span class="legend-item"><span class="legend-dot dot-free"></span>Còn trống: <strong id="legendFreeRam">8,192 MB</strong> (<span id="legendFreePercent">50%</span>)</span>
+                  </div>
+                </div>
+              </section>
+
+              <!-- ============ JVM Arguments & GC Presets Card ============ -->
+              <section class="settings-card jvm-gc-card" id="jvmGcCard">
+                <div class="settings-card-head">
+                  <span class="settings-icon glyph">&#xE9D9;</span>
+                  <div>
+                    <h2>Tối ưu Garbage Collector (GC) & JVM Arguments</h2>
+                    <p>Lựa chọn bộ thu gom rác tối ưu giúp giảm giật lag khung hình (stutter) và duy trì FPS mượt mà.</p>
+                  </div>
+                </div>
+
+                <!-- GC Presets -->
+                <div class="gc-presets-row">
+                  <span class="caption text-3">GC Preset:</span>
+                  <div class="gc-presets-group" role="group" aria-label="GC Presets">
+                    <button type="button" class="btn small gc-preset-chip is-selected" data-gc="g1gc">G1GC (Mặc định)</button>
+                    <button type="button" class="btn small gc-preset-chip" data-gc="zgc">ZGC Generational (Java 21)</button>
+                    <button type="button" class="btn small gc-preset-chip" data-gc="shenandoah">Shenandoah</button>
+                    <button type="button" class="btn small gc-preset-chip" data-gc="custom">Tùy biến</button>
+                  </div>
+                </div>
+
+                <!-- JVM Arguments textarea -->
+                <label class="field"><span>JVM arguments</span>
+                  <textarea class="textbox area" id="setJvm" rows="3" placeholder="-XX:+UseG1GC -XX:+UnlockExperimentalVMOptions"></textarea>
+                </label>
+
+                <!-- Window size / Resolution -->
+                <div class="settings-grid">
+                  <label class="field"><span>Độ phân giải cửa sổ</span>
+                    <div class="size-row">
+                      <input class="textbox narrow" type="number" id="setWidth" min="320" max="7680" step="1" />
+                      <span class="text-2">×</span>
+                      <input class="textbox narrow" type="number" id="setHeight" min="240" max="4320" step="1" />
+                    </div>
+                  </label>
+                  <label class="field"><span>Thư mục instance</span>
+                    <input class="textbox" id="settingsFolder" readonly />
+                  </label>
+                </div>
+
+                <!-- Toolbar Actions -->
+                <div class="toolbar">
+                  <button class="btn accent" id="saveSettingsBtn"><span class="glyph">&#xE74E;</span><span>Lưu</span></button>
+                  <button class="btn" id="resetSettingsBtn"><span class="glyph">&#xE777;</span><span>Mặc định</span></button>
+                  <span class="caption text-2" id="settingsStatus"></span>
+                </div>
+              </section>
+
+              <div class="divider wide"></div>
+
+              <!-- ============ In-game Settings (options.txt) ============ -->
+              <section class="settings-card mc-options-card" id="mcOptionsSection">
+                <div class="mc-options-header">
+                  <div class="settings-card-head">
+                    <span class="settings-icon glyph">&#xE7FC;</span>
+                    <div>
+                      <h2>Cấu hình trong game (options.txt)</h2>
+                      <p>Tùy chỉnh đồ họa, âm thanh, điều khiển và phím bấm Minecraft trước khi khởi chạy.</p>
+                    </div>
+                  </div>
+
+                  <div class="mc-options-actions">
+                    <!-- Presets nhanh -->
+                    <div class="mc-presets-group" role="group" aria-label="Presets nhanh">
+                      <span class="caption text-3">Preset:</span>
+                      <button type="button" class="btn small" id="mcPresetFps" title="Tối ưu FPS tối đa cho máy yếu">Tối ưu FPS</button>
+                      <button type="button" class="btn small" id="mcPresetBalanced" title="Cân bằng giữa đồ họa và FPS">Cân bằng</button>
+                      <button type="button" class="btn small" id="mcPresetHigh" title="Đồ họa cao và tầm nhìn xa">Đồ họa cao</button>
+                    </div>
+
+                    <div class="mc-header-tools">
+                      <!-- Chuyển đổi Visual <-> Raw -->
+                      <div class="mc-view-switch" role="tablist" aria-label="Chế độ xem">
+                        <button type="button" class="btn small is-selected" id="mcViewVisualBtn" role="tab" aria-selected="true" data-mode="visual" title="Giao diện trực quan">
+                          <span class="glyph">&#xE790;</span><span>Giao diện</span>
+                        </button>
+                        <button type="button" class="btn small" id="mcViewRawBtn" role="tab" aria-selected="false" data-mode="raw" title="Văn bản options.txt thô">
+                          <span class="glyph">&#xE8A5;</span><span>options.txt</span>
+                        </button>
+                      </div>
+
+                      <!-- Xuất options.txt -->
+                      <button type="button" class="btn small" id="mcExportBtn" title="Tải file options.txt về máy">
+                        <span class="glyph">&#xEDE1;</span><span>Xuất options.txt</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Visual Editor -->
+                <div class="mc-options-visual" id="mcOptionsVisual">
+                  
+                  <!-- Nhóm 1: Đồ họa -->
+                  <div class="mc-group-section">
+                    <div class="mc-group-title">
+                      <span class="glyph">&#xE790;</span>
+                      <h4>Đồ họa</h4>
+                    </div>
+                    <div class="mc-controls-grid">
+                      <div class="mc-ctrl-item">
+                        <div class="mc-ctrl-label-row">
+                          <label for="mcOptRenderDistance">Render Distance (Tầm nhìn)</label>
+                          <span class="caption text-2" id="mcValRenderDistance">12 chunks</span>
+                        </div>
+                        <input type="range" id="mcOptRenderDistance" min="2" max="32" step="1" value="12" />
+                      </div>
+
+                      <div class="mc-ctrl-item">
+                        <div class="mc-ctrl-label-row">
+                          <label for="mcOptSimDistance">Simulation Distance (Mô phỏng)</label>
+                          <span class="caption text-2" id="mcValSimDistance">12 chunks</span>
+                        </div>
+                        <input type="range" id="mcOptSimDistance" min="5" max="32" step="1" value="12" />
+                      </div>
+
+                      <div class="mc-ctrl-item">
+                        <div class="mc-ctrl-label-row">
+                          <label for="mcOptMaxFps">Max FPS (FPS tối đa)</label>
+                          <span class="caption text-2" id="mcValMaxFps">120 FPS</span>
+                        </div>
+                        <input type="range" id="mcOptMaxFps" min="10" max="260" step="10" value="120" />
+                      </div>
+
+                      <div class="mc-ctrl-item">
+                        <label for="mcOptGraphicsMode">Graphics Mode (Chế độ đồ họa)</label>
+                        <select class="select" id="mcOptGraphicsMode">
+                          <option value="fast">Nhanh (Fast)</option>
+                          <option value="fancy" selected>Đẹp (Fancy)</option>
+                          <option value="fabulous">Tuyệt đẹp (Fabulous)</option>
+                        </select>
+                      </div>
+
+                      <div class="mc-ctrl-item">
+                        <label for="mcOptClouds">Clouds (Mây)</label>
+                        <select class="select" id="mcOptClouds">
+                          <option value="false">Tắt (Off)</option>
+                          <option value="fast">Nhanh (Fast)</option>
+                          <option value="fancy" selected>Đẹp (Fancy)</option>
+                        </select>
+                      </div>
+
+                      <div class="mc-ctrl-item">
+                        <label for="mcOptGuiScale">GUI Scale (Tỷ lệ giao diện)</label>
+                        <select class="select" id="mcOptGuiScale">
+                          <option value="0" selected>Tự động (Auto)</option>
+                          <option value="1">1x (Nhỏ)</option>
+                          <option value="2">2x (Vừa)</option>
+                          <option value="3">3x (Lớn)</option>
+                          <option value="4">4x (Rất lớn)</option>
+                        </select>
+                      </div>
+
+                      <div class="mc-ctrl-item">
+                        <div class="mc-ctrl-label-row">
+                          <label for="mcOptBrightness">Brightness (Độ sáng / Gamma)</label>
+                          <span class="caption text-2" id="mcValBrightness">50%</span>
+                        </div>
+                        <input type="range" id="mcOptBrightness" min="0" max="100" step="1" value="50" />
+                      </div>
+
+                      <div class="mc-ctrl-item mc-checkbox-group">
+                        <label class="setting-toggle">
+                          <input type="checkbox" id="mcOptVsync" />
+                          <span>VSync (Đồng bộ khung hình)</span>
+                        </label>
+                        <label class="setting-toggle">
+                          <input type="checkbox" id="mcOptEntityShadows" checked />
+                          <span>Entity Shadows (Bóng thực thể)</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Nhóm 2: Âm thanh -->
+                  <div class="mc-group-section">
+                    <div class="mc-group-title">
+                      <span class="glyph">&#xE767;</span>
+                      <h4>Âm thanh</h4>
+                    </div>
+                    <div class="mc-controls-grid">
+                      <div class="mc-ctrl-item">
+                        <div class="mc-ctrl-label-row">
+                          <label for="mcOptSoundMaster">Master (Âm lượng tổng)</label>
+                          <span class="caption text-2" id="mcValSoundMaster">100%</span>
+                        </div>
+                        <input type="range" id="mcOptSoundMaster" min="0" max="100" step="1" value="100" />
+                      </div>
+
+                      <div class="mc-ctrl-item">
+                        <div class="mc-ctrl-label-row">
+                          <label for="mcOptSoundMusic">Music (Nhạc nền)</label>
+                          <span class="caption text-2" id="mcValSoundMusic">50%</span>
+                        </div>
+                        <input type="range" id="mcOptSoundMusic" min="0" max="100" step="1" value="50" />
+                      </div>
+
+                      <div class="mc-ctrl-item">
+                        <div class="mc-ctrl-label-row">
+                          <label for="mcOptSoundWeather">Weather (Thời tiết)</label>
+                          <span class="caption text-2" id="mcValSoundWeather">100%</span>
+                        </div>
+                        <input type="range" id="mcOptSoundWeather" min="0" max="100" step="1" value="100" />
+                      </div>
+
+                      <div class="mc-ctrl-item">
+                        <div class="mc-ctrl-label-row">
+                          <label for="mcOptSoundBlocks">Blocks (Khối)</label>
+                          <span class="caption text-2" id="mcValSoundBlocks">100%</span>
+                        </div>
+                        <input type="range" id="mcOptSoundBlocks" min="0" max="100" step="1" value="100" />
+                      </div>
+
+                      <div class="mc-ctrl-item">
+                        <div class="mc-ctrl-label-row">
+                          <label for="mcOptSoundHostiles">Hostiles (Quái vật)</label>
+                          <span class="caption text-2" id="mcValSoundHostiles">100%</span>
+                        </div>
+                        <input type="range" id="mcOptSoundHostiles" min="0" max="100" step="1" value="100" />
+                      </div>
+
+                      <div class="mc-ctrl-item">
+                        <div class="mc-ctrl-label-row">
+                          <label for="mcOptSoundPlayers">Players (Người chơi)</label>
+                          <span class="caption text-2" id="mcValSoundPlayers">100%</span>
+                        </div>
+                        <input type="range" id="mcOptSoundPlayers" min="0" max="100" step="1" value="100" />
+                      </div>
+
+                      <div class="mc-ctrl-item">
+                        <div class="mc-ctrl-label-row">
+                          <label for="mcOptSoundAmbient">Ambient (Môi trường)</label>
+                          <span class="caption text-2" id="mcValSoundAmbient">100%</span>
+                        </div>
+                        <input type="range" id="mcOptSoundAmbient" min="0" max="100" step="1" value="100" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Nhóm 3: Điều khiển -->
+                  <div class="mc-group-section">
+                    <div class="mc-group-title">
+                      <span class="glyph">&#xE962;</span>
+                      <h4>Điều khiển</h4>
+                    </div>
+                    <div class="mc-controls-grid">
+                      <div class="mc-ctrl-item">
+                        <div class="mc-ctrl-label-row">
+                          <label for="mcOptSensitivity">Mouse Sensitivity (Độ nhạy)</label>
+                          <span class="caption text-2" id="mcValSensitivity">100%</span>
+                        </div>
+                        <input type="range" id="mcOptSensitivity" min="0" max="200" step="1" value="100" />
+                      </div>
+
+                      <div class="mc-ctrl-item">
+                        <div class="mc-ctrl-label-row">
+                          <label for="mcOptFov">FOV (Góc nhìn)</label>
+                          <span class="caption text-2" id="mcValFov">70°</span>
+                        </div>
+                        <input type="range" id="mcOptFov" min="30" max="110" step="1" value="70" />
+                      </div>
+
+                      <div class="mc-ctrl-item">
+                        <label for="mcOptSneakMode">Sneak Mode (Cúi)</label>
+                        <select class="select" id="mcOptSneakMode">
+                          <option value="false" selected>Giữ (Hold)</option>
+                          <option value="true">Bật / Tắt (Toggle)</option>
+                        </select>
+                      </div>
+
+                      <div class="mc-ctrl-item">
+                        <label for="mcOptSprintMode">Sprint Mode (Chạy nhanh)</label>
+                        <select class="select" id="mcOptSprintMode">
+                          <option value="false" selected>Giữ (Hold)</option>
+                          <option value="true">Bật / Tắt (Toggle)</option>
+                        </select>
+                      </div>
+
+                      <div class="mc-ctrl-item mc-checkbox-group">
+                        <label class="setting-toggle">
+                          <input type="checkbox" id="mcOptInvertMouse" />
+                          <span>Invert Mouse (Đảo chuột Y)</span>
+                        </label>
+                        <label class="setting-toggle">
+                          <input type="checkbox" id="mcOptAutoJump" />
+                          <span>Auto-Jump (Tự động nhảy)</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Nhóm 4: Phím bấm -->
+                  <div class="mc-group-section">
+                    <div class="mc-group-title">
+                      <span class="glyph">&#xE765;</span>
+                      <h4>Phím bấm (Keybinds)</h4>
+                      <span class="caption text-3">(Bấm vào phím để ghi phím mới, nhấn Esc để hủy)</span>
+                    </div>
+                    <div class="mc-keybinds-grid" id="mcKeybindsGrid"></div>
+                  </div>
+
+                </div>
+
+                <!-- Raw Text Editor -->
+                <div class="mc-options-raw" id="mcOptionsRaw" hidden>
+                  <div class="mc-raw-info">
+                    <span class="caption text-3">Chỉnh sửa trực tiếp file <code>options.txt</code>. Các thay đổi được đồng bộ hai chiều với giao diện đồ họa. Khóa cấu hình lạ từ mod hoặc phiên bản khác được bảo toàn.</span>
+                  </div>
+                  <textarea class="textbox area mc-raw-textarea" id="mcRawTextarea" rows="18" spellcheck="false" aria-label="Nội dung options.txt" placeholder="version:3955&#10;renderDistance:12&#10;..."></textarea>
+                </div>
+              </section>
 
               <div class="divider wide"></div>
 
@@ -281,8 +958,753 @@
         </div>
       </section>
 
+      <!-- ============ Mods page ============ -->
+      <section class="page" id="page-mods" hidden>
+        <div class="page-header">
+          <div class="header-stack">
+            <div class="header-title-row">
+              <h1 class="page-title">Mods</h1>
+              <span class="count-pill" id="modsCount">0</span>
+            </div>
+            <p class="caption text-2">Mod tuyển chọn chuẩn Modrinth — tối ưu hiệu năng, đồ họa, công nghệ &amp; gameplay.</p>
+          </div>
+          <div class="header-actions discover-filter-actions">
+            <label class="searchbox compact discover-searchbox">
+              <span class="glyph" aria-hidden="true">&#xE721;</span>
+              <input id="modsSearch" type="search" placeholder="Tìm mod, tác giả, tính năng... (Ctrl+F)" autocomplete="off" />
+            </label>
+            <select class="select" id="modsLoader" aria-label="Lọc theo loader">
+              <option value="all">Tất cả loader</option>
+              <option value="fabric">Fabric</option>
+              <option value="neoforge">NeoForge</option>
+              <option value="vanilla">Vanilla</option>
+            </select>
+            <select class="select" id="modsVersion" aria-label="Lọc theo phiên bản MC">
+              <option value="all">Tất cả phiên bản</option>
+              <option value="1.21.1">MC 1.21.1</option>
+              <option value="1.21">MC 1.21</option>
+              <option value="1.20.1">MC 1.20.1</option>
+              <option value="1.19.4">MC 1.19.4</option>
+              <option value="1.18.2">MC 1.18.2</option>
+            </select>
+            <select class="select" id="modsSort" aria-label="Sắp xếp kết quả">
+              <option value="downloads">Tải nhiều nhất</option>
+              <option value="newest">Mới nhất</option>
+              <option value="relevance">Phổ biến</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Category Tag Chips -->
+        <div class="category-chips-bar" id="modsCategoryChips" role="group" aria-label="Lọc theo thể loại">
+          <button type="button" class="chip cat-chip is-selected" data-cat="all">Tất cả</button>
+          <button type="button" class="chip cat-chip" data-cat="performance">Hiệu năng</button>
+          <button type="button" class="chip cat-chip" data-cat="technology">Công nghệ</button>
+          <button type="button" class="chip cat-chip" data-cat="survival">Sinh tồn/QoL</button>
+          <button type="button" class="chip cat-chip" data-cat="graphics">Đồ họa</button>
+          <button type="button" class="chip cat-chip" data-cat="magic">Phép thuật</button>
+          <button type="button" class="chip cat-chip" data-cat="adventure">Phiêu lưu</button>
+        </div>
+
+        <div class="card-grid discover-grid" id="modsGrid"></div>
+        <div class="empty-state" id="modsEmpty" hidden>
+          <div class="empty-icon glyph">&#xE74C;</div>
+          <strong>Không tìm thấy mod phù hợp</strong>
+          <span>Thử từ khóa khác hoặc điều chỉnh lại bộ lọc loader / phiên bản.</span>
+        </div>
+        <div class="status-area"><div class="caption" id="modsStatus"></div></div>
+      </section>
+
+      <!-- ============ Resource Packs page ============ -->
+      <section class="page" id="page-resourcepacks" hidden>
+        <div class="page-header">
+          <div class="header-stack">
+            <div class="header-title-row">
+              <h1 class="page-title">Resource Packs</h1>
+              <span class="count-pill" id="resourcepacksCount">0</span>
+            </div>
+            <p class="caption text-2">Gói tài nguyên &amp; texture chuyển đổi giao diện, âm thanh, mô hình 3D và đồ họa Minecraft.</p>
+          </div>
+          <div class="header-actions discover-filter-actions">
+            <label class="searchbox compact discover-searchbox">
+              <span class="glyph" aria-hidden="true">&#xE721;</span>
+              <input id="resourcepacksSearch" type="search" placeholder="Tìm resource pack, độ phân giải... (Ctrl+F)" autocomplete="off" />
+            </label>
+            <select class="select" id="resourcepacksVersion" aria-label="Lọc theo phiên bản MC">
+              <option value="all">Tất cả phiên bản</option>
+              <option value="1.21.1">MC 1.21.1</option>
+              <option value="1.21">MC 1.21</option>
+              <option value="1.20.1">MC 1.20.1</option>
+              <option value="1.19.4">MC 1.19.4</option>
+            </select>
+            <select class="select" id="resourcepacksSort" aria-label="Sắp xếp kết quả">
+              <option value="downloads">Tải nhiều nhất</option>
+              <option value="newest">Mới nhất</option>
+              <option value="relevance">Phổ biến</option>
+            </select>
+          </div>
+        </div>
+        <div class="card-grid discover-grid" id="resourcepacksGrid"></div>
+        <div class="empty-state" id="resourcepacksEmpty" hidden>
+          <div class="empty-icon glyph">&#xEB9F;</div>
+          <strong>Không tìm thấy resource pack</strong>
+          <span>Thử từ khóa khác hoặc đổi bộ lọc phiên bản.</span>
+        </div>
+        <div class="status-area"><div class="caption" id="resourcepacksStatus"></div></div>
+      </section>
+
+      <!-- ============ Shaders page ============ -->
+      <section class="page" id="page-shaders" hidden>
+        <div class="page-header">
+          <div class="header-stack">
+            <div class="header-title-row">
+              <h1 class="page-title">Shaders</h1>
+              <span class="count-pill" id="shadersCount">0</span>
+            </div>
+            <p class="caption text-2">Shader pack tuyển chọn từ Modrinth — tối ưu cho Iris &amp; OptiFine, cài thẳng vào instance.</p>
+          </div>
+          <div class="header-actions">
+            <div class="target-instance-box" title="Cài shader vào instance này">
+              <span class="caption text-3">Đích:</span>
+              <select class="select compact" id="shaderTargetInstance" aria-label="Instance đích cài shader"></select>
+            </div>
+            <label class="searchbox compact">
+              <span class="glyph" aria-hidden="true">&#xE721;</span>
+              <input id="shaderSearch" type="search" placeholder="Tìm shader, tác giả, phong cách... (Ctrl+F)" autocomplete="off" />
+            </label>
+            <select class="select" id="shaderStyle" aria-label="Lọc theo phong cách shader">
+              <option value="all">Tất cả phong cách</option>
+              <option value="balanced">Cân bằng</option>
+              <option value="realistic">Chân thực</option>
+              <option value="fantasy">Fantasy</option>
+              <option value="performance">Hiệu năng</option>
+            </select>
+          </div>
+        </div>
+        <div class="card-grid shader-grid" id="shaderGrid"></div>
+        <div class="empty-state" id="shaderEmpty" hidden>
+          <div class="empty-icon glyph">&#xE706;</div>
+          <strong>Không tìm thấy shader</strong>
+          <span>Thử từ khóa khác hoặc đổi bộ lọc phong cách.</span>
+        </div>
+        <div class="status-area"><div class="caption" id="shaderStatus"></div></div>
+      </section>
+
+      <!-- ============ Data Packs page ============ -->
+      <section class="page" id="page-datapacks" hidden>
+        <div class="page-header">
+          <div class="header-stack">
+            <div class="header-title-row">
+              <h1 class="page-title">Data Packs</h1>
+              <span class="count-pill" id="datapacksCount">0</span>
+            </div>
+            <p class="caption text-2">Gói dữ liệu tùy biến cơ chế game, biome mới, công thức chế tạo &amp; cấu trúc thế giới.</p>
+          </div>
+          <div class="header-actions discover-filter-actions">
+            <label class="searchbox compact discover-searchbox">
+              <span class="glyph" aria-hidden="true">&#xE721;</span>
+              <input id="datapacksSearch" type="search" placeholder="Tìm data pack, biome, tính năng... (Ctrl+F)" autocomplete="off" />
+            </label>
+            <select class="select" id="datapacksVersion" aria-label="Lọc theo phiên bản MC">
+              <option value="all">Tất cả phiên bản</option>
+              <option value="1.21.1">MC 1.21.1</option>
+              <option value="1.21">MC 1.21</option>
+              <option value="1.20.1">MC 1.20.1</option>
+            </select>
+            <select class="select" id="datapacksSort" aria-label="Sắp xếp kết quả">
+              <option value="downloads">Tải nhiều nhất</option>
+              <option value="newest">Mới nhất</option>
+              <option value="relevance">Phổ biến</option>
+            </select>
+          </div>
+        </div>
+        <div class="card-grid discover-grid" id="datapacksGrid"></div>
+        <div class="empty-state" id="datapacksEmpty" hidden>
+          <div class="empty-icon glyph">&#xEA69;</div>
+          <strong>Không tìm thấy data pack</strong>
+          <span>Thử từ khóa khác hoặc điều chỉnh lại bộ lọc phiên bản.</span>
+        </div>
+        <div class="status-area"><div class="caption" id="datapacksStatus"></div></div>
+      </section>
+
+      <!-- ============ Modpacks page ============ -->
+      <section class="page" id="page-modpacks" hidden>
+        <div class="page-header">
+          <div class="header-stack">
+            <div class="header-title-row">
+              <h1 class="page-title">Modpacks</h1>
+              <span class="count-pill" id="modpacksCount">0</span>
+            </div>
+            <p class="caption text-2">Bộ sưu tập modpack được cấu hình và tối ưu sẵn — cài đặt 1-click tạo instance chơi ngay.</p>
+          </div>
+          <div class="header-actions discover-filter-actions">
+            <button class="btn" id="importMrpackBtn"><span class="glyph">&#xE8B5;</span><span>Nhập .mrpack</span></button>
+            <input type="file" id="modpackFileInput" accept=".mrpack,.zip" hidden />
+            <label class="searchbox compact discover-searchbox">
+              <span class="glyph" aria-hidden="true">&#xE721;</span>
+              <input id="modpacksSearch" type="search" placeholder="Tìm modpack, chủ đề, phong cách... (Ctrl+F)" autocomplete="off" />
+            </label>
+            <select class="select" id="modpacksLoader" aria-label="Lọc theo loader">
+              <option value="all">Tất cả loader</option>
+              <option value="fabric">Fabric</option>
+              <option value="neoforge">NeoForge</option>
+            </select>
+            <select class="select" id="modpacksVersion" aria-label="Lọc theo phiên bản MC">
+              <option value="all">Tất cả phiên bản</option>
+              <option value="1.21.1">MC 1.21.1</option>
+              <option value="1.20.1">MC 1.20.1</option>
+            </select>
+            <select class="select" id="modpacksSort" aria-label="Sắp xếp kết quả">
+              <option value="downloads">Tải nhiều nhất</option>
+              <option value="newest">Mới nhất</option>
+              <option value="name">Tên (A-Z)</option>
+              <option value="relevance">Phổ biến</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modpack-toolbar-row">
+          <div class="modpack-category-chips" id="modpackCategoryChips" role="tablist" aria-label="Lọc thể loại modpack">
+            <button type="button" class="chip is-active" data-modpack-category="all" role="tab" aria-selected="true">Tất cả</button>
+            <button type="button" class="chip" data-modpack-category="optimization" role="tab" aria-selected="false">Tối ưu / FPS</button>
+            <button type="button" class="chip" data-modpack-category="tech" role="tab" aria-selected="false">Kỹ thuật / Tech</button>
+            <button type="button" class="chip" data-modpack-category="adventure" role="tab" aria-selected="false">Phiêu lưu / RPG</button>
+            <button type="button" class="chip" data-modpack-category="magic" role="tab" aria-selected="false">Phép thuật / Magic</button>
+          </div>
+        </div>
+
+        <div class="modpack-drop-zone" id="modpackDropZone" hidden>
+          <span class="glyph">&#xE8B5;</span>
+          <strong>Thả file modpack (.mrpack / .zip) vào đây</strong>
+          <span class="caption text-2">Hệ thống sẽ tự động phân tích manifest và tạo instance mới</span>
+        </div>
+
+        <div class="card-grid discover-grid" id="modpacksGrid"></div>
+        <div class="empty-state" id="modpacksEmpty" hidden>
+          <div class="empty-icon glyph">&#xE8B5;</div>
+          <strong>Không tìm thấy modpack</strong>
+          <span>Thử từ khóa khác hoặc điều chỉnh lại bộ lọc loader / phiên bản.</span>
+        </div>
+        <div class="status-area"><div class="caption" id="modpacksStatus"></div></div>
+      </section>
+
+      <!-- ============ Skins page ============ -->
+      <section class="page" id="page-skins" hidden>
+        <div class="page-header">
+          <div class="header-stack">
+            <div class="header-title-row">
+              <h1 class="page-title">Skins</h1>
+              <span class="count-pill" id="skinsCount">6</span>
+            </div>
+            <p class="caption text-2">Chọn ngoại hình cho tài khoản. Skin sẽ được áp dụng khi vào game.</p>
+          </div>
+          <div class="header-actions">
+            <select class="select skin-account-select" id="skinAccountSelect" aria-label="Chọn tài khoản để đổi skin"></select>
+            <button class="btn" id="randomSkinBtn"><span class="glyph">&#xE895;</span><span>Ngẫu nhiên</span></button>
+          </div>
+        </div>
+
+        <div class="skins-layout">
+          <section class="skin-preview-panel">
+            <div class="skin-stage" id="skinStage">
+              <div class="skin-glow" aria-hidden="true"></div>
+              <span class="skin-applied-badge" id="skinAppliedBadge" hidden>Đang dùng</span>
+              <div class="skin-drop-zone" id="skinDropZone" hidden>
+                <span class="glyph">&#xE898;</span>
+                <strong>Thả file skin .PNG vào đây</strong>
+                <span class="caption text-2">Hỗ trợ 64x64 hoặc 64x32 pixel</span>
+              </div>
+              <div class="skin-stage-controls" role="toolbar" aria-label="Điều khiển mô hình 3D">
+                <div class="skin-anim-group" id="skinAnimGroup">
+                  <button type="button" class="stage-btn is-active" data-skin-anim="walk" title="Đi bộ (Walk)">Đi bộ</button>
+                  <button type="button" class="stage-btn" data-skin-anim="fly" title="Bay với Elytra (Fly)">Bay</button>
+                  <button type="button" class="stage-btn" data-skin-anim="sneak" title="Ngồi thụp rình rập (Sneak)">Rình rập</button>
+                  <button type="button" class="stage-btn" data-skin-anim="wave" title="Vẫy tay chào (Wave)">Vẫy tay</button>
+                  <button type="button" class="stage-btn" data-skin-anim="bow" title="Giương cung nhắm (Bow aim)">Giương cung</button>
+                </div>
+                <div class="skin-stage-actions">
+                  <button type="button" class="stage-btn is-active" id="skinAutoRotateBtn" title="Bật/Tắt tự động xoay"><span class="glyph">&#xE777;</span></button>
+                </div>
+              </div>
+              <div class="skin-viewer-shell">
+                <div class="skin-viewer-loader" id="skinViewerLoader" role="status">
+                  <span class="skin-spinner" aria-hidden="true"></span>
+                  <span>Đang tải skin 3D…</span>
+                </div>
+                <canvas id="skinViewer" class="skin-canvas" role="img" aria-label="Mô hình 3D của skin đang chọn"></canvas>
+                <div class="skin-viewer-error" id="skinViewerError" hidden>
+                  <span class="glyph">&#xE783;</span>
+                  <span>Không thể khởi tạo mô hình 3D.</span>
+                </div>
+              </div>
+              <div class="skin-viewer-hint" aria-hidden="true"><span class="glyph">&#xE7C2;</span> Kéo để xoay · Lăn chuột để zoom · Thả file PNG để nhập</div>
+              <div class="skin-stage-caption">
+                <span class="skin-eyebrow" id="skinPreviewEyebrow">Skin cho Steve</span>
+                <span class="skin-name-row">
+                  <strong id="skinPreviewName">Steve</strong>
+                  <button type="button" class="btn compact skin-model-toggle-btn" id="skinModelToggleBtn" title="Chuyển đổi Slim (Alex 3px) ↔ Classic (Steve 4px)">
+                    <span class="glyph">&#xE790;</span>
+                    <span id="skinPreviewModel">Classic</span>
+                  </button>
+                </span>
+              </div>
+            </div>
+            <div class="skin-preview-actions">
+              <button class="btn accent" id="applySkinBtn">Áp dụng skin</button>
+              <button class="btn" id="resetSkinBtn">Mặc định</button>
+            </div>
+            <div class="skin-cape-box" id="skinCapeBox">
+              <div class="skin-cape-header">
+                <div class="skin-cape-header-title">
+                  <span class="caption text-2">Áo choàng (Cape)</span>
+                  <span class="chip compact" id="skinCapeBadge">Không dùng</span>
+                </div>
+                <div class="skin-cape-header-actions">
+                  <input type="file" id="capeFileInput" accept="image/png" hidden />
+                  <button type="button" class="btn compact" id="capeUploadBtn" title="Tải lên áo choàng từ file PNG">
+                    <span class="glyph">&#xE898;</span>
+                    <span>Tải cape</span>
+                  </button>
+                </div>
+              </div>
+              <div class="skin-cape-list" id="skinCapeList"></div>
+            </div>
+            <div class="skin-current">
+              <span class="caption text-3">Skin đang dùng</span>
+              <strong id="skinCurrentName">Steve</strong>
+              <span class="caption text-3" id="skinCurrentAccount">Steve · Offline · Active</span>
+            </div>
+          </section>
+
+          <section class="skin-picker-panel">
+            <div class="skin-picker-head">
+              <div>
+                <h2>Bộ sưu tập skin</h2>
+                <p class="caption text-2">Mẫu có sẵn, skin tự tạo hoặc tải từ cộng đồng.</p>
+              </div>
+            </div>
+            <div class="skin-tools-bar">
+              <div class="skin-grab-row">
+                <label class="searchbox compact skin-grab-input-wrap">
+                  <span class="glyph" aria-hidden="true">&#xE77B;</span>
+                  <input type="text" id="skinGrabInput" placeholder="Nhập username Minecraft (vd: Technoblade, Dream)..." autocomplete="off" />
+                </label>
+                <button class="btn compact" id="skinGrabBtn">Tải skin</button>
+              </div>
+              <div class="skin-upload-row">
+                <input type="file" id="skinFileInput" accept="image/png" hidden />
+                <button class="btn compact" id="skinUploadBtn"><span class="glyph">&#xE898;</span><span>Nhập file PNG</span></button>
+              </div>
+            </div>
+            <div class="skin-grid" id="skinGrid"></div>
+            <p class="skin-picker-note">Demo lưu skin cục bộ trong trình duyệt. Skin và áo choàng tự động liên kết với tài khoản đang chọn.</p>
+          </section>
+        </div>
+        <div class="status-area"><div class="caption" id="skinStatus" aria-live="polite"></div></div>
+      </section>
+
+      <!-- ============ Cosmetics & Capes Store page ============ -->
+      <section class="page" id="page-shop" hidden>
+        <div class="page-header">
+          <div class="header-stack">
+            <div class="header-title-row">
+              <h1 class="page-title">Cửa hàng</h1>
+              <span class="count-pill" id="shopCount">12</span>
+            </div>
+            <p class="caption text-2">Khám phá Áo choàng độc quyền, Cánh Elytra, Mũ 3D và Hiệu ứng đặc biệt.</p>
+          </div>
+          <div class="header-actions">
+            <div class="shop-coin-pill" id="shopCoinPill" title="Số dư Vaz Coins hiện tại">
+              <span class="glyph">&#xE7C1;</span>
+              <strong id="shopCoinBalance">650</strong>
+              <span class="coin-unit">Coins</span>
+            </div>
+            <button class="btn accent compact" id="claimDailyCoinBtn">
+              <span class="glyph">&#xE735;</span>
+              <span>Điểm danh +100</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="shop-toolbar">
+          <div class="searchbox shop-searchbox">
+            <span class="glyph">&#xE721;</span>
+            <input type="text" id="shopSearch" placeholder="Tìm kiếm trang phục, áo choàng, cánh..." autocomplete="off" />
+          </div>
+          <div class="shop-category-chips" id="shopCategoryChips">
+            <button type="button" class="chip is-active" data-shop-cat="all">Tất cả</button>
+            <button type="button" class="chip" data-shop-cat="capes">Áo choàng</button>
+            <button type="button" class="chip" data-shop-cat="wings">Cánh Elytra</button>
+            <button type="button" class="chip" data-shop-cat="hats">Mũ 3D</button>
+            <button type="button" class="chip" data-shop-cat="effects">Hiệu ứng</button>
+            <button type="button" class="chip" data-shop-cat="bundles">Gói Combo</button>
+          </div>
+          <div class="shop-sort-wrap">
+            <select class="select" id="shopSortSelect" aria-label="Sắp xếp vật phẩm">
+              <option value="featured">Nổi bật nhất</option>
+              <option value="price-asc">Giá: Thấp đến cao</option>
+              <option value="price-desc">Giá: Cao đến thấp</option>
+              <option value="rarity">Độ hiếm</option>
+              <option value="name">Tên A-Z</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="shop-grid" id="shopGrid"></div>
+
+        <div class="empty-state shop-empty-state" id="shopEmptyState" hidden>
+          <span class="empty-icon glyph">&#xE721;</span>
+          <p class="empty-title">Không tìm thấy vật phẩm phù hợp</p>
+          <span class="caption text-2">Thử tìm bằng từ khóa khác hoặc chuyển sang danh mục khác.</span>
+        </div>
+
+        <div class="status-area"><div class="caption" id="shopStatus" aria-live="polite"></div></div>
+      </section>
+
+      <!-- ============ Global settings page ============ -->
+      <section class="page" id="page-settings" hidden>
+        <div class="page-header">
+          <div class="header-stack">
+            <h1 class="page-title">Cài đặt</h1>
+            <p class="caption text-2">Cấu hình toàn diện launcher, môi trường Java, giao diện và hiệu năng.</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn accent" id="saveGlobalSettingsBtn">Lưu cài đặt</button>
+            <button class="btn" id="resetGlobalSettingsBtn">Mặc định</button>
+          </div>
+        </div>
+
+        <div class="settings-toolbar-row">
+          <div class="settings-category-chips" id="settingsCategoryChips" role="tablist" aria-label="Lọc nhóm cài đặt">
+            <button type="button" class="chip is-active" data-settings-group="all" role="tab" aria-selected="true">Tất cả</button>
+            <button type="button" class="chip" data-settings-group="launcher" role="tab" aria-selected="false">Chung</button>
+            <button type="button" class="chip" data-settings-group="java" role="tab" aria-selected="false">Java &amp; RAM</button>
+            <button type="button" class="chip" data-settings-group="appearance" role="tab" aria-selected="false">Giao diện</button>
+            <button type="button" class="chip" data-settings-group="network" role="tab" aria-selected="false">Mạng &amp; Tải</button>
+            <button type="button" class="chip" data-settings-group="discord" role="tab" aria-selected="false">Discord</button>
+            <button type="button" class="chip" data-settings-group="storage" role="tab" aria-selected="false">Lưu trữ</button>
+            <button type="button" class="chip" data-settings-group="about" role="tab" aria-selected="false">Thông tin</button>
+          </div>
+        </div>
+
+        <div class="settings-layout">
+          <!-- Nhóm 1: Launcher & Hệ thống -->
+          <section class="settings-card" data-settings-group="launcher">
+            <div class="settings-card-head">
+              <span class="settings-icon glyph">&#xE770;</span>
+              <div><h2>Khởi chạy &amp; Hệ thống</h2><p>Hành vi ứng dụng khi chạy game và tắt cửa sổ.</p></div>
+            </div>
+            <label class="setting-field">
+              <span>Ngôn ngữ hiển thị</span>
+              <select class="select" id="settingLanguage" aria-label="Ngôn ngữ launcher">
+                <option value="vi">Tiếng Việt (Việt Nam)</option>
+                <option value="en">English (US)</option>
+              </select>
+            </label>
+            <label class="setting-field">
+              <span>Khi Minecraft khởi chạy</span>
+              <select class="select" id="settingLaunchAction" aria-label="Hành động khi chạy game">
+                <option value="hide">Ẩn launcher (Khuyên dùng)</option>
+                <option value="minimize">Thu nhỏ xuống taskbar</option>
+                <option value="keep">Giữ nguyên cửa sổ launcher</option>
+                <option value="close">Đóng hoàn toàn launcher</option>
+              </select>
+            </label>
+            <label class="setting-toggle">
+              <input type="checkbox" id="settingCloseToTray" checked />
+              <span>Thu nhỏ vào khay hệ thống (System Tray) khi bấm nút đóng [X]</span>
+            </label>
+            <label class="setting-toggle">
+              <input type="checkbox" id="settingAutoCheckUpdates" checked />
+              <span>Tự động kiểm tra bản cập nhật V.A.Z khi mở ứng dụng</span>
+            </label>
+          </section>
+
+          <!-- Nhóm 2: Java & Minecraft -->
+          <section class="settings-card" data-settings-group="java">
+            <div class="settings-card-head">
+              <span class="settings-icon glyph">&#xE950;</span>
+              <div><h2>Java &amp; Bộ nhớ RAM</h2><p>Áp dụng mặc định cho instance mới và tinh chỉnh JVM.</p></div>
+            </div>
+            <label class="setting-field">
+              <span>Đường dẫn Java Runtime</span>
+              <div class="setting-inline">
+                <input class="textbox" id="globalJavaPath" placeholder="Tự động phát hiện" autocomplete="off" />
+                <button type="button" class="btn" id="detectJavaBtn" title="Dò tìm các bản Java cài sẵn trên máy"><span class="glyph">&#xE721;</span><span>Dò Java</span></button>
+              </div>
+            </label>
+            <label class="setting-field">
+              <span>RAM tối thiểu (Xms)</span>
+              <div class="setting-inline">
+                <input type="range" id="settingMinRam" min="1024" max="8192" step="512" value="1024" />
+                <input class="textbox narrow" type="number" id="settingMinRamValue" min="1024" max="8192" step="512" value="1024" />
+                <span class="text-2">MB</span>
+              </div>
+            </label>
+            <label class="setting-field">
+              <span>RAM tối đa mặc định (Xmx)</span>
+              <div class="setting-inline">
+                <input type="range" id="globalRam" min="1024" max="16384" step="512" />
+                <input class="textbox narrow" type="number" id="globalRamValue" min="1024" max="16384" step="512" />
+                <span class="text-2">MB</span>
+              </div>
+            </label>
+            <label class="setting-field">
+              <span>Preset cờ tối ưu JVM</span>
+              <select class="select" id="settingJvmPreset" aria-label="Preset JVM Flags">
+                <option value="standard">Tiêu chuẩn (G1GC mặc định)</option>
+                <option value="aikar">Aikar's Flags (Tối ưu server &amp; client mượt nhất)</option>
+                <option value="zgc">ZGC Low Latency (Java 21+ loại bỏ khựng lag)</option>
+                <option value="custom">Tùy chỉnh thủ công</option>
+              </select>
+            </label>
+            <label class="setting-field">
+              <span>Cờ JVM bổ sung (Arguments)</span>
+              <input class="textbox code-font" id="settingJvmArgs" placeholder="-XX:+UseG1GC -XX:+UnlockExperimentalVMOptions" autocomplete="off" />
+            </label>
+            <div class="setting-grid-2">
+              <label class="setting-field">
+                <span>Chiều rộng cửa sổ</span>
+                <input class="textbox" type="number" id="settingWindowWidth" min="640" max="3840" value="1280" />
+              </label>
+              <label class="setting-field">
+                <span>Chiều cao cửa sổ</span>
+                <input class="textbox" type="number" id="settingWindowHeight" min="480" max="2160" value="720" />
+              </label>
+            </div>
+            <label class="setting-toggle">
+              <input type="checkbox" id="settingStartFullscreen" />
+              <span>Khởi động game ở chế độ toàn màn hình (Fullscreen)</span>
+            </label>
+          </section>
+
+          <!-- Nhóm 3: Giao diện & Trải nghiệm -->
+          <section class="settings-card" data-settings-group="appearance">
+            <div class="settings-card-head">
+              <span class="settings-icon glyph">&#xE790;</span>
+              <div><h2>Giao diện &amp; Trải nghiệm</h2><p>Chủ đề màu, hiệu ứng chuyển động và âm thanh xúc giác.</p></div>
+            </div>
+            <label class="setting-field">
+              <span>Giao diện chính (Theme)</span>
+              <select class="select" id="globalTheme">
+                <option value="dark">Tối hiện đại (Dark)</option>
+                <option value="light">Sáng thanh lịch (Light)</option>
+                <option value="obsidian">Huyền bí Obsidian 2026</option>
+              </select>
+            </label>
+            <div class="setting-field">
+              <span>Màu sắc chủ đạo (Accent Color)</span>
+              <div class="accent-palette-picker" id="settingsAccentPicker" role="radiogroup" aria-label="Màu sắc chủ đạo">
+                <button type="button" class="accent-swatch is-active" data-accent="emerald" title="Emerald (Xanh lục ngọc)" style="--swatch-color: #10b981;"></button>
+                <button type="button" class="accent-swatch" data-accent="cyan" title="Cyan (Xanh lơ biển)" style="--swatch-color: #06b6d4;"></button>
+                <button type="button" class="accent-swatch" data-accent="violet" title="Violet (Tím huyền ảo)" style="--swatch-color: #8b5cf6;"></button>
+                <button type="button" class="accent-swatch" data-accent="amber" title="Amber (Vàng hổ phách)" style="--swatch-color: #f59e0b;"></button>
+                <button type="button" class="accent-swatch" data-accent="rose" title="Rose (Hồng thạch anh)" style="--swatch-color: #f43f5e;"></button>
+              </div>
+              <input type="hidden" id="settingAccentColor" value="emerald" />
+            </div>
+            <label class="setting-toggle">
+              <input type="checkbox" id="globalReduceMotion" />
+              <span>Giảm chuyển động (Tắt hoạt ảnh trượt &amp; lò xo theo accessibility)</span>
+            </label>
+            <label class="setting-toggle">
+              <input type="checkbox" id="settingUiSound" checked />
+              <span>Phát âm thanh click xúc giác Minecraft khi tương tác</span>
+            </label>
+          </section>
+
+          <!-- Nhóm 4: Mạng & Tải xuống -->
+          <section class="settings-card" data-settings-group="network">
+            <div class="settings-card-head">
+              <span class="settings-icon glyph">&#xE896;</span>
+              <div><h2>Mạng &amp; Tải xuống</h2><p>Tốc độ tải modpack, texture pack và máy chủ CDN.</p></div>
+            </div>
+            <label class="setting-field">
+              <span>Số luồng tải đồng thời</span>
+              <select class="select" id="settingDownloadThreads" aria-label="Số luồng tải">
+                <option value="2">2 luồng (Mạng chậm hoặc không ổn định)</option>
+                <option value="4">4 luồng (Mặc định)</option>
+                <option value="8">8 luồng (Mạng cáp quang nhanh)</option>
+                <option value="16">16 luồng (Tải cực nhanh / Gigabit)</option>
+              </select>
+            </label>
+            <label class="setting-field">
+              <span>Máy chủ CDN tải modpack &amp; asset</span>
+              <select class="select" id="settingDownloadMirror" aria-label="Máy chủ CDN">
+                <option value="cloudflare">Cloudflare Global Edge (Nhanh nhất tại VN)</option>
+                <option value="modrinth">Modrinth Direct API</option>
+                <option value="curseforge">CurseForge CDN Edge</option>
+                <option value="fastly">Fastly Anycast</option>
+              </select>
+            </label>
+            <label class="setting-field">
+              <span>Giới hạn băng thông tải xuống</span>
+              <select class="select" id="settingBandwidthLimit" aria-label="Giới hạn băng thông">
+                <option value="unlimited">Không giới hạn (Tối đa tốc độ)</option>
+                <option value="25mb">25 MB/s (~200 Mbps)</option>
+                <option value="10mb">10 MB/s (~80 Mbps)</option>
+                <option value="5mb">5 MB/s (~40 Mbps)</option>
+              </select>
+            </label>
+          </section>
+
+          <!-- Nhóm 5: Discord & Riêng tư -->
+          <section class="settings-card discord-rpc-settings-card" data-settings-group="discord">
+            <div class="settings-card-head">
+              <span class="settings-icon glyph">&#xE717;</span>
+              <div><h2>Discord &amp; Riêng tư</h2><p>Mô phỏng trạng thái hoạt động trên Discord khi chơi game.</p></div>
+            </div>
+            <div class="discord-rpc-controls">
+              <label class="setting-toggle">
+                <input type="checkbox" id="discordRpcToggle" checked />
+                <span>Kích hoạt Discord Rich Presence</span>
+              </label>
+              <label class="setting-field">
+                <span>Trạng thái tùy biến in-game</span>
+                <input class="textbox" id="discordStatusInput" placeholder="VD: Đang đào kim cương ở Y=-58..." value="Đang sinh tồn ở thế giới mới" autocomplete="off" />
+              </label>
+              <label class="setting-toggle">
+                <input type="checkbox" id="settingDiscordShowInstance" checked />
+                <span>Hiển thị tên instance và phiên bản Minecraft trên Discord</span>
+              </label>
+              <label class="setting-toggle">
+                <input type="checkbox" id="settingTelemetry" />
+                <span>Gửi nhật ký crash ẩn danh giúp cải thiện V.A.Z</span>
+              </label>
+            </div>
+            <div class="discord-preview-section">
+              <div class="discord-preview-heading">XEM TRƯỚC TRÊN DISCORD</div>
+              <div class="discord-profile-card" id="discordProfileCard">
+                <div class="discord-status-header" id="discordStatusHeader">ĐANG CHƠI MỘT TRÒ CHƠI</div>
+                <div class="discord-game-row">
+                  <div class="discord-asset-container">
+                    <img class="discord-large-art" id="discordLargeArt" src="assets/blocks/grass_block.png" alt="Minecraft" />
+                    <img class="discord-small-art" id="discordSmallArt" src="assets/skins/steve.png" alt="Avatar" />
+                  </div>
+                  <div class="discord-game-details">
+                    <div class="discord-game-title">Minecraft</div>
+                    <div class="discord-subline discord-instance-text" id="discordInstanceText">Aurora SMP · Fabric 1.21.1</div>
+                    <div class="discord-subline discord-custom-text" id="discordCustomText">Đang sinh tồn ở thế giới mới</div>
+                    <div class="discord-subline discord-timer-text" id="discordTimerText">00:42 elapsed</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Nhóm 6: Lưu trữ & Dữ liệu -->
+          <section class="settings-card" data-settings-group="storage">
+            <div class="settings-card-head">
+              <span class="settings-icon glyph">&#xE8B7;</span>
+              <div><h2>Lưu trữ &amp; Dữ liệu</h2><p>Vị trí lưu instance, sao lưu thế giới và bộ nhớ tạm.</p></div>
+            </div>
+            <label class="setting-field">
+              <span>Thư mục dữ liệu launcher</span>
+              <div class="setting-inline">
+                <input class="textbox" id="globalDataPath" readonly />
+                <button type="button" class="btn" id="openDataFolderBtn"><span class="glyph">&#xE8B7;</span><span>Mở</span></button>
+              </div>
+            </label>
+            <label class="setting-field">
+              <span>Thư mục sao lưu thế giới</span>
+              <div class="setting-inline">
+                <input class="textbox" id="settingBackupPath" readonly value="%APPDATA%/.vaz/backups" />
+                <button type="button" class="btn" id="openBackupFolderBtn"><span class="glyph">&#xE8B7;</span><span>Mở</span></button>
+              </div>
+            </label>
+            <div class="storage-cache-row">
+              <div class="storage-cache-info">
+                <span>Dung lượng bộ nhớ tạm (Cache):</span>
+                <strong id="settingCacheSizeLabel">148.5 MB</strong>
+              </div>
+              <button type="button" class="btn danger left" id="clearCacheBtn">
+                <span class="glyph">&#xE74D;</span><span>Xóa cache tải xuống</span>
+              </button>
+            </div>
+          </section>
+
+          <!-- Nhóm 7: Thông tin & Chẩn đoán -->
+          <section class="settings-card" data-settings-group="about">
+            <div class="settings-card-head">
+              <span class="settings-icon glyph">&#xE946;</span>
+              <div><h2>Thông tin &amp; Chẩn đoán</h2><p>Phiên bản, thông số phần cứng và xuất báo cáo lỗi.</p></div>
+            </div>
+            <div class="about-version-box">
+              <div class="about-vaz-brand">
+                <span class="logo-mark">V</span>
+                <div>
+                  <strong class="about-title">V.A.Z Minecraft Client</strong>
+                  <span class="caption text-2" id="aboutVersionBadge">Phiên bản 2.4.0 (Build 2026.10-release)</span>
+                </div>
+              </div>
+              <button type="button" class="btn compact" id="checkForUpdatesBtn">
+                <span class="glyph">&#xE72C;</span><span>Kiểm tra cập nhật</span>
+              </button>
+            </div>
+            <div class="system-specs-card" id="aboutSystemSpecs">
+              <div class="spec-item"><span class="caption text-2">Hệ điều hành:</span><strong id="specOs">Windows 11 x64 (Build 26100)</strong></div>
+              <div class="spec-item"><span class="caption text-2">Vi xử lý (CPU):</span><strong id="specCpu">Intel(R) Core(TM) i7-13700H (14C 20T)</strong></div>
+              <div class="spec-item"><span class="caption text-2">Đồ họa (GPU):</span><strong id="specGpu">NVIDIA GeForce RTX 4060 Laptop (8GB VRAM)</strong></div>
+              <div class="spec-item"><span class="caption text-2">Bộ nhớ (RAM):</span><strong id="specRam">16.0 GB DDR5 (Khả dụng: 11.2 GB)</strong></div>
+              <div class="spec-item"><span class="caption text-2">Java phát hiện:</span><strong id="specJava">Java 21.0.4 LTS (Eclipse Temurin)</strong></div>
+            </div>
+            <div class="about-actions-row">
+              <button type="button" class="btn" id="exportDiagnosticBtn">
+                <span class="glyph">&#xE896;</span><span>Xuất báo cáo chẩn đoán (.json)</span>
+              </button>
+            </div>
+          </section>
+        </div>
+        <div class="status-area"><div class="caption" id="globalSettingsStatus"></div></div>
+      </section>
+
     </main>
   </div>
+
+  <!-- ============ Minecraft Bottom Play Dock ============ -->
+  <footer class="mc-play-bar" id="mcPlayBar" role="region" aria-label="Thanh khởi chạy Minecraft">
+    <div class="mc-play-bar-left mc-dock-left">
+      <div class="mc-instance-selector-card" id="mcInstanceSelectorCard">
+        <div class="mc-instance-icon-wrap" id="mcInstanceIconWrap">
+          <img class="mc-block-icon" src="assets/blocks/grass_block.png" width="32" height="32" alt="Grass Block" />
+        </div>
+        <div class="mc-instance-info">
+          <div class="mc-instance-select-wrap">
+            <span class="mc-instance-name" id="mcInstanceName">Đang tải...</span>
+            <span class="mc-instance-chevron glyph" aria-hidden="true">&#xE70D;</span>
+            <select class="mc-instance-select mc-instance-native-select" id="globalActiveInstance" title="Chọn phiên bản / instance Minecraft"></select>
+          </div>
+          <span class="mc-instance-sub" id="mcInstanceSub">1.21.1 · Fabric</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="mc-play-bar-center mc-dock-center">
+      <button class="mc-play-btn" id="globalPlayBtn" title="Khởi chạy Minecraft (Ctrl+P)">
+        <span class="mc-play-main">
+          <span class="glyph mc-play-glyph" id="globalPlayIcon">&#xE768;</span>
+          <span class="mc-play-text" id="globalPlayText">CHƠI</span>
+        </span>
+        <span class="mc-play-sub" id="mcPlaySubText">Sẵn sàng</span>
+        <span class="mc-play-progress" id="mcPlayProgress" aria-hidden="true"></span>
+      </button>
+    </div>
+
+    <div class="mc-play-bar-right mc-dock-right">
+      <button class="mc-account-badge" id="userBtn" type="button" title="Đổi tài khoản / skin">
+        <span class="mc-account-avatar">
+          <span class="mc-account-face" id="mcAccountFace" aria-hidden="true"></span>
+        </span>
+        <span class="mc-account-details">
+          <strong class="mc-account-name" id="mcAccountName">Player</strong>
+          <span class="mc-account-status">Microsoft · Sẵn sàng</span>
+        </span>
+      </button>
+      <button class="mc-dev-btn" id="mcDevToolsBtn" type="button" title="Công cụ kiểm thử & giao diện" aria-expanded="false">
+        <span class="glyph">&#xE713;</span>
+      </button>
+    </div>
+  </footer>
 </div>
 
 <!-- Command palette (Ctrl+K) -->
@@ -327,9 +1749,435 @@
     <div class="tasks-empty" id="tasksEmpty" hidden>
       <span class="glyph">&#xE823;</span>
       <p>Chưa có hoạt động nào.</p>
-      <span class="caption text-3">Launch, cài mod, backup... sẽ hiện ở đây.</span>
+      <span class="caption text-3">Launch, cài mod, sao lưu... sẽ hiện ở đây.</span>
     </div>
   </aside>
+</div>
+
+<!-- Dev & Diagnostic Popover (preserves automated test suite triggers) -->
+<div class="mc-dev-popover" id="mcDevPopover" hidden>
+  <div class="mc-dev-header">
+    <strong>Công cụ nhà phát triển</strong>
+    <button class="btn icon-only small" id="mcDevCloseBtn" title="Đóng">&#xE711;</button>
+  </div>
+  <div class="mc-dev-actions">
+    <div class="mc-dev-field">
+      <label class="field-label" for="crashScenarioSelect">Kịch bản crash</label>
+      <select class="select compact" id="crashScenarioSelect" aria-label="Chọn kịch bản crash">
+        <option value="oom">OOM (Java heap space)</option>
+        <option value="java">Sai Java (Java 8 vs 1.21.1)</option>
+        <option value="dependency">Thiếu Dependency (Fabric API)</option>
+        <option value="mixin">Xung đột Mixin (MixinError)</option>
+      </select>
+    </div>
+    <button class="demo-btn danger" id="simulateCrashBtn" title="Giả lập game crash ở instance">Simulate crash</button>
+    <button class="demo-btn" id="soundToggleBtn" title="Bật/tắt hiệu ứng âm thanh Minecraft">Âm thanh: Bật</button>
+    <button class="demo-btn" id="themeToggle">Dark</button>
+    <button class="demo-btn" id="resetDemo">Reset</button>
+  </div>
+</div>
+
+<!-- Lightbox host for screenshots -->
+<div class="lightbox-host" id="lightboxHost" hidden>
+  <div class="lightbox-scrim" id="lightboxScrim"></div>
+  <div class="lightbox-card" role="dialog" aria-modal="true" aria-label="Xem ảnh toàn màn hình">
+    <button class="btn icon-only lightbox-close" id="lightboxCloseBtn" title="Đóng (Esc)" aria-label="Đóng">
+      <span class="glyph">&#xE711;</span>
+    </button>
+    <div class="lightbox-media">
+      <button class="btn icon-only lightbox-nav-btn lightbox-prev-btn" id="lightboxPrevBtn" aria-label="Ảnh trước" title="Ảnh trước (Mũi tên trái)">
+        <span class="glyph">&#xE76B;</span>
+      </button>
+      <img id="lightboxImg" src="" alt="Screenshot" />
+      <button class="btn icon-only lightbox-nav-btn lightbox-next-btn" id="lightboxNextBtn" aria-label="Ảnh sau" title="Ảnh sau (Mũi tên phải)">
+        <span class="glyph">&#xE76C;</span>
+      </button>
+    </div>
+    <div class="lightbox-footer">
+      <div class="lightbox-info">
+        <div class="lightbox-title-text" id="lightboxTitle"></div>
+        <div class="lightbox-meta-row">
+          <span class="lightbox-counter-badge" id="lightboxCounter">1 / 1</span>
+          <span class="lightbox-badge" id="lightboxWorld"><span class="glyph">&#xE81E;</span><span id="lightboxWorldName"></span></span>
+          <span class="caption text-2" id="lightboxDate"></span>
+          <span class="caption text-3" id="lightboxDimensions"></span>
+        </div>
+      </div>
+      <div class="lightbox-actions">
+        <button class="btn" id="lightboxCopyBtn" title="Sao chép tên file"><span class="glyph">&#xE8C8;</span><span>Sao chép</span></button>
+        <button class="btn" id="lightboxSetCoverBtn" title="Đặt làm ảnh bìa instance"><span class="glyph">&#xE790;</span><span>Đặt làm ảnh bìa</span></button>
+        <button class="btn" id="lightboxDownloadBtn" title="Tải về máy"><span class="glyph">&#xE896;</span><span>Tải về</span></button>
+        <button class="btn danger" id="lightboxDeleteBtn" title="Xóa ảnh này"><span class="glyph">&#xE74D;</span><span>Xóa ảnh</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Mod Inspector Drawer -->
+<div class="inspector-host" id="modInspectorHost" hidden>
+  <div class="inspector-scrim" id="modInspectorScrim" aria-hidden="true"></div>
+  <aside class="inspector-drawer" id="modInspector" role="dialog" aria-modal="true" aria-label="Chi tiết Mod">
+    <header class="inspector-header">
+      <div class="inspector-mod-badge-wrap">
+        <img class="inspector-icon" id="modInspectorIcon" src="assets/mods/sodium.webp" alt="Mod Icon" />
+      </div>
+      <div class="inspector-headline">
+        <h2 class="inspector-title" id="modInspectorTitle">Tên mod</h2>
+        <div class="inspector-meta-row">
+          <span class="inspector-version-tag" id="modInspectorVersion">v0.0.0</span>
+          <span class="inspector-loader-tag" id="modInspectorLoader">Fabric</span>
+          <span class="inspector-mc-tag" id="modInspectorMc">1.21.1</span>
+        </div>
+      </div>
+      <button class="btn icon-only inspector-close-btn" id="modInspectorClose" title="Đóng Inspector (Esc)" aria-label="Đóng">
+        <span class="glyph">&#xE711;</span>
+      </button>
+    </header>
+
+    <div class="inspector-body">
+      <!-- File path info -->
+      <div class="inspector-section">
+        <div class="inspector-section-label">Tệp cài đặt</div>
+        <div class="inspector-file-box">
+          <span class="glyph inspector-file-icon">&#xE74C;</span>
+          <span class="inspector-file-name" id="modInspectorFile">mod.jar</span>
+        </div>
+      </div>
+
+      <!-- Description / Summary -->
+      <div class="inspector-section">
+        <div class="inspector-section-label">Mô tả</div>
+        <p class="inspector-desc" id="modInspectorDesc">Mô tả chi tiết về mod...</p>
+      </div>
+
+      <!-- Authors & Category -->
+      <div class="inspector-grid-2">
+        <div class="inspector-field">
+          <span class="inspector-field-label">Tác giả</span>
+          <span class="inspector-field-val" id="modInspectorAuthor">—</span>
+        </div>
+        <div class="inspector-field">
+          <span class="inspector-field-label">Thể loại</span>
+          <span class="inspector-field-val" id="modInspectorCategory">—</span>
+        </div>
+      </div>
+
+      <!-- Links -->
+      <div class="inspector-section" id="modInspectorLinksSection">
+        <div class="inspector-section-label">Liên kết ngoài</div>
+        <div class="inspector-links" id="modInspectorLinks">
+          <!-- Dynamic links: Modrinth, Source, Issues -->
+        </div>
+      </div>
+
+      <!-- Dependencies -->
+      <div class="inspector-section">
+        <div class="inspector-section-header">
+          <div class="inspector-section-label">Thư viện & Phụ thuộc (Dependencies)</div>
+          <span class="inspector-dep-badge" id="modInspectorDepStatus">Đầy đủ</span>
+        </div>
+        <div class="inspector-deps-list" id="modInspectorDeps">
+          <!-- List of dependencies with status icon -->
+        </div>
+        <div class="inspector-dep-action" id="modInspectorDepAction" hidden>
+          <button class="btn accent full-width" id="modInspectorResolveDepBtn">
+            <span class="glyph">&#xE710;</span>
+            <span id="modInspectorResolveDepText">Cài mod còn thiếu</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- Modpack Inspector Drawer -->
+<div class="inspector-host" id="modpackInspectorHost" hidden>
+  <div class="inspector-scrim" id="modpackInspectorScrim" aria-hidden="true"></div>
+  <aside class="inspector-drawer modpack-inspector-drawer" id="modpackInspector" role="dialog" aria-modal="true" aria-label="Chi tiết Modpack">
+    <div class="modpack-inspector-hero">
+      <img class="modpack-inspector-banner" id="modpackInspectorBanner" src="assets/modpacks/performance-banner.jpg" alt="Cover Modpack" />
+      <div class="modpack-inspector-hero-overlay"></div>
+      <button class="btn icon-only inspector-close-btn" id="modpackInspectorClose" title="Đóng Inspector (Esc)" aria-label="Đóng chi tiết modpack">
+        <span class="glyph">&#xE711;</span>
+      </button>
+    </div>
+    <header class="inspector-header modpack-inspector-header">
+      <div class="inspector-mod-badge-wrap modpack-icon-wrap">
+        <img class="inspector-icon" id="modpackInspectorIcon" src="assets/modpacks/performance-icon.png" alt="Modpack Icon" />
+      </div>
+      <div class="inspector-headline">
+        <h2 class="inspector-title" id="modpackInspectorTitle">Performance Fabric</h2>
+        <div class="inspector-meta-row">
+          <span class="caption text-2">bởi <strong id="modpackInspectorAuthor">Vazer Team</strong></span>
+          <span class="inspector-loader-tag" id="modpackInspectorLoader">Fabric</span>
+          <span class="inspector-mc-tag" id="modpackInspectorMc">1.21.1</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="inspector-body modpack-inspector-body">
+      <!-- Version Selector -->
+      <div class="inspector-section">
+        <div class="inspector-section-label">Phiên bản phát hành</div>
+        <select class="select full-width" id="modpackInspectorVersionSelect" aria-label="Chọn phiên bản modpack">
+          <!-- Populated dynamically -->
+        </select>
+      </div>
+
+      <!-- Quick Metrics -->
+      <div class="modpack-stats-row">
+        <div class="modpack-stat-item">
+          <span class="modpack-stat-val" id="modpackInspectorModCount">35 mods</span>
+          <span class="modpack-stat-lbl">Số lượng mod</span>
+        </div>
+        <div class="modpack-stat-item">
+          <span class="modpack-stat-val" id="modpackInspectorDownloads">1.2M</span>
+          <span class="modpack-stat-lbl">Lượt tải</span>
+        </div>
+        <div class="modpack-stat-item">
+          <span class="modpack-stat-val" id="modpackInspectorSize">145 MB</span>
+          <span class="modpack-stat-lbl">Dung lượng</span>
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div class="inspector-section">
+        <div class="inspector-section-label">Mô tả chi tiết</div>
+        <p class="inspector-desc" id="modpackInspectorDesc">Mô tả modpack...</p>
+      </div>
+
+      <!-- Changelog Section -->
+      <div class="inspector-section" id="modpackInspectorChangelogSection">
+        <div class="inspector-section-label">Nhật ký thay đổi (Changelog)</div>
+        <div class="modpack-changelog-box" id="modpackInspectorChangelog">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Mods List in pack -->
+      <div class="inspector-section">
+        <div class="inspector-section-header">
+          <div class="inspector-section-label">Danh sách mod trong gói (<span id="modpackInspectorModsHeaderCount">0</span>)</div>
+        </div>
+        <div class="modpack-mods-chips" id="modpackInspectorModList">
+          <!-- Mod badges populated dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <footer class="modpack-inspector-footer">
+      <button class="btn accent full-width" id="modpackInspectorInstallBtn">
+        <span class="glyph">&#xE8B5;</span>
+        <span id="modpackInspectorInstallText">Cài đặt & Tạo Instance</span>
+      </button>
+    </footer>
+  </aside>
+</div>
+
+<!-- Modpack 1-Click Install Modal -->
+<div class="modal-host" id="modpackInstallModalHost" hidden>
+  <div class="modal-scrim" id="modpackInstallScrim"></div>
+  <div class="modal-card modpack-install-modal" role="dialog" aria-modal="true" aria-label="Cài đặt Modpack">
+    <div class="modal-header">
+      <div class="modal-header-icon" aria-hidden="true">
+        <span class="glyph">&#xE896;</span>
+      </div>
+      <div>
+        <h2 class="modal-title" id="modpackInstallModalTitle">Cài đặt Modpack</h2>
+        <p class="modal-subtitle text-2" id="modpackInstallModalSubtitle">Đang thiết lập instance và tải các thành phần cần thiết</p>
+      </div>
+    </div>
+
+    <div class="modpack-install-body">
+      <!-- 3 Steps -->
+      <div class="modpack-steps-list">
+        <div class="modpack-step is-active" id="modpackStepManifest">
+          <div class="modpack-step-num">1</div>
+          <div class="modpack-step-info">
+            <strong class="modpack-step-title">Manifest & Overrides</strong>
+            <span class="caption text-2 modpack-step-desc">Đọc cấu hình gói, danh mục mod và overrides</span>
+          </div>
+          <span class="glyph modpack-step-icon">&#xE73E;</span>
+        </div>
+
+        <div class="modpack-step" id="modpackStepMods">
+          <div class="modpack-step-num">2</div>
+          <div class="modpack-step-info">
+            <strong class="modpack-step-title">Tải mod & loader</strong>
+            <span class="caption text-2 modpack-step-desc">Tải các tệp .jar và cấu hình loader</span>
+          </div>
+          <span class="glyph modpack-step-icon">&#xE73E;</span>
+        </div>
+
+        <div class="modpack-step" id="modpackStepInstance">
+          <div class="modpack-step-num">3</div>
+          <div class="modpack-step-info">
+            <strong class="modpack-step-title">Tạo Instance</strong>
+            <span class="caption text-2 modpack-step-desc">Tạo instance mới trong thư viện V.A.Z</span>
+          </div>
+          <span class="glyph modpack-step-icon">&#xE73E;</span>
+        </div>
+      </div>
+
+      <!-- Progress bar -->
+      <div class="modpack-progress-area">
+        <div class="modpack-progress-bar-wrap">
+          <div class="modpack-progress-fill" id="modpackProgressFill" style="width: 0%"></div>
+        </div>
+        <div class="modpack-progress-meta">
+          <span class="caption text-2" id="modpackProgressDetail">Chuẩn bị cài đặt...</span>
+          <span class="caption" id="modpackProgressText">0%</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" id="modpackInstallCancelBtn">Hủy</button>
+    </div>
+  </div>
+</div>
+
+<!-- Microsoft Device Code Flow Modal -->
+<div class="modal-host" id="msAuthModalHost" hidden>
+  <div class="modal-scrim" id="msAuthScrim" data-ms-close></div>
+  <div class="modal-card auth-modal-card" role="dialog" aria-modal="true" aria-label="Đăng nhập Microsoft qua Device Code">
+    <div class="modal-header">
+      <div class="modal-header-icon ms-icon" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <rect x="2" y="2" width="9" height="9" fill="#f25022"/>
+          <rect x="13" y="2" width="9" height="9" fill="#7fba00"/>
+          <rect x="2" y="13" width="9" height="9" fill="#00a4ef"/>
+          <rect x="13" y="13" width="9" height="9" fill="#ffb900"/>
+        </svg>
+      </div>
+      <div class="modal-header-text">
+        <h2 class="modal-title">Đăng nhập tài khoản Microsoft</h2>
+        <p class="caption text-2">Xác thực an toàn bằng Device Code không cần nhập mật khẩu vào launcher.</p>
+      </div>
+      <button class="btn icon-only modal-close-btn" id="msCloseBtn" data-ms-close title="Đóng (Esc)" aria-label="Đóng">&#xE711;</button>
+    </div>
+
+    <div class="modal-body auth-modal-body">
+      <div class="auth-step-instruction">
+        <span class="auth-step-number">1</span>
+        <span>Sao chép mã kết nối bên dưới và truy cập trang xác thực Microsoft:</span>
+      </div>
+
+      <div class="auth-code-box">
+        <div class="auth-code-label">MÃ KẾT NỐI (USER CODE)</div>
+        <div class="auth-code-display" id="msUserCode">V4Z8-9MC2</div>
+        <div class="auth-code-actions">
+          <button class="btn accent" id="msCopyCodeBtn" type="button">
+            <span class="glyph">&#xE8C8;</span>
+            <span>Sao chép mã</span>
+          </button>
+          <a class="btn" id="msOpenLinkBtn" href="https://microsoft.com/link" target="_blank" rel="noopener noreferrer">
+            <span class="glyph">&#xE8A7;</span>
+            <span>https://microsoft.com/link</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="auth-timer-row">
+        <div class="auth-timer-indicator">
+          <span class="glyph">&#xE823;</span>
+          <span>Mã hết hạn sau:</span>
+          <strong class="auth-timer-countdown" id="msCountdownTimer">15:00</strong>
+        </div>
+        <div class="auth-polling-badge" id="msPollingBadge">
+          <span class="pulse-dot"></span>
+          <span id="msAuthStatus">Đang chờ bạn xác thực trên trình duyệt...</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn accent" id="msSimulateSuccessBtn" type="button">
+        <span class="glyph">&#xE73E;</span>
+        <span>Mô phỏng hoàn tất xác thực</span>
+      </button>
+      <button class="btn" id="msCancelBtn" data-ms-close type="button">Hủy</button>
+    </div>
+  </div>
+</div>
+
+<!-- Offline Account Modal -->
+<div class="modal-host" id="offlineModalHost" hidden>
+  <div class="modal-scrim" id="offlineScrim" data-offline-close></div>
+  <div class="modal-card auth-modal-card" role="dialog" aria-modal="true" aria-label="Thêm tài khoản Offline">
+    <div class="modal-header">
+      <div class="modal-header-icon offline-icon" aria-hidden="true">
+        <span class="glyph">&#xE77B;</span>
+      </div>
+      <div class="modal-header-text">
+        <h2 class="modal-title">Thêm tài khoản Offline / Local</h2>
+        <p class="caption text-2">Tạo tài khoản chơi đơn hoặc LAN không cần tài khoản Microsoft.</p>
+      </div>
+      <button class="btn icon-only modal-close-btn" id="offlineCloseBtn" data-offline-close title="Đóng (Esc)" aria-label="Đóng">&#xE711;</button>
+    </div>
+
+    <div class="modal-body auth-modal-body">
+      <div class="field-group">
+        <label class="field-label" for="offlineUsernameInput">Tên người chơi (Minecraft Username)</label>
+        <input class="textbox" id="offlineUsernameInput" placeholder="Ví dụ: Miner_2026" maxlength="16" autocomplete="off" spellcheck="false" />
+        <p class="caption text-3">Quy chuẩn Minecraft: 3-16 ký tự, chỉ gồm chữ cái, số và dấu gạch dưới (_).</p>
+        <div class="infobar error" id="offlineUsernameError" hidden>
+          <span class="glyph">&#xE7BA;</span>
+          <span id="offlineUsernameErrorText">Tên không hợp lệ</span>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <span class="field-label">Chọn model skin mặc định</span>
+        <div class="skin-chips-row" id="offlineSkinOptions" role="radiogroup" aria-label="Skin mặc định">
+          <label class="skin-select-chip is-selected" for="offlineSkinSteve">
+            <input type="radio" name="offlineSkin" id="offlineSkinSteve" value="steve" checked />
+            <span class="skin-face avatar-face" style="--skin-texture:url('assets/skins/steve.png')"></span>
+            <span>Steve (Cổ điển 4px)</span>
+          </label>
+          <label class="skin-select-chip" for="offlineSkinAlex">
+            <input type="radio" name="offlineSkin" id="offlineSkinAlex" value="alex" />
+            <span class="skin-face avatar-face" style="--skin-texture:url('assets/skins/alex.png')"></span>
+            <span>Alex (Thon gọn 3px)</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn accent" id="offlineSubmitBtn" type="button">Tạo tài khoản</button>
+      <button class="btn" id="offlineCancelBtn" data-offline-close type="button">Hủy</button>
+    </div>
+  </div>
+</div>
+
+<!-- Cosmetics 3D Try-On Modal -->
+<div class="modal-host" id="shopTryOnModalHost" hidden>
+  <div class="modal-scrim" id="shopTryOnScrim"></div>
+  <div class="modal-card shop-tryon-modal" id="shopTryOnModal" role="dialog" aria-modal="true" aria-label="Xem thử trang phục 3D">
+    <div class="modal-header">
+      <div class="shop-tryon-header-title">
+        <h2 class="modal-title" id="shopTryOnTitle">Xem thử trang phục</h2>
+        <span class="chip compact shop-tryon-rarity" id="shopTryOnRarity">Legendary</span>
+      </div>
+      <button class="btn icon-only" id="shopTryOnCloseBtn" aria-label="Đóng"><span class="glyph">&#xE711;</span></button>
+    </div>
+    <div class="shop-tryon-body">
+      <div class="shop-tryon-viewer-box">
+        <canvas id="shopViewer" class="skin-canvas" width="280" height="340"></canvas>
+        <div class="shop-tryon-viewer-tip">Kéo chuột để xoay 360°</div>
+      </div>
+      <div class="shop-tryon-details">
+        <p class="caption text-2" id="shopTryOnCategory">Danh mục: Cánh Elytra</p>
+        <p class="shop-tryon-desc" id="shopTryOnDesc"></p>
+        <div class="shop-tryon-price-box">
+          <span class="caption text-2">Giá bán:</span>
+          <div class="shop-tryon-price" id="shopTryOnPrice"></div>
+        </div>
+        <div class="shop-tryon-actions" id="shopTryOnActions"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Dialog host -->
@@ -338,16 +2186,7 @@
 <!-- Context menu -->
 <div class="context-menu" id="contextMenu" hidden></div>
 
-<!-- Prototype-only floating bar -->
-<div class="demo-bar">
-  <span class="demo-dot"></span>
-  <span>Prototype · mô phỏng</span>
-  <span class="demo-version">Wave 3 · v7</span>
-  <button class="demo-btn" id="simulateCrashBtn" title="Giả lập game crash ở instance đang chạy">Simulate crash</button>
-  <button class="demo-btn" id="themeToggle">Dark</button>
-  <button class="demo-btn" id="resetDemo">Reset</button>
-</div>
-
+<script src="vendor/skinview3d.bundle.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

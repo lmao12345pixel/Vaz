@@ -1,0 +1,248 @@
+﻿build-test	UNKNOWN STEP	∩╗┐2026-10-31T02:14:07.1645670Z Current runner version: '2.338.2'
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.1662704Z ##[group]Runner Image Provisioner
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.1663187Z Hosted Compute Agent
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.1663496Z Version: 20261021.618
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.1663867Z Commit: 21505ad2541d5be6135ed84fc33697146cf75b8e
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.1664257Z Build Date: 2026-10-21T00:45:21Z
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.1664682Z Worker ID: {2dfcf9d0-87e1-414a-ac98-7a1951230406}
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.1665078Z Region: centralus
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.1665364Z Cloud: Azure
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.1665656Z ##[endgroup]
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.1666359Z ##[group]Operating System
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.1666692Z Microsoft Windows Server 2025
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.1667015Z 10.0.26100
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.1667309Z Datacenter
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.1667587Z ##[endgroup]
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.1667873Z ##[group]Runner Image
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.1668223Z Image: windows-2025-vs2026
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.1668543Z Version: 20261030.294.1
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.1669447Z Included Software: https://github.com/actions/runner-images/blob/win25-vs2026/20261030.294/images/windows/Windows2025-VS2026-Readme.md
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.1670339Z Image Release: https://github.com/actions/runner-images/releases/tag/win25-vs2026%2F20261030.294
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.1670858Z ##[endgroup]
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.1671510Z ##[group]GITHUB_TOKEN Permissions
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.1672824Z Contents: read
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.1673132Z Metadata: read
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.1673447Z Packages: read
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.1673745Z ##[endgroup]
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.1675209Z Secret source: Actions
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.1675720Z Cache mode: write
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.1676187Z Prepare workflow directory
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.1886079Z Prepare all required actions
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.1920674Z Getting action download info
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.4272122Z Download action repository 'actions/checkout@v4' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.5088968Z Download action repository 'actions/setup-dotnet@v4' (SHA:67a3573c9a986a3f9c594539f4ab511d57bb3ce9)
+build-test	UNKNOWN STEP	2026-10-31T02:14:07.8879826Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.1297350Z Complete job name: build-test
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.2538462Z ##[group]Run actions/checkout@v4
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.2539222Z with:
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.2539516Z   repository: lmao12345pixel/Vaz
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.2541709Z   token: ***
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.2541998Z   ssh-strict: true
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.2542289Z   ssh-user: git
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.2542593Z   persist-credentials: true
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.2542931Z   clean: true
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.2543237Z   sparse-checkout-cone-mode: true
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.2543583Z   fetch-depth: 1
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.2543865Z   fetch-tags: false
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.2544170Z   show-progress: true
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.2544461Z   lfs: false
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.2544739Z   submodules: false
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.2545048Z   set-safe-directory: true
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.2545366Z   allow-unsafe-pr-checkout: false
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.2545858Z ##[endgroup]
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.3467165Z Syncing repository: lmao12345pixel/Vaz
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.3468307Z ##[group]Getting Git version info
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.3468780Z Working directory is 'D:\a\Vaz\Vaz'
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.3911595Z [command]"C:\Program Files\Git\bin\git.exe" version
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.6746631Z git version 2.56.0.windows.4
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.6781248Z ##[endgroup]
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.6794920Z Temporarily overriding HOME='D:\a\_temp\5452999f-29a4-436c-a2ba-b332bc1b3da4' before making global git config changes
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.6796720Z Adding repository directory to the temporary git global config as a safe directory
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.6801738Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\Vaz\Vaz
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.7242035Z Deleting the contents of 'D:\a\Vaz\Vaz'
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.7246086Z ##[group]Initializing the repository
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.7251611Z [command]"C:\Program Files\Git\bin\git.exe" init D:\a\Vaz\Vaz
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.7944383Z Initialized empty Git repository in D:/a/Vaz/Vaz/.git/
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.7970906Z [command]"C:\Program Files\Git\bin\git.exe" remote add origin https://github.com/lmao12345pixel/Vaz
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.8415913Z ##[endgroup]
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.8416921Z ##[group]Disabling automatic garbage collection
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.8421122Z [command]"C:\Program Files\Git\bin\git.exe" config --local gc.auto 0
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.8646332Z ##[endgroup]
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.8647631Z ##[group]Setting up auth
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.8653647Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+build-test	UNKNOWN STEP	2026-10-31T02:14:08.8880579Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+build-test	UNKNOWN STEP	2026-10-31T02:14:10.0489240Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+build-test	UNKNOWN STEP	2026-10-31T02:14:10.0819130Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+build-test	UNKNOWN STEP	2026-10-31T02:14:10.4964681Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+build-test	UNKNOWN STEP	2026-10-31T02:14:10.5220369Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
+build-test	UNKNOWN STEP	2026-10-31T02:14:10.8670573Z [command]"C:\Program Files\Git\bin\git.exe" config --local http.https://github.com/.extraheader "AUTHORIZATION: basic ***"
+build-test	UNKNOWN STEP	2026-10-31T02:14:10.8923177Z ##[endgroup]
+build-test	UNKNOWN STEP	2026-10-31T02:14:10.8923431Z ##[group]Fetching the repository
+build-test	UNKNOWN STEP	2026-10-31T02:14:10.8931363Z [command]"C:\Program Files\Git\bin\git.exe" -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +ecafdef6fa98c611f101cd46a26e1380b4bdafea:refs/remotes/pull/1/merge
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.4999510Z From https://github.com/lmao12345pixel/Vaz
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.5001678Z  * [new ref]         ecafdef6fa98c611f101cd46a26e1380b4bdafea -> pull/1/merge
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.5029501Z ##[endgroup]
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.5029734Z ##[group]Determining the checkout info
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.5031587Z ##[endgroup]
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.5040411Z [command]"C:\Program Files\Git\bin\git.exe" sparse-checkout disable
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.5412628Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset-all extensions.worktreeConfig
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.5643235Z ##[group]Checking out the ref
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.5648644Z [command]"C:\Program Files\Git\bin\git.exe" checkout --progress --force refs/remotes/pull/1/merge
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.8575426Z Note: switching to 'refs/remotes/pull/1/merge'.
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.8575994Z 
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.8576158Z You are in 'detached HEAD' state. You can look around, make experimental
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.8576598Z changes and commit them, and you can discard any commits you make in this
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.8577098Z state without impacting any branches by switching back to a branch.
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.8577316Z 
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.8577620Z If you want to create a new branch to retain commits you create, you may
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.8578354Z do so (now or later) by using -c with the switch command. Example:
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.8578537Z 
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.8578657Z   git switch -c <new-branch-name>
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.8578806Z 
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.8578863Z Or undo this operation with:
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.8578984Z 
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.8579032Z   git switch -
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.8579104Z 
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.8579293Z Turn off this advice by setting config variable advice.detachedHead to false
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.8579544Z 
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.8579824Z HEAD is now at ecafdef Merge 373bc51b6dc1bff7e93cfc6f682f1e5a28ed7b17 into bf424790f603d3614b01edb33e023aa17787927a
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.8688450Z ##[endgroup]
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.9009635Z [command]"C:\Program Files\Git\bin\git.exe" log -1 --format=%H
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.9231471Z ecafdef6fa98c611f101cd46a26e1380b4bdafea
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.9532317Z ##[group]Run actions/setup-dotnet@v4
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.9532494Z with:
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.9532604Z   dotnet-version: 8.0.x
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.9532719Z   dotnet-quality: ga
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.9532834Z   cache: false
+build-test	UNKNOWN STEP	2026-10-31T02:14:12.9532933Z ##[endgroup]
+build-test	UNKNOWN STEP	2026-10-31T02:14:13.0652565Z (node:3172) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+build-test	UNKNOWN STEP	2026-10-31T02:14:13.0652980Z (Use `node --trace-deprecation ...` to show where the warning was created)
+build-test	UNKNOWN STEP	2026-10-31T02:14:13.1255079Z [command]"C:\Program Files\PowerShell\7\pwsh.exe" -NoLogo -Sta -NoProfile -NonInteractive -ExecutionPolicy Unrestricted -Command & 'D:\a\_actions\actions\setup-dotnet\v4\externals\install-dotnet.ps1' -SkipNonVersionedFiles -Runtime dotnet -Channel LTS
+build-test	UNKNOWN STEP	2026-10-31T02:14:14.3503085Z dotnet-install: .NET Core Runtime with version '10.0.14' is already installed.
+build-test	UNKNOWN STEP	2026-10-31T02:14:14.4312503Z [command]"C:\Program Files\PowerShell\7\pwsh.exe" -NoLogo -Sta -NoProfile -NonInteractive -ExecutionPolicy Unrestricted -Command & 'D:\a\_actions\actions\setup-dotnet\v4\externals\install-dotnet.ps1' -SkipNonVersionedFiles -Channel 8.0 -Quality ga
+build-test	UNKNOWN STEP	2026-10-31T02:14:15.1839527Z dotnet-install: .NET Core SDK with version '8.0.427' is already installed.
+build-test	UNKNOWN STEP	2026-10-31T02:14:15.2589686Z ##[group]Run dotnet restore Vaz.sln
+build-test	UNKNOWN STEP	2026-10-31T02:14:15.2589921Z ^[[36;1mdotnet restore Vaz.sln^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:14:15.3019889Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+build-test	UNKNOWN STEP	2026-10-31T02:14:15.3020083Z env:
+build-test	UNKNOWN STEP	2026-10-31T02:14:15.3020202Z   DOTNET_ROOT: C:\Program Files\dotnet
+build-test	UNKNOWN STEP	2026-10-31T02:14:15.3020348Z ##[endgroup]
+build-test	UNKNOWN STEP	2026-10-31T02:14:20.8888789Z   Determining projects to restore...
+build-test	UNKNOWN STEP	2026-10-31T02:14:46.4402027Z   Restored D:\a\Vaz\Vaz\src\Vazer.Core\Vazer.Core.csproj (in 24.61 sec).
+build-test	UNKNOWN STEP	2026-10-31T02:14:49.4649995Z   Restored D:\a\Vaz\Vaz\tests\Vazer.Core.Tests\Vazer.Core.Tests.csproj (in 27.72 sec).
+build-test	UNKNOWN STEP	2026-10-31T02:15:00.0953448Z   Restored D:\a\Vaz\Vaz\src\Vaz.WinUI\Vaz.WinUI.csproj (in 38.39 sec).
+build-test	UNKNOWN STEP	2026-10-31T02:15:00.2073776Z ##[group]Run dotnet build Vaz.sln -c Debug --no-restore --nologo
+build-test	UNKNOWN STEP	2026-10-31T02:15:00.2074090Z ^[[36;1mdotnet build Vaz.sln -c Debug --no-restore --nologo^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:00.2121895Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+build-test	UNKNOWN STEP	2026-10-31T02:15:00.2122098Z env:
+build-test	UNKNOWN STEP	2026-10-31T02:15:00.2122218Z   DOTNET_ROOT: C:\Program Files\dotnet
+build-test	UNKNOWN STEP	2026-10-31T02:15:00.2122365Z ##[endgroup]
+build-test	UNKNOWN STEP	2026-10-31T02:15:09.2080056Z   Vazer.Core -> D:\a\Vaz\Vaz\src\Vazer.Core\bin\Debug\net8.0-windows10.0.26100.0\Vazer.Core.dll
+build-test	UNKNOWN STEP	2026-10-31T02:15:10.8477257Z   Vazer.Core.Tests -> D:\a\Vaz\Vaz\tests\Vazer.Core.Tests\bin\Debug\net8.0-windows10.0.26100.0\Vazer.Core.Tests.dll
+build-test	UNKNOWN STEP	2026-10-31T02:15:27.8035300Z   Vaz.WinUI -> D:\a\Vaz\Vaz\src\Vaz.WinUI\bin\x64\Debug\net8.0-windows10.0.26100.0\win-x64\Vaz.WinUI.dll
+build-test	UNKNOWN STEP	2026-10-31T02:15:28.1801785Z 
+build-test	UNKNOWN STEP	2026-10-31T02:15:28.1808727Z Build succeeded.
+build-test	UNKNOWN STEP	2026-10-31T02:15:28.1809970Z     0 Warning(s)
+build-test	UNKNOWN STEP	2026-10-31T02:15:28.1810149Z     0 Error(s)
+build-test	UNKNOWN STEP	2026-10-31T02:15:28.1811656Z 
+build-test	UNKNOWN STEP	2026-10-31T02:15:28.1812022Z Time Elapsed 00:00:27.13
+build-test	UNKNOWN STEP	2026-10-31T02:15:28.5891252Z ##[group]Run dotnet test Vaz.sln -c Debug --no-build --nologo --logger "trx;LogFileName=results.trx"
+build-test	UNKNOWN STEP	2026-10-31T02:15:28.5891941Z ^[[36;1mdotnet test Vaz.sln -c Debug --no-build --nologo --logger "trx;LogFileName=results.trx"^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:28.5963307Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+build-test	UNKNOWN STEP	2026-10-31T02:15:28.5963643Z env:
+build-test	UNKNOWN STEP	2026-10-31T02:15:28.5963832Z   DOTNET_ROOT: C:\Program Files\dotnet
+build-test	UNKNOWN STEP	2026-10-31T02:15:28.5964382Z ##[endgroup]
+build-test	UNKNOWN STEP	2026-10-31T02:15:29.9273143Z Test run for D:\a\Vaz\Vaz\tests\Vazer.Core.Tests\bin\Debug\net8.0-windows10.0.26100.0\Vazer.Core.Tests.dll (.NETCoreApp,Version=v8.0)
+build-test	UNKNOWN STEP	2026-10-31T02:15:31.4302648Z A total of 1 test files matched the specified pattern.
+build-test	UNKNOWN STEP	2026-10-31T02:15:52.8591769Z Results File: D:\a\Vaz\Vaz\tests\Vazer.Core.Tests\TestResults\results.trx
+build-test	UNKNOWN STEP	2026-10-31T02:15:52.8595591Z 
+build-test	UNKNOWN STEP	2026-10-31T02:15:52.8624445Z Passed!  - Failed:     0, Passed:   326, Skipped:     0, Total:   326, Duration: 16 s - Vazer.Core.Tests.dll (net8.0)
+build-test	UNKNOWN STEP	2026-10-31T02:15:53.2691156Z ##[group]Run actions/upload-artifact@v4
+build-test	UNKNOWN STEP	2026-10-31T02:15:53.2691371Z with:
+build-test	UNKNOWN STEP	2026-10-31T02:15:53.2691489Z   name: test-results
+build-test	UNKNOWN STEP	2026-10-31T02:15:53.2691619Z   path: **/TestResults/*.trx
+build-test	UNKNOWN STEP	2026-10-31T02:15:53.2691759Z   if-no-files-found: warn
+build-test	UNKNOWN STEP	2026-10-31T02:15:53.2691888Z   compression-level: 6
+build-test	UNKNOWN STEP	2026-10-31T02:15:53.2692012Z   overwrite: false
+build-test	UNKNOWN STEP	2026-10-31T02:15:53.2692128Z   include-hidden-files: false
+build-test	UNKNOWN STEP	2026-10-31T02:15:53.2692254Z env:
+build-test	UNKNOWN STEP	2026-10-31T02:15:53.2692365Z   DOTNET_ROOT: C:\Program Files\dotnet
+build-test	UNKNOWN STEP	2026-10-31T02:15:53.2692509Z ##[endgroup]
+build-test	UNKNOWN STEP	2026-10-31T02:15:53.3995281Z (node:3632) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+build-test	UNKNOWN STEP	2026-10-31T02:15:53.3995740Z (Use `node --trace-deprecation ...` to show where the warning was created)
+build-test	UNKNOWN STEP	2026-10-31T02:15:53.5603966Z With the provided path, there will be 1 file uploaded
+build-test	UNKNOWN STEP	2026-10-31T02:15:53.5607980Z Artifact name is valid!
+build-test	UNKNOWN STEP	2026-10-31T02:15:53.5609123Z Root directory input is valid!
+build-test	UNKNOWN STEP	2026-10-31T02:15:53.8267322Z Beginning upload of artifact content to blob storage
+build-test	UNKNOWN STEP	2026-10-31T02:15:53.8466944Z (node:3632) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.0350509Z Uploaded bytes 75140
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.0742094Z Finished uploading artifact content to blob storage!
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.0742830Z SHA256 digest of uploaded artifact zip is be10d91938ebdc4fef2ef861f791c4790d572c8c182191c4016cdb868374c794
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.0744291Z Finalizing artifact upload
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6209235Z Artifact test-results.zip successfully finalized. Artifact ID 13026107988
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6209750Z Artifact test-results has been successfully uploaded! Final size is 75140 bytes. Artifact ID is 13026107988
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6219656Z Artifact download URL: https://github.com/lmao12345pixel/Vaz/actions/runs/41159049111/artifacts/13026107988
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6459177Z ##[group]Run $trx = Get-ChildItem -Path tests -Recurse -Filter '*.trx' -ErrorAction SilentlyContinue
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6459626Z ^[[36;1m$trx = Get-ChildItem -Path tests -Recurse -Filter '*.trx' -ErrorAction SilentlyContinue^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6459872Z ^[[36;1mif (-not $trx) {^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6460075Z ^[[36;1m  Write-Host "::error::Khong tim thay file .trx - co that step Test khong?"^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6460300Z ^[[36;1m  exit 1^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6460405Z ^[[36;1m}^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6460502Z ^[[36;1m^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6460600Z ^[[36;1m$total = 0^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6460732Z ^[[36;1m$failed = 0^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6460854Z ^[[36;1mforeach ($f in $trx) {^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6461011Z ^[[36;1m  [xml]$x = Get-Content $f.FullName -Raw^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6461199Z ^[[36;1m  $c = $x.TestRun.ResultSummary.Counters^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6461373Z ^[[36;1m  $total  += [int]$c.total^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6461547Z ^[[36;1m  $failed += [int]$c.failed^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6461788Z ^[[36;1m  Write-Host ("{0}: total={1} passed={2} failed={3}" -f $f.Name, $c.total, $c.passed, $c.failed)^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6462022Z ^[[36;1m}^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6462121Z ^[[36;1m^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6462231Z ^[[36;1m$min = [int]$env:MIN_TESTS^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6462359Z ^[[36;1m^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6462468Z ^[[36;1mif ($failed -gt 0) {^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6462626Z ^[[36;1m  Write-Host "::error::$failed test bi fail"^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6462794Z ^[[36;1m  exit 1^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6462897Z ^[[36;1m}^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6463164Z ^[[36;1mif ($total -lt $min) {^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6463393Z ^[[36;1m  Write-Host "::error::Chi con $total test, can it nhat $min. Co test bi xoa/skip khong?"^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6463634Z ^[[36;1m  exit 1^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6463736Z ^[[36;1m}^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6463845Z ^[[36;1mif ($total -gt $min) {^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6464114Z ^[[36;1m  Write-Host "::warning::Tong $total test (vuot nguong $min) - nho cap nhat MIN_TESTS neu muon chot so chinh xac"^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6464391Z ^[[36;1m}^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6464584Z ^[[36;1m^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6464730Z ^[[36;1mWrite-Host "Test count OK: $total >= $min"^[[0m
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6513964Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6514167Z env:
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6514288Z   DOTNET_ROOT: C:\Program Files\dotnet
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6514439Z   MIN_TESTS: 119
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.6514560Z ##[endgroup]
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.9510818Z results.trx: total=326 passed=326 failed=0
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.9551251Z ##[warning]Tong 326 test (vuot nguong 119) - nho cap nhat MIN_TESTS neu muon chot so chinh xac
+build-test	UNKNOWN STEP	2026-10-31T02:15:54.9556325Z Test count OK: 326 >= 119
+build-test	UNKNOWN STEP	2026-10-31T02:15:55.0069679Z Post job cleanup.
+build-test	UNKNOWN STEP	2026-10-31T02:15:55.0992218Z (node:9360) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+build-test	UNKNOWN STEP	2026-10-31T02:15:55.0992632Z (Use `node --trace-deprecation ...` to show where the warning was created)
+build-test	UNKNOWN STEP	2026-10-31T02:15:55.1211303Z Post job cleanup.
+build-test	UNKNOWN STEP	2026-10-31T02:15:55.2236464Z [command]"C:\Program Files\Git\bin\git.exe" version
+build-test	UNKNOWN STEP	2026-10-31T02:15:55.2483935Z git version 2.56.0.windows.4
+build-test	UNKNOWN STEP	2026-10-31T02:15:55.2533616Z Temporarily overriding HOME='D:\a\_temp\f64d48c9-9ed6-4e36-9bed-1891152340c7' before making global git config changes
+build-test	UNKNOWN STEP	2026-10-31T02:15:55.2534175Z Adding repository directory to the temporary git global config as a safe directory
+build-test	UNKNOWN STEP	2026-10-31T02:15:55.2541072Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\Vaz\Vaz
+build-test	UNKNOWN STEP	2026-10-31T02:15:55.2857756Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+build-test	UNKNOWN STEP	2026-10-31T02:15:55.3133568Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+build-test	UNKNOWN STEP	2026-10-31T02:15:55.7324094Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+build-test	UNKNOWN STEP	2026-10-31T02:15:55.7572035Z http.https://github.com/.extraheader
+build-test	UNKNOWN STEP	2026-10-31T02:15:55.7607998Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset-all http.https://github.com/.extraheader
+build-test	UNKNOWN STEP	2026-10-31T02:15:55.7897632Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+build-test	UNKNOWN STEP	2026-10-31T02:15:56.2093669Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+build-test	UNKNOWN STEP	2026-10-31T02:15:56.2345182Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
+build-test	UNKNOWN STEP	2026-10-31T02:15:56.6781211Z Cleaning up orphan processes
+build-test	UNKNOWN STEP	2026-10-31T02:15:56.7103684Z Terminate orphan process: pid (6300) (dotnet)
+build-test	UNKNOWN STEP	2026-10-31T02:15:56.7189920Z Terminate orphan process: pid (4532) (dotnet)
+build-test	UNKNOWN STEP	2026-10-31T02:15:56.7238560Z Terminate orphan process: pid (7436) (conhost)
+build-test	UNKNOWN STEP	2026-10-31T02:15:56.7437183Z Terminate orphan process: pid (6816) (VBCSCompiler)
+build-test	UNKNOWN STEP	2026-10-31T02:15:56.7473196Z Terminate orphan process: pid (7576) (conhost)
+build-test	UNKNOWN STEP	2026-10-31T02:15:56.7564183Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-dotnet@v4, actions/upload-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

@@ -25,7 +25,7 @@ public sealed class JavaResolverTests
     [Theory]
     [InlineData("1.8.9", 8)]
     [InlineData("1.16.5", 8)]
-    [InlineData("1.17.1", 16)]
+    [InlineData("1.17.1", 17)]
     [InlineData("1.18.2", 17)]
     [InlineData("1.19.4", 17)]
     [InlineData("1.20.4", 17)]

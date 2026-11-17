@@ -1,0 +1,992 @@
+using System;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Text.Json;
+using System.Threading.Tasks;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Vaz.WinUI.Models;
+using Vazer.Core.Packs;
+
+namespace Vaz.WinUI.ViewModels;
+
+public sealed partial class ResourcePackRow : ObservableObject
+{
+    public ResourcePackItem Pack { get; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IconImageSource))]
+    private Microsoft.UI.Xaml.Media.ImageSource? customIconSource;
+
+    public string Id => Pack.Id;
+    public string Name => Pack.Name;
+    public string FileName => !string.IsNullOrEmpty(Pack.FileName) ? Pack.FileName : (Name + ".zip");
+    public string Author => Pack.Author;
+    public string Description => Pack.Description;
+    public string Resolution => Pack.Resolution;
+    public string Size => Pack.Size;
+    public string Version => Pack.Version;
+    public int PackFormat => Pack.PackFormat;
+    public string IconUri => Pack.IconUri;
+    public string BannerUri => Pack.BannerUri;
+    public bool HasBanner => !string.IsNullOrWhiteSpace(BannerUri);
+
+    public Microsoft.UI.Xaml.Media.ImageSource BannerImageSource
+    {
+        get
+        {
+            if (HasBanner && Uri.TryCreate(BannerUri, UriKind.RelativeOrAbsolute, out var uri))
+            {
+                return new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(uri);
+            }
+            return Vaz.WinUI.Helpers.UiPlaceholders.Image;
+        }
+    }
+
+    public Microsoft.UI.Xaml.Media.ImageSource IconImageSource
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(IconUri) &&
+                Uri.TryCreate(IconUri, UriKind.Absolute, out var uri) &&
+                uri.IsFile)
+            {
+                // P0.6: thumbnail local (file://...) được ưu tiên. Cơ chế này đã chạy tốt
+                // cho mod icon (InstanceDetailViewModel.cs dòng 485). Không dùng path thô
+                // vì BitmapImageWinUI cần URI, và không dùng SetSourceAsync stream vì file
+                // thumbnail có thể là PNG/WEBP giấu dưới đuôi .jpg -> decoder từ chối.
+                return new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(uri);
+            }
+
+            if (CustomIconSource != null)
+            {
+                return CustomIconSource;
+            }
+
+            if (!string.IsNullOrWhiteSpace(IconUri) && Uri.TryCreate(IconUri, UriKind.RelativeOrAbsolute, out var fallbackUri))
+            {
+                return new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(fallbackUri);
+            }
+
+            return Vaz.WinUI.Helpers.UiPlaceholders.Image;
+        }
+    }
+
+    public bool IsCompatible => Pack.IsCompatible && (PackFormat == 34 || PackFormat <= 0);
+    public bool IsIncompatible => !IsCompatible;
+    public string CompatibilityText => IsCompatible ? "Tương thích" : $"Sai phiên bản (Format {PackFormat})";
+
+    public string ViewDetailsAutomationName => $"Xem chi tiết {Name}";
+    public string DeletePackAutomationName => $"Xóa gói {Name}";
+    public string OpenFileAutomationName => $"Mở vị trí tệp {Name}";
+    public bool IsInstalled => true;
+
+    public ResourcePackRow(ResourcePackItem pack)
+    {
+        Pack = pack;
+    }
+}
+
+public sealed partial class ShaderPackRow : ObservableObject
+{
+    public ShaderPackItem Shader { get; }
+
+    public string Id => Shader.Id;
+    public string Name => Shader.Name;
+    public string FileName => Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) ? Name : (Name + ".zip");
+    public string Author => Shader.Author;
+    public string Description => Shader.Description;
+    public string Style => Shader.Style;
+    public string StyleLabel => Shader.StyleLabel;
+    public string Version => Shader.Version;
+    public string Size => Shader.Size;
+    public string ImageUri => Shader.ImageUri;
+
+    public Uri? ImageUriSource
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(Shader.ImageUri) &&
+                Uri.TryCreate(Shader.ImageUri, UriKind.RelativeOrAbsolute, out var uri))
+            {
+                return uri;
+            }
+            return null;
+        }
+    }
+
+    public Microsoft.UI.Xaml.Media.ImageSource ShaderImageSource
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(Shader.ImageUri) &&
+                Uri.TryCreate(Shader.ImageUri, UriKind.RelativeOrAbsolute, out var uri))
+            {
+                return new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(uri);
+            }
+
+            return Vaz.WinUI.Helpers.UiPlaceholders.Image;
+        }
+    }
+
+    public string AccentColor => Shader.AccentColor;
+    public System.Collections.Generic.List<string> Features => Shader.Features;
+
+    public string ViewDetailsAutomationName => $"Xem chi tiết {Name}";
+    public string DeleteShaderAutomationName => $"Xóa shader {Name}";
+    public string OpenFileAutomationName => $"Mở vị trí tệp {Name}";
+    public bool IsInstalled => true;
+
+    public ShaderPackRow(ShaderPackItem shader)
+    {
+        Shader = shader;
+    }
+}
+
+public partial class InstanceDetailViewModel
+{
+    // --- Resource Packs Library ---
+    public ObservableCollection<ResourcePackRow> ResourcePacks { get; } = new();
+    public ObservableCollection<ResourcePackRow> FilteredResourcePacks { get; } = new();
+
+    [ObservableProperty] private ResourcePackRow? selectedResourcePack;
+    [ObservableProperty] private ResourcePackRow? selectedPackForInspector;
+    [ObservableProperty] private bool isPackInspectorOpen;
+    [ObservableProperty] private string resourcePackSummaryText = "Đã cài 0 gói tài nguyên";
+    [ObservableProperty] private string resourcePacksCountText = "0";
+    [ObservableProperty] private string resourcePackSearchQuery = string.Empty;
+    [ObservableProperty] private bool hasNoPacks;
+    [ObservableProperty] private bool isLoadingResourcePacks;
+
+    partial void OnResourcePackSearchQueryChanged(string value) => RefreshResourcePackLists();
+
+    // --- Shaders Library ---
+    public ObservableCollection<ShaderPackRow> Shaders { get; } = new();
+    public ObservableCollection<ShaderPackRow> FilteredShaders { get; } = new();
+
+    [ObservableProperty] private string selectedShaderFilter = "all";
+    [ObservableProperty] private ShaderPackRow? selectedShaderForInspector;
+    [ObservableProperty] private bool isShaderInspectorOpen;
+    [ObservableProperty] private string shaderSummaryText = "Đã cài 0 shaders";
+    [ObservableProperty] private bool hasShaderLoader = true;
+    [ObservableProperty] private string shaderLoaderStatus = "Đã phát hiện Iris Shader Loader";
+    [ObservableProperty] private string shaderLoaderBannerText = "Instance của bạn đang sử dụng Fabric + Iris Shaders tương thích hoàn hảo.";
+    [ObservableProperty] private bool hasNoShaders;
+    [ObservableProperty] private bool isLoadingShaders;
+    [ObservableProperty] private string shaderSearchQuery = string.Empty;
+
+    partial void OnShaderSearchQueryChanged(string value) => FilterShaders();
+
+    public void InitializeResourcePacksAndShaders()
+    {
+        LoadResourcePacks();
+        LoadShaders();
+        StartFileSystemWatchers(Current?.Path);
+    }
+
+    /// <summary>
+    /// D15 Shimmer: wrapper giữ nguyên signature void (fire-and-forget từ mọi nơi).
+    /// Chỉ bật shimmer khi danh sách đang trống (trang đầu tiên) — không shimmer khi refresh sau import/append.
+    /// </summary>
+    public void LoadResourcePacks() => _ = LoadResourcePacksWithShimmerAsync();
+
+    private async Task LoadResourcePacksWithShimmerAsync()
+    {
+        bool showShimmer = ResourcePacks.Count == 0;
+        try
+        {
+            if (showShimmer)
+            {
+                IsLoadingResourcePacks = true;
+                await Task.Yield(); // cho phép UI render skeleton trước khi load chặn dispatcher
+            }
+
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            await LoadResourcePacksCoreAsync();
+
+            // Shimmer hiển thị tối thiểu 400ms để hiệu ứng không nhấp nháy khi load quá nhanh
+            if (showShimmer && sw.ElapsedMilliseconds < 400)
+            {
+                await Task.Delay((int)(400 - sw.ElapsedMilliseconds));
+            }
+        }
+        finally
+        {
+            if (showShimmer)
+            {
+                IsLoadingResourcePacks = false;
+            }
+        }
+    }
+
+    private async Task LoadResourcePacksCoreAsync()
+    {
+        ResourcePacks.Clear();
+        var instancePath = Current?.Path;
+        if (string.IsNullOrEmpty(instancePath))
+        {
+            RefreshResourcePackLists();
+            return;
+        }
+
+        var rpDir = Path.Combine(instancePath, "resourcepacks");
+        Directory.CreateDirectory(rpDir);
+
+        PacksManifest manifest;
+        try
+        {
+            manifest = await _packManifestService.EnsureManifestWithMigrationAsync(instancePath, "resourcepack");
+        }
+        catch
+        {
+            manifest = new PacksManifest { PackType = "resourcepack" };
+        }
+
+        foreach (var entry in manifest.Packs)
+        {
+            var zipPath = Path.Combine(rpDir, entry.FileName);
+            if (!File.Exists(zipPath)) continue;
+
+            var fi = new FileInfo(zipPath);
+            long sizeKb = fi.Length / 1024;
+            string sizeStr = sizeKb > 1024 ? $"{(sizeKb / 1024.0):F1} MB" : $"{sizeKb} KB";
+
+            string desc = "Gói tài nguyên đã cài đặt.";
+            string res = "32x";
+            int packFormat = 34;
+
+            try
+            {
+                using var archive = ZipFile.OpenRead(zipPath);
+                var mcmetaEntry = archive.GetEntry("pack.mcmeta");
+                if (mcmetaEntry != null)
+                {
+                    using var s = mcmetaEntry.Open();
+                    using var doc = JsonDocument.Parse(s);
+                    if (doc.RootElement.TryGetProperty("pack", out var packEl))
+                    {
+                        if (packEl.TryGetProperty("description", out var dEl))
+                        {
+                            desc = dEl.ValueKind == JsonValueKind.String ? (dEl.GetString() ?? desc) : dEl.ToString();
+                        }
+                        if (packEl.TryGetProperty("pack_format", out var fEl) && fEl.TryGetInt32(out var pf))
+                        {
+                            packFormat = pf;
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            // P0.6: ưu tiên thumbnailLocal (file ảnh Modrinth đã cache trên đĩa) cho CustomIconSource,
+            // vì IconImageSource ưu tiên CustomIconSource TRƯỚC IconUri (dòng 53). Nếu chỉ set IconUri
+            // thì pack.png trong zip vẫn đè lên → với LowOnFire pack.png chỉ 16x16 (45% trong suốt)
+            // nên card trông như khung xám.
+            var localThumbnailPath = ResolveLocalThumbnailPath(entry, instancePath!);
+
+            var item = new ResourcePackItem
+            {
+                Id = entry.FileName,
+                Slug = entry.Slug ?? Path.GetFileNameWithoutExtension(entry.FileName).ToLowerInvariant(),
+                Name = !string.IsNullOrWhiteSpace(entry.Title) ? entry.Title : Path.GetFileNameWithoutExtension(entry.FileName),
+                FileName = entry.FileName,
+                Author = !string.IsNullOrWhiteSpace(entry.Author) ? entry.Author : "Tùy biến",
+                Description = desc,
+                Resolution = res,
+                Size = sizeStr,
+                Version = "Unknown",
+                PackFormat = packFormat,
+                IsCompatible = packFormat == 34 || packFormat <= 0,
+                // P0.6: ưu tiên ThumbnailLocal (resolve relative → absolute với instance path),
+                // fallback sang ThumbnailRemote nếu local không có.
+                // Trước đây chỉ dùng ThumbnailRemote → LowOnFire (local-only) không hiện ảnh.
+                IconUri = ResolvePackThumbnailUri(entry, instancePath!)
+            };
+
+            var newRow = new ResourcePackRow(item);
+            ResourcePacks.Add(newRow);
+            LoadThumbnailInBackground(newRow, zipPath, localThumbnailPath);
+        }
+
+        RefreshResourcePackLists();
+    }
+
+    public void RefreshResourcePackLists()
+    {
+        FilteredResourcePacks.Clear();
+
+        var query = ResourcePackSearchQuery?.Trim() ?? string.Empty;
+        var filtered = ResourcePacks.AsEnumerable();
+
+        if (!string.IsNullOrEmpty(query))
+        {
+            filtered = filtered.Where(p =>
+                p.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                p.Description.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                p.Author.Contains(query, StringComparison.OrdinalIgnoreCase));
+        }
+
+        foreach (var p in filtered)
+        {
+            FilteredResourcePacks.Add(p);
+        }
+
+        HasNoPacks = FilteredResourcePacks.Count == 0;
+        ResourcePacksCountText = ResourcePacks.Count.ToString();
+        ResourcePackSummaryText = $"Đã cài {ResourcePacks.Count} gói tài nguyên";
+    }
+
+    [RelayCommand]
+    public void OpenPackInspector(ResourcePackRow pack)
+    {
+        SelectedResourcePack = pack;
+        SelectedPackForInspector = pack;
+        IsPackInspectorOpen = true;
+    }
+
+    [RelayCommand]
+    public void ClosePackInspector()
+    {
+        IsPackInspectorOpen = false;
+        SelectedPackForInspector = null;
+    }
+
+    [RelayCommand]
+    public void OpenResourcePackFile(ResourcePackRow pack)
+    {
+        if (pack == null) return;
+        var instancePath = Current?.Path;
+        if (string.IsNullOrEmpty(instancePath)) return;
+
+        var filePath = Path.Combine(instancePath, "resourcepacks", pack.FileName);
+        if (File.Exists(filePath))
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"/select,\"{filePath}\"",
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Không thể mở vị trí tệp: {ex.Message}";
+            }
+        }
+        else
+        {
+            var rpDir = Path.Combine(instancePath, "resourcepacks");
+            Directory.CreateDirectory(rpDir);
+            try
+            {
+                Process.Start(new ProcessStartInfo { FileName = rpDir, UseShellExecute = true });
+            }
+            catch { }
+        }
+    }
+
+    [RelayCommand]
+    public void DeleteResourcePack(ResourcePackRow pack)
+    {
+        if (pack == null) return;
+        var instancePath = Current?.Path;
+        if (!string.IsNullOrEmpty(instancePath))
+        {
+            var filePath = Path.Combine(instancePath, "resourcepacks", pack.FileName);
+            if (File.Exists(filePath))
+            {
+                try
+                {
+                    File.Delete(filePath);
+                }
+                catch (Exception ex)
+                {
+                    StatusMessage = $"Không thể xóa tệp: {ex.Message}";
+                    _notificationService?.ShowError("Không thể xóa gói tài nguyên", ex.Message);
+                    return;
+                }
+            }
+
+            _ = _packManifestService.RemoveEntryAsync(instancePath, "resourcepack", pack.FileName);
+        }
+
+        ResourcePacks.Remove(pack);
+        if (SelectedPackForInspector == pack)
+        {
+            ClosePackInspector();
+        }
+        RefreshResourcePackLists();
+        StatusMessage = $"Đã xóa gói {pack.Name}.";
+        _notificationService?.ShowSuccess($"Đã xóa gói {pack.Name}", "Gói tài nguyên đã bị xóa khỏi thư mục.");
+    }
+
+    public async Task ImportResourcePackFilesAsync(System.Collections.Generic.IEnumerable<string> filePaths)
+    {
+        await Task.Yield();
+        var instancePath = Current?.Path;
+        if (string.IsNullOrEmpty(instancePath)) return;
+
+        var rpDir = Path.Combine(instancePath, "resourcepacks");
+        Directory.CreateDirectory(rpDir);
+
+        int count = 0;
+        int errorCount = 0;
+
+        foreach (var fp in filePaths)
+        {
+            if (File.Exists(fp) && fp.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+            {
+                var fn = Path.GetFileName(fp);
+
+                try
+                {
+                    using var archive = ZipFile.OpenRead(fp);
+                    var mcmetaEntry = archive.GetEntry("pack.mcmeta");
+                    if (mcmetaEntry == null)
+                    {
+                        errorCount++;
+                        StatusMessage = $"Lỗi tệp: '{fn}' không phải là Resource Pack hợp lệ (thiếu pack.mcmeta).";
+                        continue;
+                    }
+                }
+                catch
+                {
+                    errorCount++;
+                    StatusMessage = $"Lỗi tệp: '{fn}' bị hỏng hoặc không phải tệp ZIP hợp lệ.";
+                    continue;
+                }
+
+                var dest = Path.Combine(rpDir, fn);
+                File.Copy(fp, dest, overwrite: true);
+
+                var newItem = new ResourcePackItem
+                {
+                    Id = Path.GetFileNameWithoutExtension(fn).ToLowerInvariant(),
+                    Slug = Path.GetFileNameWithoutExtension(fn).ToLowerInvariant(),
+                    Name = Path.GetFileNameWithoutExtension(fn),
+                    FileName = fn,
+                    Author = "Tùy biến",
+                    Description = "Gói tài nguyên người dùng thêm vào.",
+                    Resolution = "32x",
+                    Size = "15 MB",
+                    Version = "Unknown",
+                    PackFormat = 34,
+                    IsCompatible = true
+                };
+
+                var newRow = new ResourcePackRow(newItem);
+                ResourcePacks.Add(newRow);
+
+                LoadThumbnailInBackground(newRow, dest);
+                count++;
+            }
+        }
+
+        if (count > 0)
+        {
+            RefreshResourcePackLists();
+            StatusMessage = $"Đã thêm {count} gói tài nguyên vào thư viện.";
+        }
+    }
+
+    // --- Shaders Management ---
+    /// <summary>
+    /// D15 Shimmer: tương tự LoadResourcePacks — chỉ shimmer khi danh sách trống.
+    /// </summary>
+    public void LoadShaders() => _ = LoadShadersWithShimmerAsync();
+
+    private async Task LoadShadersWithShimmerAsync()
+    {
+        bool showShimmer = Shaders.Count == 0;
+        try
+        {
+            if (showShimmer)
+            {
+                IsLoadingShaders = true;
+                await Task.Yield();
+            }
+
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            await LoadShadersCoreAsync();
+
+            if (showShimmer && sw.ElapsedMilliseconds < 400)
+            {
+                await Task.Delay((int)(400 - sw.ElapsedMilliseconds));
+            }
+        }
+        finally
+        {
+            if (showShimmer)
+            {
+                IsLoadingShaders = false;
+            }
+        }
+    }
+
+    private async Task LoadShadersCoreAsync()
+    {
+        Shaders.Clear();
+        var instancePath = Current?.Path;
+        if (string.IsNullOrEmpty(instancePath))
+        {
+            FilterShaders();
+            return;
+        }
+
+        var shDir = Path.Combine(instancePath, "shaderpacks");
+        Directory.CreateDirectory(shDir);
+
+        PacksManifest manifest;
+        try
+        {
+            manifest = await _packManifestService.EnsureManifestWithMigrationAsync(instancePath, "shader");
+        }
+        catch
+        {
+            manifest = new PacksManifest { PackType = "shader" };
+        }
+
+        foreach (var entry in manifest.Packs)
+        {
+            var zipPath = Path.Combine(shDir, entry.FileName);
+            if (!File.Exists(zipPath)) continue;
+
+            var fi = new FileInfo(zipPath);
+            long sizeKb = fi.Length / 1024;
+            string sizeStr = sizeKb > 1024 ? $"{(sizeKb / 1024.0):F1} MB" : $"{sizeKb} KB";
+
+            var imageUri = entry.ThumbnailLocal;
+            if (!string.IsNullOrEmpty(imageUri) && !Path.IsPathRooted(imageUri))
+            {
+                imageUri = Path.Combine(instancePath, imageUri);
+            }
+            if (string.IsNullOrEmpty(imageUri))
+            {
+                imageUri = entry.ThumbnailRemote ?? string.Empty;
+            }
+
+            var item = new ShaderPackItem
+            {
+                Id = entry.FileName,
+                Name = !string.IsNullOrWhiteSpace(entry.Title) ? entry.Title : Path.GetFileNameWithoutExtension(entry.FileName),
+                Author = !string.IsNullOrWhiteSpace(entry.Author) ? entry.Author : "Tùy biến",
+                Description = "Shader pack đã cài đặt.",
+                Style = "realistic",
+                StyleLabel = "Thực tế",
+                Version = entry.VersionId ?? "1.0.0",
+                Size = sizeStr,
+                ImageUri = imageUri,
+                AccentColor = "#3b82f6"
+            };
+            Shaders.Add(new ShaderPackRow(item));
+        }
+
+        FilterShaders();
+    }
+
+    public void SelectShaderFilter(string filter)
+    {
+        SelectedShaderFilter = filter;
+        FilterShaders();
+    }
+
+    private void FilterShaders()
+    {
+        FilteredShaders.Clear();
+        var query = ShaderSearchQuery?.Trim() ?? string.Empty;
+
+        var items = Shaders.AsEnumerable();
+        if (SelectedShaderFilter != "all")
+        {
+            items = items.Where(s => s.Style.Equals(SelectedShaderFilter, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (!string.IsNullOrEmpty(query))
+        {
+            items = items.Where(s =>
+                s.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                s.Description.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                s.Author.Contains(query, StringComparison.OrdinalIgnoreCase));
+        }
+
+        foreach (var s in items)
+        {
+            FilteredShaders.Add(s);
+        }
+
+        ShaderSummaryText = $"Đã cài {Shaders.Count} shaders (Hiển thị {FilteredShaders.Count})";
+        HasNoShaders = FilteredShaders.Count == 0;
+    }
+
+    [RelayCommand]
+    public void OpenShaderInspector(ShaderPackRow shader)
+    {
+        SelectedShaderForInspector = shader;
+        IsShaderInspectorOpen = true;
+    }
+
+    [RelayCommand]
+    public void CloseShaderInspector()
+    {
+        IsShaderInspectorOpen = false;
+        SelectedShaderForInspector = null;
+    }
+
+    [RelayCommand]
+    public void OpenShaderFile(ShaderPackRow shader)
+    {
+        if (shader == null) return;
+        var instancePath = Current?.Path;
+        if (string.IsNullOrEmpty(instancePath)) return;
+
+        var filePath = Path.Combine(instancePath, "shaderpacks", shader.FileName);
+        if (File.Exists(filePath))
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"/select,\"{filePath}\"",
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Không thể mở vị trí tệp: {ex.Message}";
+            }
+        }
+        else
+        {
+            var shDir = Path.Combine(instancePath, "shaderpacks");
+            Directory.CreateDirectory(shDir);
+            try
+            {
+                Process.Start(new ProcessStartInfo { FileName = shDir, UseShellExecute = true });
+            }
+            catch { }
+        }
+    }
+
+    [RelayCommand]
+    public void DeleteShader(ShaderPackRow shader)
+    {
+        if (shader == null) return;
+        var instancePath = Current?.Path;
+        if (!string.IsNullOrEmpty(instancePath))
+        {
+            var filePath = Path.Combine(instancePath, "shaderpacks", shader.FileName);
+            if (File.Exists(filePath))
+            {
+                try
+                {
+                    File.Delete(filePath);
+                }
+                catch (Exception ex)
+                {
+                    StatusMessage = $"Không thể xóa shader: {ex.Message}";
+                    _notificationService?.ShowError("Không thể xóa shader", ex.Message);
+                    return;
+                }
+            }
+
+            _ = _packManifestService.RemoveEntryAsync(instancePath, "shader", shader.FileName);
+        }
+
+        Shaders.Remove(shader);
+        if (SelectedShaderForInspector == shader)
+        {
+            CloseShaderInspector();
+        }
+        FilterShaders();
+        StatusMessage = $"Đã xóa shader {shader.Name}.";
+        _notificationService?.ShowSuccess($"Đã xóa shader {shader.Name}", "Shader đã bị xóa khỏi thư mục.");
+    }
+
+    public async Task ImportShaderFilesAsync(System.Collections.Generic.IEnumerable<string> filePaths)
+    {
+        await Task.Yield();
+        var instancePath = Current?.Path;
+        if (string.IsNullOrEmpty(instancePath)) return;
+
+        var shDir = Path.Combine(instancePath, "shaderpacks");
+        Directory.CreateDirectory(shDir);
+
+        int count = 0;
+        int errorCount = 0;
+
+        foreach (var fp in filePaths)
+        {
+            if (File.Exists(fp) && fp.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+            {
+                var fn = Path.GetFileName(fp);
+
+                try
+                {
+                    using var archive = ZipFile.OpenRead(fp);
+                    bool hasShaders = archive.Entries.Any(e => e.FullName.StartsWith("shaders/", StringComparison.OrdinalIgnoreCase) ||
+                                                               e.FullName.Contains("/shaders/"));
+                    if (!hasShaders)
+                    {
+                        errorCount++;
+                        StatusMessage = $"Lỗi tệp: '{fn}' không phải là Shader Pack hợp lệ (thiếu thư mục shaders/).";
+                        continue;
+                    }
+                }
+                catch
+                {
+                    errorCount++;
+                    StatusMessage = $"Lỗi tệp: '{fn}' bị hỏng hoặc không phải tệp ZIP hợp lệ.";
+                    continue;
+                }
+
+                var dest = Path.Combine(shDir, fn);
+                File.Copy(fp, dest, overwrite: true);
+
+                var newItem = new ShaderPackItem
+                {
+                    Id = Path.GetFileNameWithoutExtension(fn).ToLowerInvariant(),
+                    Name = Path.GetFileNameWithoutExtension(fn),
+                    Author = "Tùy biến",
+                    Description = "Shader pack người dùng thêm vào.",
+                    Style = "realistic",
+                    StyleLabel = "Thực tế",
+                    Version = "1.0.0",
+                    Size = "8 MB",
+                    AccentColor = "#3b82f6"
+                };
+                Shaders.Add(new ShaderPackRow(newItem));
+                count++;
+            }
+        }
+
+        if (count > 0)
+        {
+            FilterShaders();
+            StatusMessage = $"Đã thêm {count} shader pack vào thư viện.";
+        }
+    }
+
+    [RelayCommand]
+    public async Task OpenIrisDownloadPageAsync()
+    {
+        try
+        {
+            await Windows.System.Launcher.LaunchUriAsync(new Uri("https://modrinth.com/mod/iris"));
+        }
+        catch { }
+    }
+
+    // --- Thumbnail Background Loading ---
+
+    /// <summary>
+    /// P0.6: Resolve IconUri cho ResourcePackItem theo thứ tự ưu tiên:
+    /// 1. ThumbnailLocal (đường dẫn tương đối "thumbnails/xxx.jpg") → resolve thành đường tuyệt đối.
+    /// 2. ThumbnailRemote (URL) nếu local không có.
+    /// 3. String.Empty (→ LoadThumbnailInBackground sẽ cấp CustomIconSource từ pack.png trong zip).
+    ///
+    /// Trước đây (bug P0.6): chỉ dùng ThumbnailRemote → entry không có remote (ví dụ LowOnFire
+    /// chỉ có local) luôn nhận placeholder xám dù thumbnail đã tải về đĩa.
+    /// </summary>
+    private static string ResolvePackThumbnailUri(PackManifestEntry entry, string instancePath)
+    {
+        var local = ResolveLocalThumbnailPath(entry, instancePath);
+        if (local != null)
+        {
+            // new Uri(path).AbsoluteUri → "file:///C:/..." — định dạng BitmapImage WinUI hiểu.
+            // Đây là cùng cơ chế với mod icon (InstanceDetailViewModel.cs dòng 485).
+            return new Uri(local).AbsoluteUri;
+        }
+        return entry.ThumbnailRemote ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Trả về đường dẫn TUYỆT ĐỐI của thumbnailLocal nếu file thật sự tồn tại, ngược lại null.
+    /// </summary>
+    private static string? ResolveLocalThumbnailPath(PackManifestEntry entry, string instancePath)
+    {
+        if (string.IsNullOrEmpty(entry.ThumbnailLocal)) return null;
+
+        var local = entry.ThumbnailLocal;
+        if (!Path.IsPathRooted(local))
+        {
+            local = Path.Combine(instancePath, local);
+        }
+        return File.Exists(local) ? local : null;
+    }
+
+    private void LoadThumbnailInBackground(ResourcePackRow row, string zipPath, string? localThumbnailPath = null)
+    {
+        _ = Task.Run(async () =>
+        {
+            byte[]? imageBytes = null;
+
+            // P0.6: ưu tiên file thumbnail đã cache (Modrinth, thường 96x96..400x400).
+            // Dùng SetSourceAsync từ byte[] (cơ chế đã chạy tốt), không dùng Uri file://
+            // vì BitmapImage trong WinUI không mở được đường dẫn tuyệt đối dạng path.
+            if (!string.IsNullOrEmpty(localThumbnailPath))
+            {
+                try
+                {
+                    if (File.Exists(localThumbnailPath))
+                    {
+                        imageBytes = await File.ReadAllBytesAsync(localThumbnailPath);
+                    }
+                }
+                catch { /* fallback sang pack.png */ }
+            }
+
+            // Fallback: pack.png nằm trong zip (hành vi cũ).
+            if (imageBytes == null || imageBytes.Length == 0)
+            {
+                try
+                {
+                    using var archive = ZipFile.OpenRead(zipPath);
+                    var entry = archive.GetEntry("pack.png") ?? archive.Entries.FirstOrDefault(e =>
+                        string.Equals(e.FullName, "pack.png", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(Path.GetFileName(e.FullName), "pack.png", StringComparison.OrdinalIgnoreCase));
+
+                    if (entry != null)
+                    {
+                        using var stream = entry.Open();
+                        using var ms = new MemoryStream();
+                        await stream.CopyToAsync(ms);
+                        imageBytes = ms.ToArray();
+                    }
+                }
+                catch
+                {
+                    // File unreadable or invalid zip
+                }
+            }
+
+            if (imageBytes != null && imageBytes.Length > 0)
+            {
+                App.Dispatcher?.TryEnqueue(async () =>
+                {
+                    try
+                    {
+                        var ras = new Windows.Storage.Streams.InMemoryRandomAccessStream();
+                        using (var writer = ras.AsStreamForWrite())
+                        {
+                            await writer.WriteAsync(imageBytes, 0, imageBytes.Length);
+                            await writer.FlushAsync();
+                        }
+                        ras.Seek(0);
+                        var bmp = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage();
+                        await bmp.SetSourceAsync(ras);
+                        row.CustomIconSource = bmp;
+                    }
+                    catch
+                    {
+                        row.CustomIconSource = Vaz.WinUI.Helpers.UiPlaceholders.Image;
+                    }
+                });
+            }
+        });
+    }
+
+    // --- FileSystemWatchers for Hot-Reloading Folders ---
+    private FileSystemWatcher? _resourcePacksWatcher;
+    private FileSystemWatcher? _shaderPacksWatcher;
+    private System.Threading.Timer? _resourcePacksDebounceTimer;
+    private System.Threading.Timer? _shadersDebounceTimer;
+    private readonly object _watcherLock = new();
+
+    public void StartFileSystemWatchers(string? instancePath)
+    {
+        DisposeFileSystemWatchers();
+
+        if (string.IsNullOrEmpty(instancePath) || !Directory.Exists(instancePath)) return;
+
+        try
+        {
+            var rpDir = Path.Combine(instancePath, "resourcepacks");
+            Directory.CreateDirectory(rpDir);
+            _resourcePacksWatcher = new FileSystemWatcher(rpDir, "*.zip")
+            {
+                NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite,
+                EnableRaisingEvents = true
+            };
+            _resourcePacksWatcher.Created += OnResourcePacksDirectoryChanged;
+            _resourcePacksWatcher.Deleted += OnResourcePacksDirectoryChanged;
+            _resourcePacksWatcher.Renamed += OnResourcePacksDirectoryChanged;
+        }
+        catch { }
+
+        try
+        {
+            var shDir = Path.Combine(instancePath, "shaderpacks");
+            Directory.CreateDirectory(shDir);
+            _shaderPacksWatcher = new FileSystemWatcher(shDir, "*.zip")
+            {
+                NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite,
+                EnableRaisingEvents = true
+            };
+            _shaderPacksWatcher.Created += OnShadersDirectoryChanged;
+            _shaderPacksWatcher.Deleted += OnShadersDirectoryChanged;
+            _shaderPacksWatcher.Renamed += OnShadersDirectoryChanged;
+        }
+        catch { }
+    }
+
+    private void OnResourcePacksDirectoryChanged(object sender, FileSystemEventArgs e)
+    {
+        lock (_watcherLock)
+        {
+            _resourcePacksDebounceTimer?.Dispose();
+            _resourcePacksDebounceTimer = new System.Threading.Timer(_ =>
+            {
+                App.Dispatcher?.TryEnqueue(() =>
+                {
+                    LoadResourcePacks();
+                });
+            }, null, 400, System.Threading.Timeout.Infinite);
+        }
+    }
+
+    private void OnShadersDirectoryChanged(object sender, FileSystemEventArgs e)
+    {
+        lock (_watcherLock)
+        {
+            _shadersDebounceTimer?.Dispose();
+            _shadersDebounceTimer = new System.Threading.Timer(_ =>
+            {
+                App.Dispatcher?.TryEnqueue(() =>
+                {
+                    LoadShaders();
+                });
+            }, null, 400, System.Threading.Timeout.Infinite);
+        }
+    }
+
+    public void DisposeFileSystemWatchers()
+    {
+        lock (_watcherLock)
+        {
+            _resourcePacksDebounceTimer?.Dispose();
+            _resourcePacksDebounceTimer = null;
+            _shadersDebounceTimer?.Dispose();
+            _shadersDebounceTimer = null;
+
+            if (_resourcePacksWatcher != null)
+            {
+                _resourcePacksWatcher.EnableRaisingEvents = false;
+                _resourcePacksWatcher.Dispose();
+                _resourcePacksWatcher = null;
+            }
+
+            if (_shaderPacksWatcher != null)
+            {
+                _shaderPacksWatcher.EnableRaisingEvents = false;
+                _shaderPacksWatcher.Dispose();
+                _shaderPacksWatcher = null;
+            }
+        }
+    }
+}

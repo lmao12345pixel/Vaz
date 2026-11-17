@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>V.A.Z Motion Lab — Design System & Interaction Spec</title>
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./motion-lab.css">
+</head>
+<body class="ml-body">
+  <div class="ml-root">
+    <!-- Header -->
+    <header class="ml-header">
+      <div class="ml-header-info">
+        <a href="./index.html" class="ml-back-link" title="Về UI Prototype">&larr; V.A.Z Prototype</a>
+        <h1 class="ml-title">Motion Lab</h1>
+        <p class="ml-subtitle">Môi trường đo kiểm chuyển động chuẩn hóa: Shared Element, Launch Sequence, Microinteractions.</p>
+      </div>
+      <div class="ml-controls">
+        <button type="button" id="mlReduceMotionToggle" class="ml-btn ml-toggle-btn" role="switch" aria-checked="false">
+          <span class="ml-toggle-label">Giảm chuyển động:</span>
+          <span class="ml-toggle-state">TẮT</span>
+        </button>
+        <button type="button" id="mlThemeToggle" class="ml-btn ml-icon-btn" title="Đổi giao diện Sáng / Tối">
+          <span class="ml-theme-icon">&#xE708;</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Token Table Section -->
+    <section class="ml-section ml-tokens-section" aria-labelledby="mlTokensHeading">
+      <div class="ml-section-header">
+        <h2 id="mlTokensHeading" class="ml-section-title">Design Tokens (Computed từ :root)</h2>
+        <span class="ml-badge">Nguồn: styles.css</span>
+      </div>
+      <div class="ml-table-responsive">
+        <table class="ml-token-table">
+          <thead>
+            <tr>
+              <th>Token Name</th>
+              <th>CSS Variable</th>
+              <th>Computed Value</th>
+              <th>Intended Usage</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="ml-token-row" data-token="--dur-fast">
+              <td><strong>Duration Fast</strong></td>
+              <td><code>--dur-fast</code></td>
+              <td class="ml-token-val" data-token="--dur-fast">--</td>
+              <td>Hover màu, viền, icon, ghost button</td>
+            </tr>
+            <tr class="ml-token-row" data-token="--dur-base">
+              <td><strong>Duration Base</strong></td>
+              <td><code>--dur-base</code></td>
+              <td class="ml-token-val" data-token="--dur-base">--</td>
+              <td>Card lift, tab, row hover, toast</td>
+            </tr>
+            <tr class="ml-token-row" data-token="--dur-slow">
+              <td><strong>Duration Slow</strong></td>
+              <td><code>--dur-slow</code></td>
+              <td class="ml-token-val" data-token="--dur-slow">--</td>
+              <td>Dialog / sheet / overlay entrance, FLIP</td>
+            </tr>
+            <tr class="ml-token-row" data-token="--ease-standard">
+              <td><strong>Ease Standard</strong></td>
+              <td><code>--ease-standard</code></td>
+              <td class="ml-token-val" data-token="--ease-standard">--</td>
+              <td>Chuyển trạng thái mặc định</td>
+            </tr>
+            <tr class="ml-token-row" data-token="--ease-out">
+              <td><strong>Ease Out</strong></td>
+              <td><code>--ease-out</code></td>
+              <td class="ml-token-val" data-token="--ease-out">--</td>
+              <td>Phần tử xuất hiện / entrance</td>
+            </tr>
+            <tr class="ml-token-row" data-token="--ease-spring">
+              <td><strong>Ease Spring</strong></td>
+              <td><code>--ease-spring</code></td>
+              <td class="ml-token-val" data-token="--ease-spring">--</td>
+              <td>Nhấn nút, toggle, badge count</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Demos Section (>= 3 demo cards) -->
+    <section class="ml-section" aria-labelledby="mlDemosHeading">
+      <div class="ml-section-header">
+        <h2 id="mlDemosHeading" class="ml-section-title">Motion Demos</h2>
+        <span class="ml-badge">Executable Spec</span>
+      </div>
+
+      <div class="ml-demos-grid">
+        <!-- Demo Card 1: Shared Element Transition -->
+        <article class="ml-demo-card" id="demoSharedElement" data-demo="shared-element">
+          <div class="ml-card-head">
+            <div>
+              <h3 class="ml-card-title">1. Shared Element Transition</h3>
+              <p class="ml-card-desc">FLIP morph: Icon + Title di chuyển mượt mà giữa Grid Card và Detail Header.</p>
+            </div>
+            <button type="button" class="ml-btn ml-replay-btn" data-demo="shared-element" title="Chạy lại animation">Replay</button>
+          </div>
+          <div class="ml-card-body">
+            <div class="ml-stage" id="mlSharedStage">
+              <!-- Grid state -->
+              <div class="ml-shared-grid" id="mlSharedGrid">
+                <button type="button" class="ml-instance-card" id="mlCardInst1" data-inst-id="opt-121">
+                  <div class="ml-card-icon-box ml-shared ml-shared-icon">
+                    <span class="ml-icon-glyph">&#xE7FC;</span>
+                  </div>
+                  <div class="ml-card-info">
+                    <div class="ml-card-name ml-shared ml-shared-title">Fabulously Optimized 1.21</div>
+                    <div class="ml-card-sub">Fabric 0.16.0 • 42 mods • 144 FPS</div>
+                  </div>
+                </button>
+                <button type="button" class="ml-instance-card" id="mlCardInst2" data-inst-id="atm-120">
+                  <div class="ml-card-icon-box ml-shared ml-shared-icon">
+                    <span class="ml-icon-glyph">&#xE74C;</span>
+                  </div>
+                  <div class="ml-card-info">
+                    <div class="ml-card-name ml-shared ml-shared-title">All The Mods 10</div>
+                    <div class="ml-card-sub">NeoForge 21.1 • 380 mods</div>
+                  </div>
+                </button>
+              </div>
+
+              <!-- Detail state (hidden initially) -->
+              <div class="ml-shared-detail" id="mlSharedDetail" hidden>
+                <div class="ml-detail-nav">
+                  <button type="button" class="ml-btn ml-back-btn" id="mlDetailBackBtn">&larr; Back to Instances</button>
+                </div>
+                <div class="ml-shared-header">
+                  <div class="ml-detail-icon-box ml-shared ml-shared-icon" id="mlDetailIconBox">
+                    <span class="ml-icon-glyph" id="mlDetailGlyph">&#xE7FC;</span>
+                  </div>
+                  <div class="ml-detail-info">
+                    <h4 class="ml-detail-title ml-shared ml-shared-title" id="mlDetailTitle">Fabulously Optimized 1.21</h4>
+                    <p class="ml-detail-meta" id="mlDetailMeta">Fabric 0.16.0 &bull; Cài đặt &bull; Mods &bull; Worlds</p>
+                  </div>
+                </div>
+                <div class="ml-detail-tabs">
+                  <span class="ml-tab is-active">Mods (42)</span>
+                  <span class="ml-tab">Worlds</span>
+                  <span class="ml-tab">Settings</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="ml-card-footer">
+            <span class="ml-token-pill">--dur-slow (380ms)</span>
+            <span class="ml-token-pill">--ease-out</span>
+            <span class="ml-token-pill">FLIP Transform</span>
+          </div>
+        </article>
+
+        <!-- Demo Card 2: Launch Sequence (4-stage Sequential Progress) -->
+        <article class="ml-demo-card" id="demoLaunch" data-demo="launch">
+          <div class="ml-card-head">
+            <div>
+              <h3 class="ml-card-title">2. Launch Sequence</h3>
+              <p class="ml-card-desc">Quy trình khởi chạy 4 giai đoạn tuần tự: Java &rarr; Assets &rarr; Mods &rarr; World.</p>
+            </div>
+            <button type="button" class="ml-btn ml-replay-btn" data-demo="launch" title="Chạy lại animation">Replay</button>
+          </div>
+          <div class="ml-card-body">
+            <div class="ml-stage ml-launch-stage" id="mlLaunchStage">
+              <div class="ml-launch-hero">
+                <button type="button" class="ml-btn ml-btn-accent ml-play-btn" id="mlLaunchBtn">
+                  <span class="ml-play-icon">&#xE768;</span> Khởi chạy Game (Play)
+                </button>
+                <span class="ml-launch-summary" id="mlLaunchSummary">Sẵn sàng khởi chạy phiên bản 1.21</span>
+              </div>
+
+              <!-- Launch Overlay Modal -->
+              <div class="ml-launch-overlay" id="mlLaunchOverlay" hidden aria-modal="true" role="dialog">
+                <div class="ml-launch-modal">
+                  <div class="ml-modal-header">
+                    <h4 class="ml-modal-title">Khởi chạy: Fabulously Optimized 1.21</h4>
+                    <button type="button" class="ml-btn ml-icon-btn ml-close-launch" id="mlLaunchCancelBtn" title="Hủy">&#xE711;</button>
+                  </div>
+                  <div class="ml-stages-list">
+                    <div class="ml-stage-row" data-stage="java" data-state="idle">
+                      <div class="ml-stage-meta">
+                        <span class="ml-stage-label">1. Java Runtime Environment</span>
+                        <span class="ml-stage-status">Chờ</span>
+                      </div>
+                      <div class="ml-progress-track">
+                        <div class="ml-progress-fill" style="width: 0%;"></div>
+                      </div>
+                    </div>
+                    <div class="ml-stage-row" data-stage="assets" data-state="idle">
+                      <div class="ml-stage-meta">
+                        <span class="ml-stage-label">2. Minecraft Assets &amp; Indexes</span>
+                        <span class="ml-stage-status">Chờ</span>
+                      </div>
+                      <div class="ml-progress-track">
+                        <div class="ml-progress-fill" style="width: 0%;"></div>
+                      </div>
+                    </div>
+                    <div class="ml-stage-row" data-stage="mods" data-state="idle">
+                      <div class="ml-stage-meta">
+                        <span class="ml-stage-label">3. Fabric Mods &amp; Dependencies</span>
+                        <span class="ml-stage-status">Chờ</span>
+                      </div>
+                      <div class="ml-progress-track">
+                        <div class="ml-progress-fill" style="width: 0%;"></div>
+                      </div>
+                    </div>
+                    <div class="ml-stage-row" data-stage="world" data-state="idle">
+                      <div class="ml-stage-meta">
+                        <span class="ml-stage-label">4. World Saves &amp; Configs</span>
+                        <span class="ml-stage-status">Chờ</span>
+                      </div>
+                      <div class="ml-progress-track">
+                        <div class="ml-progress-fill" style="width: 0%;"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="ml-modal-footer">
+                    <span class="ml-status-text" id="mlLaunchStatus">Đang chuẩn bị...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="ml-card-footer">
+            <span class="ml-token-pill">--dur-base (220ms)</span>
+            <span class="ml-token-pill">4 Sequential Stages</span>
+            <span class="ml-token-pill">State-driven</span>
+          </div>
+        </article>
+
+        <!-- Demo Card 3: Microinteractions & Feedback -->
+        <article class="ml-demo-card" id="demoMicro" data-demo="micro">
+          <div class="ml-card-head">
+            <div>
+              <h3 class="ml-card-title">3. Microinteractions &amp; Kinetic Feedback</h3>
+              <p class="ml-card-desc">Phản hồi xúc giác UI: button press scale spring, count badge bump, and toast alerts.</p>
+            </div>
+            <button type="button" class="ml-btn ml-replay-btn" data-demo="micro" title="Chạy lại animation">Replay</button>
+          </div>
+          <div class="ml-card-body">
+            <div class="ml-stage ml-micro-stage" id="mlMicroStage">
+              <div class="ml-micro-row">
+                <button type="button" class="ml-btn ml-spring-btn" id="mlSpringBtn">
+                  Nhấn thử Spring
+                </button>
+                <div class="ml-badge-container">
+                  <span class="ml-badge-label">Thông báo:</span>
+                  <span class="ml-badge-count" id="mlBadgeCount">0</span>
+                </div>
+              </div>
+              <div class="ml-toast-container" id="mlToastContainer">
+                <!-- Sample toast -->
+                <div class="ml-toast-item" id="mlSampleToast">Đã đồng bộ hóa 42 mods thành công!</div>
+              </div>
+            </div>
+          </div>
+          <div class="ml-card-footer">
+            <span class="ml-token-pill">--dur-fast (140ms)</span>
+            <span class="ml-token-pill">--ease-spring</span>
+            <span class="ml-token-pill">Elastic Bump</span>
+          </div>
+        </article>
+      </div>
+    </section>
+  </div>
+
+  <script type="module" src="./motion-lab.js"></script>
+</body>
+</html>

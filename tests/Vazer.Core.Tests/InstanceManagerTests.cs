@@ -12,7 +12,7 @@ namespace Vazer.Core.Tests;
 /// <summary>
 /// Phase 1.6 TASK3 + 1.7 TASK1: InstanceManager metadata round-trip without network.
 /// CreateFabric/CreateVanilla require network (Mojang/Fabric APIs) and are NOT
-/// covered here. NeoForge goes through injectable <see cref="INeoForgeInstallerService"/>.
+/// covered here. NeoForge goes through injectable <see cref="INeoForgeInstaller"/>.
 /// </summary>
 public sealed class InstanceManagerTests : IDisposable
 {
@@ -102,6 +102,30 @@ public sealed class InstanceManagerTests : IDisposable
     }
 
     [Fact]
+    public void RequireLoaderVersion_Null_Throws_With_Minecraft_Version()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => InstanceManager.RequireLoaderVersion(null, "1.21.1"));
+
+        ex.Message.Should().Contain("1.21.1");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void RequireLoaderVersion_Blank_Throws(string loaderVersion)
+    {
+        Assert.Throws<InvalidOperationException>(
+            () => InstanceManager.RequireLoaderVersion(loaderVersion, "1.21.1"));
+    }
+
+    [Fact]
+    public void RequireLoaderVersion_Valid_Returns_Value()
+    {
+        InstanceManager.RequireLoaderVersion("0.15.11", "1.21.1").Should().Be("0.15.11");
+    }
+
+    [Fact]
     public async Task CreateNeoForgeAsync_Uses_Service_And_Writes_Metadata()
     {
         var fake = new FakeNeoForgeService { Version = "21.1.169" };
@@ -144,7 +168,7 @@ public sealed class InstanceManagerTests : IDisposable
         fake.Installed.Should().HaveCount(1);
     }
 
-    private sealed class FakeNeoForgeService : INeoForgeInstallerService
+    private sealed class FakeNeoForgeService : INeoForgeInstaller
     {
         public string Version { get; set; } = "21.1.169";
         public int ResolveCalls { get; private set; }

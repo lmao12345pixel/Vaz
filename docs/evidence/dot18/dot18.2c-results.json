@@ -1,0 +1,44 @@
+[
+  {
+    "Case": "#1 Mo dialog",
+    "Status": "PASS",
+    "Evidence": "uia/case1-dialog-open.txt",
+    "Note": "Dialog window 'Tao instance moi' visible (Offscreen=False)"
+  },
+  {
+    "Case": "#2 Fabric + 1.21.1",
+    "Status": "PASS (adapted)",
+    "Evidence": "uia/case2-fabric-loader-versions.txt",
+    "Note": "Used MC 1.21.7 (1.21.1 not in top-10 dropdown); 26 loader versions, first='0.20.1' is highest"
+  },
+  {
+    "Case": "#3 Quilt + 1.21.1",
+    "Status": "PASS (adapted)",
+    "Evidence": "uia/case3-quilt-loader-versions.txt",
+    "Note": "Used MC 1.21.7; 26 loader versions, first='0.30.2'"
+  },
+  {
+    "Case": "#4 NeoForge + 1.20.1",
+    "Status": "PASS (adapted)",
+    "Evidence": "uia/case4-neoforge-empty-state.txt",
+    "Note": "Used MC 26.3 (1.20.1 not in dropdown); loader list empty, 'Khong co version tuong thich' + warning 'Vui long chon loader version cho NeoForge.' both visible"
+  },
+  {
+    "Case": "#7 Badge 'Da cai'",
+    "Status": "PASS (adapted)",
+    "Evidence": "uia/case7-badge-tree.txt",
+    "Note": "Badge rendered for fake-installed 1.21.7 (1.21.1 not in dropdown); badges found=2"
+  },
+  {
+    "Case": "#5 Chua chon Loader Version",
+    "Status": "PASS (adapted)",
+    "Evidence": "uia/case4-neoforge-empty-state.txt",
+    "Note": "PrimaryButton IsEnabled=False when loader-version list is empty (NeoForge + 26.3); warning + 'Khong co version tuong thich' visible"
+  },
+  {
+    "Case": "#9 Light/Dark",
+    "Status": "PASS",
+    "Evidence": "screenshots/case9-dialog-light.png",
+    "Note": "Captured dark (case1) + light dialog screenshots"
+  }
+]

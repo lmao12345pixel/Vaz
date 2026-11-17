@@ -1,0 +1,272 @@
+<UserControl
+    x:Class="Vaz.WinUI.Views.Controls.WizardStep3Confirm"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <UserControl.Resources>
+        <LinearGradientBrush x:Key="PreviewGradientBrush" StartPoint="0,0" EndPoint="0,1">
+            <GradientStop x:Name="GradientStop1" Color="#8B5A2B" Offset="0" />
+            <GradientStop x:Name="GradientStop2" Color="#6B4423" Offset="1" />
+        </LinearGradientBrush>
+        <LinearGradientBrush x:Key="CreateGradient" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="{ThemeResource MkVibeCreateGradientStartColor}" Offset="0" />
+            <GradientStop Color="{ThemeResource MkVibeCreateGradientMidColor}" Offset="0.55" />
+            <GradientStop Color="{ThemeResource MkVibeCreateGradientEndColor}" Offset="1" />
+        </LinearGradientBrush>
+    </UserControl.Resources>
+
+    <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10" Padding="24,10,24,6">
+        <!-- Hero + subtitle -->
+        <StackPanel Grid.Row="0" Spacing="4">
+            <TextBlock Text="Xác nhận &amp; tạo" Margin="0,0,0,16" Style="{StaticResource MkVibeTitleStyle}" />
+            <TextBlock x:Name="BreadcrumbText"
+                       Text="Kiểm tra cấu hình trước khi tạo instance."
+                       Margin="0,0,0,24"
+                       FontSize="13"
+                       FontFamily="{ThemeResource MkVibePixelFont}"
+                       Foreground="{ThemeResource MkVibeMutedTextBrush}" />
+        </StackPanel>
+
+        <!-- Preview card -->
+        <Border x:Name="PreviewCard"
+                Grid.Row="1"
+                Width="500"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Background="{StaticResource PreviewGradientBrush}"
+                BorderBrush="{ThemeResource MkVibeWoodCardBorderBrush}"
+                BorderThickness="4"
+                CornerRadius="0"
+                Padding="26,22,26,18">
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="12">
+                <!-- Big loader tile -->
+                <Border x:Name="LoaderTile"
+                        Grid.Row="0"
+                        Width="104"
+                        Height="104"
+                        CornerRadius="{ThemeResource MkVibeBlockCorner}"
+                        HorizontalAlignment="Center"
+                        Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                    <Image x:Name="LoaderLogo"
+                           Width="64"
+                           Height="64"
+                           Stretch="Uniform"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center" />
+                </Border>
+
+                <TextBlock x:Name="VersionLine"
+                           Grid.Row="1"
+                           Text="Minecraft 1.21.1"
+                           FontFamily="{ThemeResource MkVibePixelFont}"
+                           FontSize="12"
+                           FontWeight="SemiBold"
+                           Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                           HorizontalAlignment="Center" />
+
+                <TextBlock x:Name="LoaderLine"
+                           Grid.Row="2"
+                           Text="Fabric"
+                           FontFamily="{ThemeResource MkVibePixelFont}"
+                           FontSize="10"
+                           FontWeight="Medium"
+                           Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                           HorizontalAlignment="Center" />
+
+                <!-- Editable name -->
+                <Grid Grid.Row="3" Margin="10,2,10,0">
+                    <TextBox x:Name="NameBox"
+                             Text="Fabric 1.21.1 #1"
+                             PlaceholderText=""
+                             Padding="16,22,16,6"
+                             FontSize="15"
+                             Background="{ThemeResource MkVibeSlotHighlightBrush}"
+                             BorderBrush="{ThemeResource MkVibeSlotSubtleBorderBrush}"
+                             BorderThickness="1"
+                             CornerRadius="10"
+                             Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                             HorizontalAlignment="Stretch" />
+                    <TextBlock x:Name="FloatingLabel"
+                               Text="Tên instance"
+                               FontFamily="{ThemeResource MkVibePixelFont}"
+                               FontSize="9"
+                               Foreground="{ThemeResource MkVibeInputFloatingLabelBrush}"
+                               Margin="16,6,16,0"
+                               VerticalAlignment="Top"
+                               IsHitTestVisible="False" />
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- Footer -->
+        <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="8">
+            <Button x:Name="BackButton"
+                    Grid.Column="0"
+                    Content="← Quay lại"
+                    Height="36"
+                    Padding="16,7"
+                    CornerRadius="6"
+                    Click="BackButton_Click" />
+            <Button x:Name="CancelButton"
+                    Grid.Column="1"
+                    Content="Hủy"
+                    Height="36"
+                    Padding="16,7"
+                    CornerRadius="6"
+                    Click="CancelButton_Click" />
+
+            <!-- Create button host + glow -->
+            <Grid Grid.Column="3" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <Border x:Name="CreateGlow"
+                        CornerRadius="18"
+                        Background="{StaticResource CreateGradient}"
+                        Opacity="0.0"
+                        Width="220"
+                        Height="52" />
+                <Button x:Name="CreateButton"
+                        Height="38"
+                        Width="180"
+                        Padding="16,7"
+                        CornerRadius="19"
+                        BorderThickness="0"
+                        Background="{StaticResource CreateGradient}"
+                        Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                        FontWeight="SemiBold"
+                        FontSize="14"
+                        IsEnabled="False"
+                        Click="CreateButton_Click">
+                    <Button.Content>
+                        <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <!-- Normal content -->
+                            <StackPanel x:Name="NormalContent"
+                                        Orientation="Horizontal"
+                                        Spacing="8"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center">
+                                <FontIcon Glyph="&#xE73E;" FontSize="14" VerticalAlignment="Center" />
+                                <TextBlock x:Name="ActionLabel" Text="Tạo Instance" VerticalAlignment="Center" />
+                            </StackPanel>
+
+                            <!-- Loading content: furnace animation (Grid 3 cột) -->
+                            <Grid x:Name="LoadingContent"
+                                  Visibility="Collapsed"
+                                  ColumnDefinitions="Auto,*,Auto"
+                                  ColumnSpacing="8"
+                                  Width="140"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center">
+                                <!-- Cột 1: TextBlock 🔥 (FlameFlicker) -->
+                                <TextBlock x:Name="FlameIcon"
+                                           Grid.Column="0"
+                                           Text="🔥"
+                                           FontSize="14"
+                                           VerticalAlignment="Center"
+                                           RenderTransformOrigin="0.5,0.5">
+                                    <TextBlock.RenderTransform>
+                                        <TransformGroup>
+                                            <RotateTransform x:Name="FlameRotate" Angle="0" />
+                                            <ScaleTransform x:Name="FlameScale" ScaleX="1" ScaleY="1" />
+                                        </TransformGroup>
+                                    </TextBlock.RenderTransform>
+                                </TextBlock>
+
+                                <!-- Cột 2: ProgressBar (style MkVibeFurnaceProgressStyle) -->
+                                <ProgressBar x:Name="FurnaceProgressBar"
+                                             Grid.Column="1"
+                                             Style="{StaticResource MkVibeFurnaceProgressStyle}"
+                                             Height="10"
+                                             Minimum="0"
+                                             Maximum="100"
+                                             Value="0"
+                                             VerticalAlignment="Center" />
+
+                                <!-- Cột 3: TextBlock % (font MkVibePixelFont, 9px) -->
+                                <TextBlock x:Name="PercentText"
+                                           Grid.Column="2"
+                                           Text="0%"
+                                           FontFamily="{ThemeResource MkVibePixelFont}"
+                                           FontSize="9"
+                                           Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                                           VerticalAlignment="Center" />
+
+                                <TextBlock x:Name="StageText" Visibility="Collapsed" />
+                            </Grid>
+
+                            <!-- Success content: checkmark bounce + success message -->
+                            <StackPanel x:Name="SuccessContent"
+                                        Visibility="Collapsed"
+                                        Opacity="0"
+                                        Orientation="Horizontal"
+                                        Spacing="8"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center">
+                                <Border Width="22" Height="22" CornerRadius="11" Background="White" VerticalAlignment="Center">
+                                    <FontIcon Glyph="&#xE73E;" FontSize="13" Foreground="{ThemeResource MkVibeEmeraldBrush}" FontWeight="Bold"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <TextBlock Text="Đã tạo thành công!"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"
+                                           Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Grid>
+                    </Button.Content>
+                </Button>
+            </Grid>
+        </Grid>
+
+        <!-- Migration warning panel (change mode only): overlay 3-choice, thay cho nested ContentDialog
+             (WinUI 3 không hỗ trợ ContentDialog lồng trong ContentDialog wizard). -->
+        <Grid x:Name="MigrationWarningPanel"
+              Grid.Row="0" Grid.RowSpan="3"
+              Visibility="Collapsed"
+              Opacity="0"
+              Background="{ThemeResource MkVibeOverlayDimBrush}">
+            <Border x:Name="MigrationInnerPanel"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    MaxWidth="440"
+                    CornerRadius="12"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    Padding="20,18">
+                <StackPanel Spacing="14">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Đổi phiên bản?" FontSize="18" FontWeight="SemiBold" />
+                        <TextBlock Text="Đổi phiên bản có thể làm hỏng mods và world hiện tại. Bạn có muốn tiếp tục?"
+                                   TextWrapping="Wrap"
+                                   FontSize="13"
+                                   LineHeight="18"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                    <Button x:Name="KeepModsButton" Click="KeepModsButton_Click"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center"
+                            Style="{StaticResource VazAccentButtonStyle}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE73E;" FontSize="14" />
+                            <TextBlock Text="Đổi ngay, giữ mods" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="DeleteModsButton" Click="DeleteModsButton_Click"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE74D;" FontSize="14" />
+                            <TextBlock Text="Đổi ngay, xóa mods" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="CancelMigrationButton" Click="CancelMigrationButton_Click"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center"
+                            Background="Transparent"
+                            BorderThickness="0">
+                        <TextBlock Text="Hủy" />
+                    </Button>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Vazer.Core.Abstractions;
 using Vazer.Core.Auth;
+using Vazer.Core.GameOptions;
 using Vazer.Core.Http;
 using Vazer.Core.Instances;
 using Vazer.Core.Java;
@@ -14,7 +15,10 @@ using Vazer.Core.Loaders.Optifine;
 using Vazer.Core.Modpacks;
 using Vazer.Core.Modrinth;
 using Vazer.Core.Mods;
+using Vazer.Core.Packs;
+using Vazer.Core.Settings;
 using Vazer.Core.Store;
+using Vazer.Core.Versions;
 
 namespace Vazer.Core.Extensions;
 
@@ -81,25 +85,47 @@ public static class MinecraftServiceCollectionExtensions
 
         // Core services
         services.AddSingleton<IAccountStore, AccountStore>();
+        services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<IAuthProvider, OfflineAuthProvider>();
         services.AddSingleton<IAuthProvider, MsalAuthProvider>();
         services.AddSingleton<CompositeAuthProvider>();
         services.AddSingleton<IAdoptiumClient, AdoptiumClient>();
+        services.AddSingleton<IJavaVersionMapper, JavaVersionMapper>();
         services.AddSingleton<IJavaResolver, JavaResolver>();
-        services.AddSingleton<INeoForgeInstallerService, NeoForgeInstallerService>();
+        // Loader installers (Strategy pattern cho IInstanceCreationService).
+        // NeoForgeInstaller cũng là INeoForgeInstaller (InstanceManager/MrpackImporter dùng).
+        services.AddSingleton<VanillaInstaller>();
+        services.AddSingleton<FabricInstaller>();
+        services.AddSingleton<QuiltInstaller>();
+        services.AddSingleton<NeoForgeInstaller>();
+        services.AddSingleton<ForgeInstaller>();
+        services.AddSingleton<ILoaderInstaller>(sp => sp.GetRequiredService<VanillaInstaller>());
+        services.AddSingleton<ILoaderInstaller>(sp => sp.GetRequiredService<FabricInstaller>());
+        services.AddSingleton<ILoaderInstaller>(sp => sp.GetRequiredService<QuiltInstaller>());
+        services.AddSingleton<ILoaderInstaller>(sp => sp.GetRequiredService<NeoForgeInstaller>());
+        services.AddSingleton<ILoaderInstaller>(sp => sp.GetRequiredService<ForgeInstaller>());
+        services.AddSingleton<INeoForgeInstaller>(sp => sp.GetRequiredService<NeoForgeInstaller>());
+        services.AddSingleton<IInstanceCreationService, InstanceCreationService>();
         services.AddSingleton<LoaderInstallerRegistry>(sp =>
         {
             var registry = new LoaderInstallerRegistry();
-            registry.Register("neoforge", sp.GetRequiredService<INeoForgeInstallerService>());
+            registry.Register("neoforge", sp.GetRequiredService<NeoForgeInstaller>());
+            registry.Register("forge", sp.GetRequiredService<ForgeInstaller>());
             return registry;
         });
+        // Phase B: CreateInstanceViewModel cần IMinecraftVersionService (fetch Mojang/Fabric/Quilt/NeoForge metadata).
+        services.AddSingleton<IMinecraftVersionService, MinecraftVersionService>();
         services.AddSingleton<IInstanceManager, InstanceManager>();
+        services.AddSingleton<IInstanceMigrationService, InstanceMigrationService>();
+        services.AddSingleton<IVersionManagementService, VersionManagementService>();
         services.AddSingleton<IGameLauncher, CmlGameLauncher>();
 
         // Phase 2 services
         services.AddSingleton<IModrinthClient, ModrinthClient>();
         services.AddSingleton<IModInstallService, ModInstallService>();
+        services.AddSingleton<IPackManifestService, PackManifestService>();
         services.AddSingleton<IMrpackImporter, MrpackImporter>();
+        services.AddSingleton<IGameOptionsService, GameOptionsService>();
         services.AddSingleton<IOptifineInstallerService>(sp => new OptifineInstallerService(
             sp.GetRequiredService<IHttpClientFactory>(),
             sp.GetRequiredService<IOptions<MinecraftOptions>>(),

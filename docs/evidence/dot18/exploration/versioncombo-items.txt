@@ -1,0 +1,29 @@
+VersionCombo items (UIA dump via expand/collapse)
+Count: 26
+
+MinecraftVersionInfo { Id = 26.3, Type = release, ReleaseTime = 2026-09-15T11:23:02+00:00, Url = https://piston-meta.mojang.com/v1/packages/80608ff6753705b6a82e2cb86a5937d4d233abd4/26.3.json, FilterKey = release, IsInstalled = False }
+MinecraftVersionInfo { Id = 26.2, Type = release, ReleaseTime = 2026-06-16T12:03:33+00:00, Url = https://piston-meta.mojang.com/v1/packages/09165f570b16394790c4e37c93b0918729615d17/26.2.json, FilterKey = release, IsInstalled = False }
+MinecraftVersionInfo { Id = 26.1.2, Type = release, ReleaseTime = 2026-04-09T10:12:23+00:00, Url = https://piston-meta.mojang.com/v1/packages/4e49d699db7dba839226d0ed1fcf36c465c2edbe/26.1.2.json, FilterKey = release, IsInstalled = False }
+MinecraftVersionInfo { Id = 26.1.1, Type = release, ReleaseTime = 2026-04-01T09:06:36+00:00, Url = https://piston-meta.mojang.com/v1/packages/f242283c7b8a4c2a75668578248aee60928d2613/26.1.1.json, FilterKey = release, IsInstalled = False }
+MinecraftVersionInfo { Id = 26.1, Type = release, ReleaseTime = 2026-03-24T12:11:04+00:00, Url = https://piston-meta.mojang.com/v1/packages/90d81d9cd00c1ce55eb2b40aad4f1112bb58f12a/26.1.json, FilterKey = release, IsInstalled = False }
+MinecraftVersionInfo { Id = 1.21.11, Type = release, ReleaseTime = 2025-12-09T12:23:30+00:00, Url = https://piston-meta.mojang.com/v1/packages/35f8a9bc4874e2c95e51b3ad21e043a33776f7c2/1.21.11.json, FilterKey = release, IsInstalled = False }
+MinecraftVersionInfo { Id = 1.21.10, Type = release, ReleaseTime = 2025-10-07T09:17:23+00:00, Url = https://piston-meta.mojang.com/v1/packages/b0dc919ace9cee9a91d5a6dcaa594d41a26fcb1b/1.21.10.json, FilterKey = release, IsInstalled = False }
+MinecraftVersionInfo { Id = 1.21.9, Type = release, ReleaseTime = 2025-09-30T11:58:43+00:00, Url = https://piston-meta.mojang.com/v1/packages/811c9cc308cd5b928defa6434a7975233eaa6184/1.21.9.json, FilterKey = release, IsInstalled = False }
+MinecraftVersionInfo { Id = 1.21.8, Type = release, ReleaseTime = 2025-07-17T12:04:02+00:00, Url = https://piston-meta.mojang.com/v1/packages/17db9704e95a73d53452f07a9b472e428288defa/1.21.8.json, FilterKey = release, IsInstalled = False }
+MinecraftVersionInfo { Id = 1.21.7, Type = release, ReleaseTime = 2025-06-30T09:32:16+00:00, Url = https://piston-meta.mojang.com/v1/packages/1b478ff245de95b05e3c1a1589f391ade22e1bd3/1.21.7.json, FilterKey = release, IsInstalled = False }
+MinecraftVersionInfo { Id = 26.3, Type = release, ReleaseTime = 2026-09-15T11:23:02+00:00, Url = https://piston-meta.mojang.com/v1/packages/80608ff6753705b6a82e2cb86a5937d4d233abd4/26.3.json, FilterKey = release, IsInstalled = False }
+MinecraftVersionInfo { Id = 26.2, Type = release, ReleaseTime = 2026-06-16T12:03:33+00:00, Url = https://piston-meta.mojang.com/v1/packages/09165f570b16394790c4e37c93b0918729615d17/26.2.json, FilterKey = release, IsInstalled = False }
+MinecraftVersionInfo { Id = 26.1.2, Type = release, ReleaseTime = 2026-04-09T10:12:23+00:00, Url = https://piston-meta.mojang.com/v1/packages/4e49d699db7dba839226d0ed1fcf36c465c2edbe/26.1.2.json, FilterKey = release, IsInstalled = False }
+MinecraftVersionInfo { Id = 26.1.1, Type = release, ReleaseTime = 2026-04-01T09:06:36+00:00, Url = https://piston-meta.mojang.com/v1/packages/f242283c7b8a4c2a75668578248aee60928d2613/26.1.1.json, FilterKey = release, IsInstalled = False }
+MinecraftVersionInfo { Id = 26.1, Type = release, ReleaseTime = 2026-03-24T12:11:04+00:00, Url = https://piston-meta.mojang.com/v1/packages/90d81d9cd00c1ce55eb2b40aad4f1112bb58f12a/26.1.json, FilterKey = release, IsInstalled = False }
+MinecraftVersionInfo { Id = 1.21.11, Type = release, ReleaseTime = 2025-12-09T12:23:30+00:00, Url = https://piston-meta.mojang.com/v1/packages/35f8a9bc4874e2c95e51b3ad21e043a33776f7c2/1.21.11.json, FilterKey = release, IsInstalled = False }
+MinecraftVersionInfo { Id = 1.21.10, Type = release, ReleaseTime = 2025-10-07T09:17:23+00:00, Url = https://piston-meta.mojang.com/v1/packages/b0dc919ace9cee9a91d5a6dcaa594d41a26fcb1b/1.21.10.json, FilterKey = release, IsInstalled = False }
+MinecraftVersionInfo { Id = 1.21.9, Type = release, ReleaseTime = 2025-09-30T11:58:43+00:00, Url = https://piston-meta.mojang.com/v1/packages/811c9cc308cd5b928defa6434a7975233eaa6184/1.21.9.json, FilterKey = release, IsInstalled = False }
+MinecraftVersionInfo { Id = 1.21.8, Type = release, ReleaseTime = 2025-07-17T12:04:02+00:00, Url = https://piston-meta.mojang.com/v1/packages/17db9704e95a73d53452f07a9b472e428288defa/1.21.8.json, FilterKey = release, IsInstalled = False }
+MinecraftVersionInfo { Id = 1.21.7, Type = release, ReleaseTime = 2025-06-30T09:32:16+00:00, Url = https://piston-meta.mojang.com/v1/packages/1b478ff245de95b05e3c1a1589f391ade22e1bd3/1.21.7.json, FilterKey = release, IsInstalled = False }
+Instances
+Accounts
+Settings
+Vaz.WinUI.ViewModels.InstanceCardItem
+Vaz.WinUI.ViewModels.InstanceCardItem
+Vaz.WinUI.ViewModels.InstanceCardItem

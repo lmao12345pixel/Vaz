@@ -5,21 +5,44 @@
     xmlns:vm="using:Vaz.WinUI.ViewModels"
     NavigationCacheMode="Required">
 
-    <Grid Padding="24" RowSpacing="16" RowDefinitions="Auto,Auto,*,Auto">
+    <Grid Padding="24" RowSpacing="18" RowDefinitions="Auto,Auto,*,Auto">
         <!-- Header -->
-        <StackPanel Spacing="4">
-            <TextBlock Text="Tài khoản" FontSize="28" FontWeight="SemiBold" />
+        <StackPanel Spacing="6">
+            <TextBlock Text="Tài khoản" FontSize="26" FontWeight="SemiBold" />
             <TextBlock
-                Text="Cần ít nhất 1 tài khoản active để Launch instance."
-                Style="{StaticResource CaptionTextBlockStyle}" />
+                Text="Quản lý tài khoản Microsoft và tài khoản Offline dùng để khởi chạy các phiên bản Minecraft."
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                FontSize="13" />
         </StackPanel>
 
         <!-- Toolbar -->
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="12">
-            <Button Content="Add Offline" Click="AddOffline_Click" />
-            <Button Content="Add Microsoft" Click="AddMicrosoft_Click" />
-            <Button Content="Refresh (active)" Click="RefreshActive_Click" />
-            <Button Content="Tải lại danh sách" Click="Reload_Click" />
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10">
+            <Button
+                Style="{StaticResource VazAccentButtonStyle}"
+                Click="AddMicrosoft_Click">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE77B;" FontSize="14" />
+                    <TextBlock Text="Thêm tài khoản Microsoft" FontWeight="SemiBold" />
+                </StackPanel>
+            </Button>
+            <Button Click="AddOffline_Click">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE779;" FontSize="14" />
+                    <TextBlock Text="Thêm Offline" />
+                </StackPanel>
+            </Button>
+            <Button Click="RefreshActive_Click">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE72C;" FontSize="13" />
+                    <TextBlock Text="Làm mới phiên" />
+                </StackPanel>
+            </Button>
+            <Button Click="Reload_Click">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE895;" FontSize="13" />
+                    <TextBlock Text="Tải lại" />
+                </StackPanel>
+            </Button>
         </StackPanel>
 
         <!-- Danh sách tài khoản -->
@@ -37,23 +60,23 @@
             <ListView.ItemTemplate>
                 <DataTemplate x:DataType="vm:AccountRow">
                     <Border
-                        Padding="14,12"
+                        Padding="16,14"
                         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                         BorderThickness="1"
-                        CornerRadius="8">
-                        <Grid ColumnDefinitions="48,*,Auto,Auto" ColumnSpacing="16">
+                        CornerRadius="10">
+                        <Grid ColumnDefinitions="52,*,Auto" ColumnSpacing="16">
                             <!-- Minecraft Avatar -->
                             <Border
-                                Width="48"
-                                Height="48"
-                                CornerRadius="6"
+                                Width="52"
+                                Height="52"
+                                CornerRadius="8"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                 BorderThickness="1"
                                 Background="{ThemeResource LayerFillColorDefaultBrush}">
                                 <Image
-                                    Width="48"
-                                    Height="48"
+                                    Width="52"
+                                    Height="52"
                                     Stretch="UniformToFill">
                                     <Image.Source>
                                         <BitmapImage UriSource="{x:Bind AvatarUri}" />
@@ -61,42 +84,96 @@
                                 </Image>
                             </Border>
 
-                            <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
-                                <TextBlock Text="{x:Bind DisplayName}" FontWeight="SemiBold" FontSize="15" />
+                            <!-- Account Details & Badges -->
+                            <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                    <TextBlock Text="{x:Bind DisplayName}" FontWeight="SemiBold" FontSize="16" />
+                                    <Border
+                                        Background="{StaticResource VazAccentSubtleBrush}"
+                                        CornerRadius="6"
+                                        Padding="8,3"
+                                        Visibility="{x:Bind IsActive, Mode=OneWay, Converter={StaticResource BoolToVis}}">
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <FontIcon Glyph="&#xE73E;" FontSize="11" Foreground="{StaticResource VazAccentBrush}" />
+                                            <TextBlock
+                                                Text="Đang Active"
+                                                Foreground="{StaticResource VazAccentBrush}"
+                                                FontWeight="SemiBold"
+                                                FontSize="12" />
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+
+                                <!-- Meta badges: Kind, UUID, Token status, Cape -->
                                 <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <!-- Kind badge -->
                                     <Border
                                         Background="{ThemeResource LayerFillColorDefaultBrush}"
-                                        CornerRadius="4"
-                                        Padding="6,2">
-                                        <TextBlock Text="{x:Bind KindText}" Style="{StaticResource CaptionTextBlockStyle}" />
+                                        CornerRadius="6"
+                                        Padding="8,3">
+                                        <TextBlock Text="{x:Bind KindText}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                     </Border>
-                                    <TextBlock
-                                        Text="✓ Active"
-                                        Foreground="{ThemeResource SystemFillColorSuccessBrush}"
-                                        FontWeight="Medium"
-                                        Style="{StaticResource CaptionTextBlockStyle}"
-                                        Visibility="{x:Bind IsActive, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
+
+                                    <!-- Short UUID -->
+                                    <Border
+                                        Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                        CornerRadius="6"
+                                        Padding="8,3">
+                                        <TextBlock Text="{x:Bind ShortUuid}" FontSize="12" FontFamily="Consolas" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    </Border>
+
+                                    <!-- Token status -->
+                                    <Border
+                                        Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                        CornerRadius="6"
+                                        Padding="8,3">
+                                        <TextBlock Text="{x:Bind TokenStatus}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    </Border>
+
+                                    <!-- Cape chip -->
+                                    <Border
+                                        Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                        CornerRadius="6"
+                                        Padding="8,3">
+                                        <TextBlock Text="{x:Bind CapeText}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    </Border>
                                 </StackPanel>
                             </StackPanel>
 
-                            <Button
-                                Grid.Column="2"
-                                Content="Set active"
-                                VerticalAlignment="Center"
-                                Margin="0,0,8,0"
-                                Click="SetActive_Click" />
-                            <Button
-                                Grid.Column="3"
-                                Content="Xóa"
-                                VerticalAlignment="Center"
-                                Click="Remove_Click" />
+                            <!-- Actions -->
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <Button
+                                    Click="SetActive_Click"
+                                    Visibility="{x:Bind IsActive, Mode=OneWay, Converter={StaticResource BoolToVisInv}}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <FontIcon Glyph="&#xE73E;" FontSize="12" />
+                                        <TextBlock Text="Đặt Active" />
+                                    </StackPanel>
+                                </Button>
+                                <Button
+                                    Click="RefreshItem_Click"
+                                    ToolTipService.ToolTip="Làm mới token">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <FontIcon Glyph="&#xE72C;" FontSize="12" />
+                                        <TextBlock Text="Làm mới" />
+                                    </StackPanel>
+                                </Button>
+                                <Button
+                                    Click="Remove_Click"
+                                    ToolTipService.ToolTip="Xóa tài khoản">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <FontIcon Glyph="&#xE74D;" FontSize="12" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                                        <TextBlock Text="Xóa" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
                         </Grid>
                     </Border>
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>
 
-        <!-- Status / Error -->
+        <!-- Status / Error / Toast -->
         <StackPanel Grid.Row="3" Spacing="4">
             <InfoBar
                 IsOpen="{x:Bind ViewModel.HasError, Mode=TwoWay}"

@@ -1,16 +1,17 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization.Metadata;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Identity.Client;
 using Microsoft.Identity.Client.Extensions.Msal;
 using Vazer.Core.Abstractions;
+using Vazer.Core.Json;
 
 namespace Vazer.Core.Auth;
 
@@ -29,6 +30,7 @@ public sealed class MsalAuthProvider : IAuthProvider
     /// <inheritdoc />
     public AccountKind Kind => AccountKind.Microsoft;
 
+    /// <summary>Khởi tạo MsalAuthProvider với cấu hình production.</summary>
     public MsalAuthProvider(
         IHttpClientFactory httpClientFactory,
         ILogger<MsalAuthProvider> logger,
@@ -37,6 +39,11 @@ public sealed class MsalAuthProvider : IAuthProvider
     {
     }
 
+    /// <summary>Khởi tạo MsalAuthProvider phục vụ DI và unit test.</summary>
+    /// <param name="httpClientFactory">Factory tạo HTTP client cho OAuth requests.</param>
+    /// <param name="logger">Logger cho authentication provider.</param>
+    /// <param name="options">Cấu hình Minecraft options.</param>
+    /// <param name="msal">Nullable: khi null (ví dụ chế độ OfflineDemoMode hoặc unit test), provider bỏ qua MSAL interactive flow; login online sẽ ném lỗi rõ ràng thay vì crash.</param>
     internal MsalAuthProvider(
         IHttpClientFactory httpClientFactory,
         ILogger<MsalAuthProvider> logger,
@@ -194,26 +201,18 @@ public sealed class MsalAuthProvider : IAuthProvider
         return await msal.AcquireTokenInteractiveAsync(Scopes, ct);
     }
 
-    [RequiresUnreferencedCode("Calls Vazer.Core.Auth.MsalAuthProvider.PostJsonAsync(HttpClient, String, Object, CancellationToken)")]
     private async Task<(string XblToken, string Uhs)> XboxLiveAuthenticateAsync(string msAccessToken, CancellationToken ct)
     {
         using var client = CreateHttpClient();
-        var request = new
-        {
-            RelyingParty = "http://auth.xboxlive.com",
-            TokenType = "JWT",
-            Properties = new
-            {
-                AuthMethod = "RPS",
-                SiteName = "user.auth.xboxlive.com",
-                RpsTicket = $"d={msAccessToken}"
-            }
-        };
+        var request = new XboxAuthRequest(
+            "http://auth.xboxlive.com",
+            "JWT",
+            new XboxAuthProperties("RPS", "user.auth.xboxlive.com", $"d={msAccessToken}"));
 
         string response;
         try
         {
-            response = await PostJsonAsync(client, "https://user.auth.xboxlive.com/user/authenticate", request, ct);
+            response = await PostJsonAsync(client, "https://user.auth.xboxlive.com/user/authenticate", request, VazJsonContext.CamelCase.XboxAuthRequest, ct);
         }
         catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
         {
@@ -229,21 +228,15 @@ public sealed class MsalAuthProvider : IAuthProvider
         return (xblToken, uhs);
     }
 
-    [RequiresUnreferencedCode("Calls Vazer.Core.Auth.MsalAuthProvider.PostJsonAsync(HttpClient, String, Object, CancellationToken)")]
     private async Task<string> XstsAuthorizeAsync(string xblToken, CancellationToken ct)
     {
         using var client = CreateHttpClient();
-        var request = new
-        {
-            RelyingParty = "rp://api.minecraftservices.com/",
-            TokenType = "JWT",
-            Properties = new
-            {
-                UserTokens = new[] { xblToken }
-            }
-        };
+        var request = new XstsAuthRequest(
+            "rp://api.minecraftservices.com/",
+            "JWT",
+            new XstsAuthProperties(new[] { xblToken }));
 
-        var response = await PostJsonAsync(client, "https://xsts.auth.xboxlive.com/xsts/authorize", request, ct);
+        var response = await PostJsonAsync(client, "https://xsts.auth.xboxlive.com/xsts/authorize", request, VazJsonContext.CamelCase.XstsAuthRequest, ct);
         var json = JsonNode.Parse(response)!;
 
         // Check for XErr errors (these are 32-bit unsigned values > int.MaxValue)
@@ -273,16 +266,12 @@ public sealed class MsalAuthProvider : IAuthProvider
         return json["Token"]?.GetValue<string>() ?? throw new InvalidOperationException("XSTS token missing in response");
     }
 
-    [RequiresUnreferencedCode("Calls Vazer.Core.Auth.MsalAuthProvider.PostJsonAsync(HttpClient, String, Object, CancellationToken)")]
     private async Task<(string McToken, int ExpiresIn)> MinecraftLoginAsync(string uhs, string xstsToken, CancellationToken ct)
     {
         using var client = CreateHttpClient();
-        var request = new
-        {
-            identityToken = $"XBL3.0 x={uhs};{xstsToken}"
-        };
+        var request = new MinecraftLoginRequest($"XBL3.0 x={uhs};{xstsToken}");
 
-        var response = await PostJsonAsync(client, "https://api.minecraftservices.com/authentication/login_with_xbox", request, ct);
+        var response = await PostJsonAsync(client, "https://api.minecraftservices.com/authentication/login_with_xbox", request, VazJsonContext.CamelCase.MinecraftLoginRequest, ct);
         var json = JsonNode.Parse(response)!;
 
         var mcToken = json["access_token"]?.GetValue<string>() ?? throw new InvalidOperationException("Minecraft access token missing");
@@ -323,10 +312,9 @@ public sealed class MsalAuthProvider : IAuthProvider
         return client;
     }
 
-    [RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Serialize<TValue>(TValue, JsonSerializerOptions)")]
-    private async Task<string> PostJsonAsync(HttpClient client, string url, object payload, CancellationToken ct)
+    private async Task<string> PostJsonAsync<T>(HttpClient client, string url, T payload, JsonTypeInfo<T> typeInfo, CancellationToken ct)
     {
-        var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        var json = JsonSerializer.Serialize(payload, typeInfo);
         using var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
         for (int attempt = 0; attempt <= _options.HttpMaxRetries; attempt++)
